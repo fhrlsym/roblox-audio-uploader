@@ -70,7 +70,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
     }
 
     command
-      .audioBitrate(320)
+      .audioBitrate(128)
       .audioCodec('libmp3lame')
       .toFormat('mp3')
       .on('end', resolve)
@@ -79,13 +79,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   });
 }
 
-app.post('/api/youtube-download', async (req, res) => {
-  const { url, speed = 1.0, amplify = 0, cookies } = req.body;
-
-  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
-    return res.status(400).json({ error: 'Invalid YouTube URL' });
-  }
-
+async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
   const tempBase = join(__dirname, `temp_${videoId}`);
   const tempAudioPath = join(__dirname, `temp_${videoId}.mp3`);
@@ -136,21 +130,81 @@ app.post('/api/youtube-download', async (req, res) => {
 
     if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
 
+    return { title, outputPath, fileId: `output_${videoId}`, cleanup: () => {
+      for (const f of [tempAudioPath, outputPath]) {
+        if (existsSync(f)) unlinkSync(f);
+      }
+    } };
+
+  } catch (error) {
+    for (const f of [tempAudioPath, outputPath]) {
+      if (existsSync(f)) unlinkSync(f);
+    }
+    throw error;
+  } finally {
+    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
+  }
+}
+
+async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Untitled', description = '', creatorType = 'user', creatorId, apiKey }) {
+  const creator = creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId };
+
+  const form = new FormData();
+  form.append('request', JSON.stringify({
+    assetType,
+    displayName,
+    description,
+    creationContext: { creator },
+  }));
+  form.append('fileContent', createReadStream(filePath), {
+    filename: `${displayName}.mp3`,
+    contentType: 'audio/mpeg',
+  });
+
+  const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
+    method: 'POST',
+    headers: { 'x-api-key': apiKey },
+    body: form,
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const err = new Error(data.message || data.code || `Upload failed (${response.status})`);
+    err.details = data;
+    err.status = response.status;
+    throw err;
+  }
+
+  const pathMatch = (data.path || '').match(/operations\/(.+)/);
+  if (!pathMatch) {
+    const err = new Error('No operation ID returned');
+    err.details = data;
+    err.status = 500;
+    throw err;
+  }
+
+  return pathMatch[1];
+}
+
+app.post('/api/youtube-download', async (req, res) => {
+  const { url, speed = 1.0, amplify = 0, cookies } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+
+  try {
+    const { title, outputPath, fileId, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
     res.json({
       success: true,
       filename: `${title}.mp3`,
       path: outputPath,
-      fileId: `output_${videoId}`,
+      fileId,
     });
-
   } catch (error) {
     console.error('Download error:', error);
-    for (const f of [tempAudioPath, outputPath]) {
-      if (existsSync(f)) unlinkSync(f);
-    }
     res.status(500).json({ error: error.message || 'Download failed' });
-  } finally {
-    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
   }
 });
 
@@ -199,7 +253,7 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
       }
 
       command
-      .audioBitrate(320)
+      .audioBitrate(128)
         .audioCodec('libmp3lame')
         .toFormat('mp3')
         .on('end', resolve)
@@ -246,53 +300,77 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'Missing creator ID' });
   }
 
-  const creator = creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId };
-
-  const form = new FormData();
-  form.append('request', JSON.stringify({
-    assetType,
-    displayName,
-    description,
-    creationContext: { creator },
-  }));
-  form.append('fileContent', createReadStream(req.file.path), {
-    filename: req.file.originalname || 'audio.mp3',
-    contentType: req.file.mimetype || 'audio/mpeg',
-  });
-
-  const cleanup = () => {
+  try {
+    const operationId = await uploadToRoblox(req.file.path, {
+      assetType,
+      displayName,
+      description,
+      creatorType,
+      creatorId,
+      apiKey,
+    });
+    res.json({ operationId });
+  } catch (error) {
+    console.error('Roblox upload error:', error);
+    res.status(error.status || 500).json({
+      error: error.message || 'Upload failed',
+      details: error.details,
+    });
+  } finally {
     setTimeout(() => {
       if (req.file && existsSync(req.file.path)) unlinkSync(req.file.path);
     }, 1000);
-  };
+  }
+});
+
+app.post('/api/youtube-upload', async (req, res) => {
+  const {
+    url,
+    speed = 1.0,
+    amplify = 0,
+    cookies,
+    displayName,
+    description = '',
+    creatorType = 'user',
+    creatorId,
+    apiKey,
+  } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+  if (!creatorId) {
+    return res.status(400).json({ error: 'Missing creator ID' });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Missing API key' });
+  }
 
   try {
-    const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
-      method: 'POST',
-      headers: { 'x-api-key': apiKey },
-      body: form,
-    });
-
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok) {
-      return res.status(response.status || 500).json({
-        error: data.message || data.code || `Upload failed (${response.status})`,
-        details: data,
+    const { title, outputPath, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
+    const name = `${displayName || title}.mp3`;
+    try {
+      const operationId = await uploadToRoblox(outputPath, {
+        assetType: 'Audio',
+        displayName: name,
+        description,
+        creatorType,
+        creatorId,
+        apiKey,
       });
+      res.json({ success: true, filename: name, operationId });
+    } catch (uploadErr) {
+      console.error('Roblox upload error:', uploadErr);
+      res.status(uploadErr.status || 500).json({
+        error: uploadErr.message || 'Upload failed',
+        details: uploadErr.details,
+      });
+    } finally {
+      setTimeout(cleanup, 1000);
     }
-
-    const pathMatch = (data.path || '').match(/operations\/(.+)/);
-    if (!pathMatch) {
-      return res.status(500).json({ error: 'No operation ID returned', details: data });
-    }
-
-    res.json({ operationId: pathMatch[1] });
   } catch (error) {
-    console.error('Roblox upload error:', error);
-    res.status(500).json({ error: error.message });
-  } finally {
-    cleanup();
+    console.error('Download error:', error);
+    res.status(500).json({ error: error.message || 'Download failed' });
   }
 });
 

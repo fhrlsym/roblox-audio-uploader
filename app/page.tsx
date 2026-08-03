@@ -59,6 +59,7 @@ export default function Home() {
   const [amplify, setAmplify] = useState(-4);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<any[]>([]);
+  const [autoUpload, setAutoUpload] = useState(false);
 
   const [uploadHistory, setUploadHistory] = useState<AudioUpload[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -83,6 +84,7 @@ export default function Home() {
         if (typeof s.speed === 'number') setSpeed(s.speed);
         if (typeof s.amplify === 'number') setAmplify(s.amplify);
         if (typeof s.youtubeCookies === 'string') setYoutubeCookies(s.youtubeCookies);
+        if (typeof s.autoUpload === 'boolean') setAutoUpload(s.autoUpload);
       }
     } catch {
       // ignore corrupt saved settings
@@ -100,8 +102,9 @@ export default function Home() {
       speed,
       amplify,
       youtubeCookies,
+      autoUpload,
     }));
-  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies]);
+  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies, autoUpload]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -211,35 +214,101 @@ export default function Home() {
       return;
     }
 
+    if (autoUpload) {
+      const validApiKeys = apiKeys.filter(key => key.trim());
+      if (validApiKeys.length === 0) {
+        alert('Auto-upload aktif tapi API Key belum diisi');
+        return;
+      }
+      if (targetType === 'user' && !userId.trim()) {
+        alert('Auto-upload aktif tapi User ID belum diisi');
+        return;
+      }
+      if (targetType === 'group' && !groupId.trim()) {
+        alert('Auto-upload aktif tapi Group ID belum diisi');
+        return;
+      }
+    }
+
     setDownloading(true);
-    setDownloadProgress([]);
+    setDownloadProgress(urls.map(url => ({ url, status: 'downloading', progress: 0 })));
+    if (autoUpload) setResults([]);
 
-    for (const url of urls) {
+    const processUrl = async (url: string, index: number) => {
       try {
-        setDownloadProgress(prev => [...prev, { url, status: 'downloading', progress: 0 }]);
+        if (autoUpload) {
+          const apiKey = (apiKeys.filter(k => k.trim()))[index % apiKeys.filter(k => k.trim()).length];
+          const response = await fetch(`${BACKEND_URL}/api/youtube-upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              url: url.trim(),
+              speed,
+              amplify,
+              cookies: youtubeCookies,
+              description: `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`,
+              creatorType: targetType,
+              creatorId: targetType === 'group' ? groupId : userId,
+              apiKey,
+            }),
+          });
 
-        const response = await fetch(`${BACKEND_URL}/api/youtube-download`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url.trim(), speed, amplify, cookies: youtubeCookies }),
-        });
+          const data = await response.json();
 
-        const data = await response.json();
+          if (response.ok && data.operationId) {
+            let assetId: string | null = null;
+            let status = 'Pending';
+            let opError: string | null = null;
 
-        if (data.success) {
-          const fileResponse = await fetch(`${BACKEND_URL}/api/download-file/${data.fileId}`);
-          const blob = await fileResponse.blob();
-          const file = new File([blob], data.filename, { type: 'audio/mpeg' });
-          setFiles(prev => [...prev, file]);
+            for (let attempt = 0; attempt < 120; attempt += 1) {
+              await new Promise((r) => setTimeout(r, 3000));
+              const opResponse = await fetch(
+                `${BACKEND_URL}/api/operation-status/${data.operationId}?apiKey=${encodeURIComponent(apiKey)}`
+              );
+              const opData = await opResponse.json();
+              if (opData.done) {
+                if (opData.assetId) {
+                  assetId = opData.assetId;
+                  status = opData.status || 'Pending';
+                } else {
+                  opError = opData.error || 'Upload failed during moderation';
+                }
+                break;
+              }
+            }
 
-          setDownloadProgress(prev =>
-            prev.map(p => p.url === url ? { ...p, status: 'completed', progress: 100 } : p)
-          );
+            if (assetId) {
+              const name = data.filename || url;
+              setResults(prev => [...prev, { filename: name, assetId, status, success: true }]);
+              await saveToDatabase(assetId, name, status, url.trim());
+            } else {
+              setResults(prev => [...prev, { filename: url, error: opError || 'Upload is still processing after 6 minutes', success: false }]);
+            }
+          } else {
+            setResults(prev => [...prev, { filename: url, error: data.error || data.message || 'Upload failed', success: false }]);
+          }
         } else {
-          setDownloadProgress(prev =>
-            prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0, error: data.error || 'Download failed' } : p)
-          );
+          const response = await fetch(`${BACKEND_URL}/api/youtube-download`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url.trim(), speed, amplify, cookies: youtubeCookies }),
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            const fileResponse = await fetch(`${BACKEND_URL}/api/download-file/${data.fileId}`);
+            const blob = await fileResponse.blob();
+            const file = new File([blob], data.filename, { type: 'audio/mpeg' });
+            setFiles(prev => [...prev, file]);
+          } else {
+            throw new Error(data.error || 'Download failed');
+          }
         }
+
+        setDownloadProgress(prev =>
+          prev.map(p => p.url === url ? { ...p, status: 'completed', progress: 100 } : p)
+        );
       } catch (error) {
         setDownloadProgress(prev =>
           prev.map(p => p.url === url ? {
@@ -249,10 +318,24 @@ export default function Home() {
             error: error instanceof Error ? error.message : 'Download failed',
           } : p)
         );
+        if (autoUpload) {
+          setResults(prev => [...prev, { filename: url, error: error instanceof Error ? error.message : 'Download failed', success: false }]);
+        }
       }
-    }
+    };
+
+    const CONCURRENCY = 2;
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < urls.length) {
+        const index = nextIndex++;
+        await processUrl(urls[index], index);
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, urls.length) }, worker));
 
     setDownloading(false);
+    if (autoUpload) setYoutubeUrls('');
   };
 
   const uploadToRoblox = async () => {
@@ -554,9 +637,22 @@ export default function Home() {
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
               <p className="text-xs text-white/35">One URL per line · downloaded files appear below</p>
               <button onClick={handleYoutubeDownload} disabled={downloading} className={BTN_PRIMARY}>
-                {downloading ? 'Converting…' : 'Download & Convert to MP3'}
+                {downloading ? 'Converting…' : (autoUpload ? 'Convert & Upload to Roblox' : 'Download & Convert to MP3')}
               </button>
             </div>
+
+            <button
+              onClick={() => setAutoUpload(v => !v)}
+              disabled={downloading}
+              className={`mt-3 inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs transition disabled:opacity-50 ${
+                autoUpload
+                  ? 'border-[#d4af37]/50 bg-[#d4af37]/10 text-[#f5d06f]'
+                  : 'border-white/10 bg-black/30 text-white/45'
+              }`}
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${autoUpload ? 'bg-[#f5d06f]' : 'bg-white/25'}`} />
+              Auto-upload langsung ke Roblox {autoUpload ? 'ON' : 'OFF'}
+            </button>
 
             <details className="mt-5 rounded-xl border border-white/10 bg-black/30">
               <summary className="cursor-pointer px-4 py-3 text-sm text-white/50 transition hover:text-white">
