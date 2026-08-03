@@ -84,6 +84,7 @@ app.post('/api/youtube-download', async (req, res) => {
       '--no-warnings',
       '--no-check-certificates',
       '--no-playlist',
+      '--extractor-args', 'youtube:player_client=android,ios',
       url,
     ])).replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
@@ -97,6 +98,7 @@ app.post('/api/youtube-download', async (req, res) => {
       '--no-warnings',
       '--no-check-certificates',
       '--no-playlist',
+      '--extractor-args', 'youtube:player_client=android,ios',
       '--retries', '3',
     ]);
 
