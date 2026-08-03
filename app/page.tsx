@@ -5,6 +5,27 @@ import { supabase, AudioUpload } from '../lib/supabase';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = '515753';
+const SETTINGS_KEY = 'audioUploader_settings';
+
+const CARD = 'rounded-2xl border border-white/10 bg-white/[0.02] shadow-[0_1px_0_rgba(255,255,255,0.03)]';
+const INPUT = 'w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-white/30 focus:bg-black/60';
+const LABEL = 'mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/40';
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/40';
+const BTN_GHOST = 'inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+
+function StatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    Active: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
+    Pending: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
+    Copyright: 'border-rose-400/20 bg-rose-400/10 text-rose-300',
+    Failed: 'border-white/10 bg-white/5 text-white/50',
+  };
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles[status] || styles.Failed}`}>
+      {status}
+    </span>
+  );
+}
 
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -18,13 +39,14 @@ export default function Home() {
   const [userId, setUserId] = useState('');
   const [groupId, setGroupId] = useState('');
   const [apiKeys, setApiKeys] = useState<string[]>(['']);
-  
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+
   const [youtubeUrls, setYoutubeUrls] = useState('');
   const [speed, setSpeed] = useState(2.30);
   const [amplify, setAmplify] = useState(-4);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<any[]>([]);
-  
+
   const [uploadHistory, setUploadHistory] = useState<AudioUpload[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [summary, setSummary] = useState({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
@@ -35,6 +57,36 @@ export default function Home() {
       setIsAuthenticated(true);
     }
   }, []);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (Array.isArray(s.apiKeys) && s.apiKeys.length > 0) setApiKeys(s.apiKeys);
+        if (typeof s.userId === 'string') setUserId(s.userId);
+        if (typeof s.groupId === 'string') setGroupId(s.groupId);
+        if (s.targetType === 'user' || s.targetType === 'group') setTargetType(s.targetType);
+        if (typeof s.speed === 'number') setSpeed(s.speed);
+        if (typeof s.amplify === 'number') setAmplify(s.amplify);
+      }
+    } catch {
+      // ignore corrupt saved settings
+    }
+    setSettingsLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({
+      apiKeys,
+      userId,
+      groupId,
+      targetType,
+      speed,
+      amplify,
+    }));
+  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -147,7 +199,7 @@ export default function Home() {
     for (const url of urls) {
       try {
         setDownloadProgress(prev => [...prev, { url, status: 'downloading', progress: 0 }]);
-        
+
         const response = await fetch(`${BACKEND_URL}/api/youtube-download`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -155,23 +207,23 @@ export default function Home() {
         });
 
         const data = await response.json();
-        
+
         if (data.success) {
           const fileResponse = await fetch(`${BACKEND_URL}/api/download-file/${data.fileId}`);
           const blob = await fileResponse.blob();
           const file = new File([blob], data.filename, { type: 'audio/mpeg' });
           setFiles(prev => [...prev, file]);
-          
-          setDownloadProgress(prev => 
+
+          setDownloadProgress(prev =>
             prev.map(p => p.url === url ? { ...p, status: 'completed', progress: 100 } : p)
           );
         } else {
-          setDownloadProgress(prev => 
+          setDownloadProgress(prev =>
             prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0 } : p)
           );
         }
       } catch (error) {
-        setDownloadProgress(prev => 
+        setDownloadProgress(prev =>
           prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0 } : p)
         );
       }
@@ -324,370 +376,392 @@ export default function Home() {
   const copyResults = () => {
     const text = results
       .filter(r => r.success)
-      .map(r => `${r.filename}: rbxassetid://${r.assetId} (${r.status})`)
+      .map(r => `${r.filename}: ${r.assetId} (${r.status})`)
       .join('\n');
     navigator.clipboard.writeText(text);
     alert('Results copied to clipboard!');
   };
 
+  const copyAssetId = async (assetId: string) => {
+    await navigator.clipboard.writeText(assetId);
+    alert('Asset ID copied!');
+  };
+
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 flex items-center justify-center p-4">
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-8 w-full max-w-md shadow-2xl">
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-              Roblox Audio Uploader
+      <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080a] p-4 text-white">
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="pointer-events-none absolute -bottom-32 right-1/4 h-72 w-72 rounded-full bg-white/[0.04] blur-[100px]" />
+
+        <div className="relative w-full max-w-md">
+          <div className="mb-10 text-center">
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-white/40">S2 Studio</p>
+            <h1 className="mt-3 font-serif text-4xl tracking-tight text-white">
+              Audio Master <span className="italic text-white/40">to</span> Roblox
             </h1>
-            <p className="text-gray-400 text-sm">Enter PIN to continue</p>
           </div>
-          
-          <form onSubmit={handlePinSubmit} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                value={pinInput}
-                onChange={(e) => setPinInput(e.target.value)}
-                placeholder="Enter 6-digit PIN"
-                maxLength={6}
-                className={`w-full px-4 py-3 bg-gray-900/50 border ${pinError ? 'border-red-500' : 'border-gray-700'} rounded-xl text-white text-center text-2xl tracking-widest focus:outline-none focus:border-blue-500 transition-colors`}
-                autoFocus
-              />
-              {pinError && (
-                <p className="text-red-400 text-sm mt-2 text-center">Incorrect PIN</p>
-              )}
-            </div>
-            
-            <button
-              type="submit"
-              className="w-full py-3 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              Unlock
-            </button>
-          </form>
+
+          <div className={`${CARD} p-8`}>
+            <form onSubmit={handlePinSubmit} className="space-y-5">
+              <div>
+                <label className={LABEL}>Access PIN</label>
+                <input
+                  type="password"
+                  value={pinInput}
+                  onChange={(e) => setPinInput(e.target.value)}
+                  placeholder="••••••"
+                  maxLength={6}
+                  className={`${INPUT} text-center text-2xl tracking-[0.5em] ${pinError ? 'border-rose-400/40' : ''}`}
+                  autoFocus
+                />
+                {pinError && (
+                  <p className="mt-2 text-center text-xs text-rose-300">Incorrect PIN</p>
+                )}
+              </div>
+
+              <button type="submit" className={`${BTN_PRIMARY} w-full`}>
+                Unlock
+              </button>
+            </form>
+          </div>
+
+          <p className="mt-8 text-center text-[11px] uppercase tracking-[0.3em] text-white/25">
+            Created by <span className="text-white/50">fhrlsym</span>
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 text-white p-4 md:p-8">
-      <div className="max-w-7xl mx-auto space-y-6">
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-2xl">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
-            Roblox Audio Uploader
-          </h1>
-          <p className="text-gray-400">YouTube Converter + Batch Upload</p>
-        </div>
+    <div className="relative min-h-screen bg-[#08080a] text-white">
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-48 right-[-10%] h-[30rem] w-[30rem] rounded-full bg-indigo-500/[0.07] blur-[140px]" />
+        <div className="absolute bottom-[-20%] left-[-10%] h-[26rem] w-[26rem] rounded-full bg-white/[0.03] blur-[120px]" />
+      </div>
 
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-xl p-4">
-            <div className="text-3xl font-bold text-green-400">{summary.total}</div>
-            <div className="text-gray-400 text-sm">Total Uploads</div>
+      <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-12 md:px-6">
+        <header className="flex flex-wrap items-end justify-between gap-6 pb-10">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-white/40">S2 Studio</p>
+            <h1 className="mt-3 font-serif text-4xl tracking-tight text-white md:text-5xl">
+              Audio Master <span className="italic text-white/40">to</span> Roblox
+            </h1>
+            <p className="mt-3 text-sm text-white/40">Convert · Tune · Upload · Track</p>
           </div>
-          <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-xl p-4">
-            <div className="text-3xl font-bold text-blue-400">{summary.active}</div>
-            <div className="text-gray-400 text-sm">Active</div>
-          </div>
-          <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-xl p-4">
-            <div className="text-3xl font-bold text-yellow-400">{summary.pending}</div>
-            <div className="text-gray-400 text-sm">Pending</div>
-          </div>
-        </div>
-
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-semibold mb-4">Audio Settings</h2>
-          <div className="grid md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Speed (Playback)</label>
-              <input
-                type="number"
-                step="0.01"
-                value={speed}
-                onChange={(e) => setSpeed(parseFloat(e.target.value))}
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-400 mb-2">Amplify (dB)</label>
-              <input
-                type="number"
-                step="1"
-                value={amplify}
-                onChange={(e) => setAmplify(parseInt(e.target.value))}
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-            <p className="text-blue-400 text-sm">
-              Roblox Playback Speed: <span className="font-mono font-bold">{calculateRobloxPlaybackSpeed()}</span>
-            </p>
-          </div>
-        </div>
-
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-semibold mb-4">YouTube URLs (one per line)</h2>
-          <textarea
-            value={youtubeUrls}
-            onChange={(e) => setYoutubeUrls(e.target.value)}
-            placeholder="https://www.youtube.com/watch?v=..."
-            rows={5}
-            className="w-full px-4 py-3 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500 font-mono text-sm"
-          />
-          <button
-            onClick={handleYoutubeDownload}
-            disabled={downloading}
-            className="mt-4 w-full py-3 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg"
-          >
-            {downloading ? 'Downloading & Converting...' : 'Download & Convert to MP3'}
-          </button>
-
-          {downloadProgress.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {downloadProgress.map((item, index) => (
-                <div key={index} className="p-3 bg-gray-900/50 rounded-lg">
-                  <div className="text-sm text-gray-400 truncate">{item.url}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Status: <span className={item.status === 'completed' ? 'text-green-400' : item.status === 'failed' ? 'text-red-400' : 'text-yellow-400'}>
-                      {item.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-semibold mb-4">Upload Files</h2>
-          
-          <div
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            className="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center hover:border-blue-500 transition-colors cursor-pointer"
-            onClick={() => document.getElementById('fileInput')?.click()}
-          >
-            <p className="text-gray-400 mb-2">Drag & drop files or click to browse</p>
-            <p className="text-xs text-gray-500">MP3, OGG, FLAC, WAV supported</p>
-            <input
-              id="fileInput"
-              type="file"
-              multiple
-              accept="audio/*"
-              onChange={handleFileInput}
-              className="hidden"
-            />
-          </div>
-
-          {files.length > 0 && (
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-semibold text-gray-400">Selected Files ({files.length})</h3>
-              {files.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-3 bg-gray-900/50 rounded-lg">
-                  <span className="text-sm truncate flex-1">{file.name}</span>
-                  <button
-                    onClick={() => removeFile(index)}
-                    className="ml-2 px-3 py-1 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg text-xs"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-          <h2 className="text-xl font-semibold mb-4">Roblox Settings</h2>
-          
-          <div className="flex gap-4 mb-4">
-            <button
-              onClick={() => setTargetType('user')}
-              className={`flex-1 py-2 rounded-xl font-semibold transition-all ${
-                targetType === 'user'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-              }`}
-            >
-              User
-            </button>
-            <button
-              onClick={() => setTargetType('group')}
-              className={`flex-1 py-2 rounded-xl font-semibold transition-all ${
-                targetType === 'group'
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-700 text-gray-400 hover:bg-gray-600'
-              }`}
-            >
-              Group
-            </button>
-          </div>
-
-          {targetType === 'user' ? (
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">User ID</label>
-              <input
-                type="text"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                placeholder="Enter Roblox User ID"
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          ) : (
-            <div className="mb-4">
-              <label className="block text-sm text-gray-400 mb-2">Group ID</label>
-              <input
-                type="text"
-                value={groupId}
-                onChange={(e) => setGroupId(e.target.value)}
-                placeholder="Enter Roblox Group ID"
-                className="w-full px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm text-gray-400">API Keys</label>
-              <button
-                onClick={addApiKeyField}
-                className="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg text-xs"
-              >
-                + Add Key
-              </button>
-            </div>
-            
-            {apiKeys.map((key, index) => (
-              <div key={index} className="flex gap-2">
-                <input
-                  type="password"
-                  value={key}
-                  onChange={(e) => updateApiKey(index, e.target.value)}
-                  placeholder={`API Key ${index + 1}`}
-                  className="flex-1 px-4 py-2 bg-gray-900/50 border border-gray-700 rounded-xl text-white focus:outline-none focus:border-blue-500"
-                />
-                {apiKeys.length > 1 && (
-                  <button
-                    onClick={() => removeApiKeyField(index)}
-                    className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-xl"
-                  >
-                    Remove
-                  </button>
-                )}
+          <div className="flex gap-2">
+            {[
+              { label: 'Total', value: summary.total },
+              { label: 'Active', value: summary.active },
+              { label: 'Pending', value: summary.pending },
+              { label: 'Copyright', value: summary.copyright },
+            ].map((stat) => (
+              <div key={stat.label} className="min-w-16 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-center">
+                <div className="text-xl font-semibold tabular-nums">{stat.value}</div>
+                <div className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-white/35">{stat.label}</div>
               </div>
             ))}
           </div>
-        </div>
+        </header>
 
-        <button
-          onClick={uploadToRoblox}
-          disabled={uploading}
-          className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold text-lg rounded-2xl transition-all duration-200 shadow-2xl hover:shadow-blue-500/50"
-        >
-          {uploading ? 'Uploading...' : 'Upload to Roblox'}
-        </button>
+        <main className="space-y-6">
+          <section className={`${CARD} p-6 md:p-8`}>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Audio Settings</h2>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              <div>
+                <label className={LABEL}>Speed (Playback)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={speed}
+                  onChange={(e) => setSpeed(parseFloat(e.target.value))}
+                  className={INPUT}
+                />
+              </div>
+              <div>
+                <label className={LABEL}>Amplify (dB)</label>
+                <input
+                  type="number"
+                  step="1"
+                  value={amplify}
+                  onChange={(e) => setAmplify(parseInt(e.target.value))}
+                  className={INPUT}
+                />
+              </div>
+              <div className="flex flex-col justify-end">
+                <div className="rounded-xl border border-indigo-400/20 bg-indigo-400/[0.06] px-4 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-indigo-300/70">Roblox playback</div>
+                  <div className="mt-0.5 font-mono text-lg tabular-nums text-indigo-200">
+                    {calculateRobloxPlaybackSpeed()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
 
-        {results.length > 0 && (
-          <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold">Upload Results</h2>
-              <button
-                onClick={copyResults}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-xl text-sm font-semibold"
-              >
-                Copy Results
+          <section className={`${CARD} p-6 md:p-8`}>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">YouTube Converter</h2>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <textarea
+              value={youtubeUrls}
+              onChange={(e) => setYoutubeUrls(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              rows={5}
+              className={`${INPUT} resize-y font-mono`}
+            />
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+              <p className="text-xs text-white/35">One URL per line · downloaded files appear below</p>
+              <button onClick={handleYoutubeDownload} disabled={downloading} className={BTN_PRIMARY}>
+                {downloading ? 'Converting…' : 'Download & Convert to MP3'}
               </button>
             </div>
-            <div className="space-y-2">
-              {results.map((result, index) => (
-                <div
-                  key={index}
-                  className={`p-4 rounded-xl ${
-                    result.success ? 'bg-green-500/10 border border-green-500/30' : 'bg-red-500/10 border border-red-500/30'
+
+            {downloadProgress.length > 0 && (
+              <div className="mt-5 space-y-2">
+                {downloadProgress.map((item, index) => (
+                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                      item.status === 'completed' ? 'bg-emerald-400' :
+                      item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-amber-400'
+                    }`} />
+                    <span className="min-w-0 flex-1 truncate text-sm text-white/70">{item.url}</span>
+                    <span className="text-xs capitalize text-white/40">{item.status}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={`${CARD} p-6 md:p-8`}>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload Files</h2>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => e.preventDefault()}
+              onClick={() => document.getElementById('fileInput')?.click()}
+              className="cursor-pointer rounded-xl border border-dashed border-white/15 px-8 py-12 text-center transition hover:border-white/30 hover:bg-white/[0.02]"
+            >
+              <p className="text-sm text-white/60">Drag &amp; drop files, or click to browse</p>
+              <p className="mt-1 text-xs text-white/30">MP3 · OGG · FLAC · WAV</p>
+              <input
+                id="fileInput"
+                type="file"
+                multiple
+                accept="audio/*"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </div>
+
+            {files.length > 0 && (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/35">Selected · {files.length}</p>
+                {files.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                    <span className="min-w-0 flex-1 truncate text-sm text-white/80">{file.name}</span>
+                    <button
+                      onClick={() => removeFile(index)}
+                      className="rounded-lg border border-white/10 px-3 py-1 text-xs text-white/50 transition hover:border-rose-400/30 hover:text-rose-300"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className={`${CARD} p-6 md:p-8`}>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Roblox Settings</h2>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/30 p-1.5">
+              {(['user', 'group'] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setTargetType(type)}
+                  className={`rounded-lg py-2 text-sm font-medium transition ${
+                    targetType === type ? 'bg-white text-black' : 'text-white/50 hover:text-white'
                   }`}
                 >
-                  <div className="font-semibold text-sm">{result.filename}</div>
-                  {result.success ? (
-                    <>
-                      <div className="text-xs text-gray-400 mt-1 font-mono">
-                        rbxassetid://{result.assetId}
-                      </div>
-                      <div className={`text-xs mt-1 ${
-                        result.status === 'Active' ? 'text-green-400' :
-                        result.status === 'Pending' ? 'text-yellow-400' :
-                        result.status === 'Copyright' ? 'text-red-400' :
-                        'text-gray-400'
-                      }`}>
-                        Status: {result.status}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-xs text-red-400 mt-1">{result.error}</div>
-                  )}
-                </div>
+                  {type === 'user' ? 'User' : 'Group'}
+                </button>
               ))}
             </div>
-          </div>
-        )}
 
-        <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-700 rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Upload History</h2>
-            <button
-              onClick={() => setShowHistory(!showHistory)}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-xl text-sm"
-            >
-              {showHistory ? 'Hide' : 'Show'}
-            </button>
-          </div>
-
-          {showHistory && (
-            <div className="space-y-2 max-h-96 overflow-y-auto">
-              {uploadHistory.map((item) => (
-                <div key={item.id} className="p-4 bg-gray-900/50 rounded-xl border border-gray-700">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="font-semibold text-sm">{item.name}</div>
-                      <div className="text-xs text-gray-400 font-mono mt-1">
-                        rbxassetid://{item.asset_id}
-                      </div>
-                      {item.youtube_url && (
-                        <div className="text-xs text-gray-500 mt-1 truncate">
-                          {item.youtube_url}
-                        </div>
-                      )}
-                      <div className="text-xs text-gray-500 mt-2">
-                        Speed: {item.original_speed}x | Amplify: {item.amplify}dB | Roblox: {item.roblox_playback_speed}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(item.uploaded_at).toLocaleString()}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 ml-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        item.status === 'Active' ? 'bg-green-500/20 text-green-400' :
-                        item.status === 'Pending' ? 'bg-yellow-500/20 text-yellow-400' :
-                        item.status === 'Copyright' ? 'bg-red-500/20 text-red-400' :
-                        'bg-gray-500/20 text-gray-400'
-                      }`}>
-                        {item.status}
-                      </span>
-                      {item.status === 'Pending' && (
+            <div className="mb-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <label className={LABEL}>{targetType === 'user' ? 'User ID' : 'Group ID'}</label>
+                <input
+                  type="text"
+                  value={targetType === 'user' ? userId : groupId}
+                  onChange={(e) => targetType === 'user' ? setUserId(e.target.value) : setGroupId(e.target.value)}
+                  placeholder={targetType === 'user' ? 'Enter Roblox User ID' : 'Enter Roblox Group ID'}
+                  className={INPUT}
+                />
+              </div>
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">API Keys</label>
+                  <button onClick={addApiKeyField} className="text-[11px] uppercase tracking-[0.15em] text-indigo-300 transition hover:text-indigo-200">
+                    + Add key
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {apiKeys.map((key, index) => (
+                    <div key={index} className="flex gap-2">
+                      <input
+                        type="password"
+                        value={key}
+                        onChange={(e) => updateApiKey(index, e.target.value)}
+                        placeholder={`API Key ${index + 1}`}
+                        className={INPUT}
+                      />
+                      {apiKeys.length > 1 && (
                         <button
-                          onClick={() => refreshStatus(item.asset_id)}
-                          className="px-2 py-1 bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 rounded text-xs"
+                          onClick={() => removeApiKeyField(index)}
+                          className="shrink-0 rounded-xl border border-white/10 px-3 text-xs text-white/50 transition hover:border-rose-400/30 hover:text-rose-300"
                         >
-                          Refresh
+                          ✕
                         </button>
                       )}
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
+
+            <button onClick={uploadToRoblox} disabled={uploading} className={`${BTN_PRIMARY} w-full py-4 text-base`}>
+              {uploading ? 'Uploading…' : 'Upload to Roblox'}
+            </button>
+          </section>
+
+          {results.length > 0 && (
+            <section className={`${CARD} p-6 md:p-8`}>
+              <div className="mb-6 flex items-center gap-3">
+                <span className="h-px flex-1 bg-white/10" />
+                <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload Results</h2>
+                <button onClick={copyResults} className={BTN_GHOST}>Copy</button>
+                <span className="h-px flex-1 bg-white/10" />
+              </div>
+              <div className="space-y-2">
+                {results.map((result, index) => (
+                  <div
+                    key={index}
+                    className={`rounded-xl border px-4 py-5 ${
+                      result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
+                    }`}
+                  >
+                    {result.success ? (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="font-serif text-lg leading-snug text-white">{result.filename}</div>
+                          <StatusBadge status={result.status} />
+                        </div>
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Asset ID</div>
+                            <div className="mt-1 flex items-center justify-between gap-2">
+                              <span className="truncate font-mono text-base tabular-nums text-white">{result.assetId}</span>
+                              <button
+                                onClick={() => copyAssetId(result.assetId)}
+                                className="shrink-0 text-[10px] uppercase tracking-[0.15em] text-indigo-300 transition hover:text-indigo-200"
+                              >
+                                Copy
+                              </button>
+                            </div>
+                          </div>
+                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Roblox Playback</div>
+                            <div className="mt-1 font-mono text-base tabular-nums text-indigo-200">
+                              {calculateRobloxPlaybackSpeed()}
+                            </div>
+                          </div>
+                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Tuning</div>
+                            <div className="mt-1 font-mono text-base tabular-nums text-white/80">
+                              {speed}x · {amplify}dB
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="text-sm font-medium text-white/90">{result.filename}</div>
+                        <div className="mt-1 text-xs text-rose-300/80">{result.error}</div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
-        </div>
+
+          <section className={`${CARD} p-6 md:p-8`}>
+            <div className="mb-6 flex items-center gap-3">
+              <span className="h-px flex-1 bg-white/10" />
+              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload History</h2>
+              <button onClick={() => setShowHistory(!showHistory)} className={BTN_GHOST}>
+                {showHistory ? 'Hide' : 'Show'}
+              </button>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+
+            {showHistory && (
+              <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+                {uploadHistory.map((item) => (
+                  <div key={item.id} className="rounded-xl border border-white/10 bg-black/30 px-4 py-4">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-white/90">{item.name}</div>
+                        <div className="mt-1 truncate font-mono text-xs text-white/45">{item.asset_id}</div>
+                        {item.youtube_url && (
+                          <div className="mt-1 truncate text-xs text-white/30">{item.youtube_url}</div>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-white/35">
+                          <span>Playback <span className="font-mono text-white/60">{item.roblox_playback_speed}</span></span>
+                          <span>Speed <span className="font-mono text-white/60">{item.original_speed}x</span></span>
+                          <span>Amplify <span className="font-mono text-white/60">{item.amplify}dB</span></span>
+                        </div>
+                        <div className="mt-1 text-xs text-white/25">{new Date(item.uploaded_at).toLocaleString()}</div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <StatusBadge status={item.status} />
+                        {item.status === 'Pending' && (
+                          <button
+                            onClick={() => refreshStatus(item.asset_id)}
+                            className="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-white/60 transition hover:bg-white/5 hover:text-white"
+                          >
+                            Refresh
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </main>
+
+        <footer className="mt-12 flex flex-col items-center gap-1 border-t border-white/5 pt-8 text-center">
+          <p className="font-serif text-lg italic text-white/60">S2 Studio — Audio Master to Roblox</p>
+          <p className="text-[10px] uppercase tracking-[0.3em] text-white/25">Created by fhrlsym</p>
+        </footer>
       </div>
     </div>
   );
