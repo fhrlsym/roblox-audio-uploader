@@ -213,30 +213,17 @@ export default function Home() {
 
       try {
         const formData = new FormData();
-        formData.append('fileContent', file);
+        formData.append('file', file);
+        formData.append('assetType', 'Audio');
+        formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
+        formData.append('description', `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`);
+        formData.append('creatorType', targetType);
+        formData.append('creatorId', targetType === 'group' ? groupId : userId);
+        formData.append('apiKey', apiKey);
 
-        const uploadUrl = targetType === 'user'
-          ? `https://apis.roblox.com/assets/v1/assets`
-          : `https://apis.roblox.com/assets/v1/assets`;
-
-        const requestBody: any = {
-          assetType: 'Audio',
-          displayName: file.name.replace(/\.[^/.]+$/, ''),
-          description: `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`,
-          creationContext: {
-            creator: targetType === 'user'
-              ? { userId: userId }
-              : { groupId: groupId }
-          }
-        };
-
-        const response = await fetch(uploadUrl, {
+        const response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
           method: 'POST',
-          headers: {
-            'x-api-key': apiKey,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(requestBody),
+          body: formData,
         });
 
         const result = await response.json();
@@ -276,9 +263,9 @@ export default function Home() {
 
   const checkAssetStatus = async (assetId: string, apiKey: string): Promise<string> => {
     try {
-      const response = await fetch(`https://apis.roblox.com/assets/v1/assets/${assetId}`, {
-        headers: { 'x-api-key': apiKey },
-      });
+      const response = await fetch(
+        `${BACKEND_URL}/api/asset-status/${assetId}?apiKey=${encodeURIComponent(apiKey)}`
+      );
 
       const data = await response.json();
 
@@ -288,6 +275,7 @@ export default function Home() {
         }
       }
 
+      if (data.status) return data.status;
       if (data.state === 'Active') return 'Active';
       if (data.state === 'Pending') return 'Pending';
       return 'Failed';

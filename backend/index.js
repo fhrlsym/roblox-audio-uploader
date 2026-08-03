@@ -211,6 +211,88 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
   }
 });
 
+app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
+  const {
+    assetType = 'Audio',
+    displayName = 'Untitled',
+    description = '',
+    creatorType = 'user',
+    creatorId,
+    apiKey,
+  } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Missing file' });
+  }
+
+  if (!creatorId) {
+    return res.status(400).json({ error: 'Missing creator ID' });
+  }
+
+  const form = new FormData();
+  form.append('assetType', assetType);
+  form.append('displayName', displayName);
+  form.append('description', description);
+  form.append('creationContext', JSON.stringify({
+    creator: creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId },
+  }));
+  form.append('fileContent', createReadStream(req.file.path), {
+    filename: req.file.originalname || 'audio.mp3',
+    contentType: req.file.mimetype || 'audio/mpeg',
+  });
+
+  try {
+    const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
+      method: 'POST',
+      headers: { 'x-api-key': apiKey },
+      body: form,
+    });
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok || !data.assetId) {
+      return res.status(response.status || 500).json({
+        error: data.message || `Upload failed (${response.status})`,
+        details: data,
+      });
+    }
+
+    res.json({ assetId: data.assetId });
+  } catch (error) {
+    console.error('Roblox upload error:', error);
+    res.status(500).json({ error: error.message });
+  } finally {
+    setTimeout(() => {
+      if (req.file && existsSync(req.file.path)) unlinkSync(req.file.path);
+    }, 1000);
+  }
+});
+
+app.get('/api/asset-status/:assetId', async (req, res) => {
+  const { apiKey } = req.query;
+  try {
+    const response = await fetch(
+      `https://apis.roblox.com/assets/v1/assets/${req.params.assetId}`,
+      { headers: { 'x-api-key': apiKey } }
+    );
+    const data = await response.json().catch(() => ({}));
+
+    let status = 'Failed';
+    if (data.moderationResult && data.moderationResult.moderationState === 'Rejected') {
+      status = 'Copyright';
+    } else if (data.state === 'Active') {
+      status = 'Active';
+    } else if (data.state === 'Pending') {
+      status = 'Pending';
+    }
+
+    res.json({ status, ...data });
+  } catch (error) {
+    console.error('Asset status error:', error);
+    res.json({ status: 'Pending', error: 'Could not check status' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
