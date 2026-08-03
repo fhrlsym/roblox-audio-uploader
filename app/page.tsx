@@ -27,14 +27,17 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SectionHeader({ num, title, right }: { num: string; title: string; right?: React.ReactNode }) {
+function SectionHeader({ num, title, right, hint }: { num: string; title: string; right?: React.ReactNode; hint?: string }) {
   return (
-    <div className="mb-6 flex items-center gap-4">
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d4af37]/30 bg-[#d4af37]/[0.06] font-serif text-sm text-[#e6c15c]">
-        {num}
-      </span>
-      <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">{title}</h2>
-      {right && <div className="ml-auto">{right}</div>}
+    <div className="mb-6">
+      <div className="flex items-center gap-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d4af37]/30 bg-[#d4af37]/[0.06] font-serif text-sm text-[#e6c15c]">
+          {num}
+        </span>
+        <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">{title}</h2>
+        {right && <div className="ml-auto">{right}</div>}
+      </div>
+      {hint && <p className="mt-3 pl-[3.25rem] text-xs leading-relaxed text-white/35">{hint}</p>}
     </div>
   );
 }
@@ -54,12 +57,14 @@ export default function Home() {
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
 
-  const [youtubeUrls, setYoutubeUrls] = useState('');
+  const [youtubeLinks, setYoutubeLinks] = useState<string[]>([]);
+  const [youtubeLinkInput, setYoutubeLinkInput] = useState('');
   const [speed, setSpeed] = useState(2.30);
   const [amplify, setAmplify] = useState(-4);
   const [downloading, setDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<any[]>([]);
   const [autoUpload, setAutoUpload] = useState(false);
+  const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
 
   const [uploadHistory, setUploadHistory] = useState<AudioUpload[]>([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -207,10 +212,23 @@ export default function Home() {
     }
   };
 
+  const addYoutubeLink = () => {
+    const candidate = youtubeLinkInput.trim();
+    if (!candidate) return;
+    if (!youtubeLinks.some(l => l === candidate)) {
+      setYoutubeLinks(prev => [...prev, candidate]);
+    }
+    setYoutubeLinkInput('');
+  };
+
+  const removeYoutubeLink = (index: number) => {
+    setYoutubeLinks(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleYoutubeDownload = async () => {
-    const urls = youtubeUrls.split('\n').filter(url => url.trim());
+    const urls = youtubeLinks.filter(url => url.trim());
     if (urls.length === 0) {
-      alert('Please enter at least one YouTube URL');
+      alert('Tambahkan minimal satu link YouTube dulu');
       return;
     }
 
@@ -310,16 +328,20 @@ export default function Home() {
           prev.map(p => p.url === url ? { ...p, status: 'completed', progress: 100 } : p)
         );
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Download failed';
+        if (/sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha/i.test(message)) {
+          setCookieHelpUrl(url);
+        }
         setDownloadProgress(prev =>
           prev.map(p => p.url === url ? {
             ...p,
             status: 'failed',
             progress: 0,
-            error: error instanceof Error ? error.message : 'Download failed',
+            error: message,
           } : p)
         );
         if (autoUpload) {
-          setResults(prev => [...prev, { filename: url, error: error instanceof Error ? error.message : 'Download failed', success: false }]);
+          setResults(prev => [...prev, { filename: url, error: message, success: false }]);
         }
       }
     };
@@ -335,28 +357,28 @@ export default function Home() {
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, urls.length) }, worker));
 
     setDownloading(false);
-    if (autoUpload) setYoutubeUrls('');
+    if (autoUpload) setYoutubeLinks([]);
   };
 
   const uploadToRoblox = async () => {
     if (files.length === 0) {
-      alert('Please select files or download from YouTube first');
+      alert('Pilih file dulu, atau convert dari YouTube terlebih dahulu');
       return;
     }
 
     const validApiKeys = apiKeys.filter(key => key.trim());
     if (validApiKeys.length === 0) {
-      alert('Please enter at least one API key');
+      alert('Masukkan minimal satu API Key');
       return;
     }
 
     if (targetType === 'user' && !userId.trim()) {
-      alert('Please enter User ID');
+      alert('Masukkan User ID');
       return;
     }
 
     if (targetType === 'group' && !groupId.trim()) {
-      alert('Please enter Group ID');
+      alert('Masukkan Group ID');
       return;
     }
 
@@ -417,7 +439,7 @@ export default function Home() {
               success: true,
             });
 
-            const youtubeUrl = youtubeUrls.split('\n')[i]?.trim() || undefined;
+            const youtubeUrl = youtubeLinks[i]?.trim() || undefined;
             await saveToDatabase(assetId, file.name, status, youtubeUrl);
           } else {
             uploadResults.push({
@@ -445,7 +467,7 @@ export default function Home() {
     setResults(uploadResults);
     setUploading(false);
     setFiles([]);
-    setYoutubeUrls('');
+    setYoutubeLinks([]);
   };
 
   const checkAssetStatus = async (assetId: string, apiKey: string): Promise<string> => {
@@ -504,12 +526,12 @@ export default function Home() {
       .map(r => `${r.filename}: ${r.assetId} (${r.status})`)
       .join('\n');
     navigator.clipboard.writeText(text);
-    alert('Results copied to clipboard!');
+    alert('Hasil sudah disalin ke clipboard!');
   };
 
   const copyAssetId = async (assetId: string) => {
     await navigator.clipboard.writeText(assetId);
-    alert('Asset ID copied!');
+    alert('Asset ID disalin!');
   };
 
   if (!isAuthenticated) {
@@ -592,10 +614,17 @@ export default function Home() {
 
         <main className="mt-6 space-y-6">
           <section className={`${CARD} p-6 md:p-8`}>
-            <SectionHeader num="01" title="Audio Settings" />
+            <SectionHeader
+              num="01"
+              title="Audio Settings"
+              hint="Isi ini hanya kalau sudah paham. Untuk umumnya, biarkan saja nilai bawaan (default) — sudah diset paling enak untuk Roblox."
+            />
             <div className="grid gap-6 md:grid-cols-3">
               <div>
-                <label className={LABEL}>Speed (Playback)</label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">Speed (Playback)</label>
+                  <span className="text-[10px] text-white/25">makin besar = makin cepat</span>
+                </div>
                 <input
                   type="number"
                   step="0.01"
@@ -605,7 +634,10 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label className={LABEL}>Amplify (dB)</label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">Amplify (dB)</label>
+                  <span className="text-[10px] text-white/25">minus = lebih pelan</span>
+                </div>
                 <input
                   type="number"
                   step="1"
@@ -621,23 +653,61 @@ export default function Home() {
                     {calculateRobloxPlaybackSpeed()}
                   </div>
                 </div>
+                <button
+                  onClick={() => { setSpeed(2.30); setAmplify(-4); }}
+                  className="mt-2 text-left text-[10px] uppercase tracking-[0.15em] text-white/30 transition hover:text-[#e6c15c]"
+                >
+                  Reset ke bawaan
+                </button>
               </div>
             </div>
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <SectionHeader num="02" title="YouTube Converter" />
-            <textarea
-              value={youtubeUrls}
-              onChange={(e) => setYoutubeUrls(e.target.value)}
-              placeholder="https://www.youtube.com/watch?v=..."
-              rows={5}
-              className={`${INPUT} resize-y font-mono`}
+            <SectionHeader
+              num="02"
+              title="YouTube Converter"
+              hint="Tempel link lagu YouTube, klik Tambah. Ulangi untuk tiap lagu. Setelah itu klik tombol Convert."
             />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <input
+                value={youtubeLinkInput}
+                onChange={(e) => setYoutubeLinkInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addYoutubeLink(); } }}
+                placeholder="Tempel link YouTube di sini, contoh: https://www.youtube.com/watch?v=..."
+                className={`${INPUT} flex-1`}
+              />
+              <button onClick={addYoutubeLink} className={`${BTN_GHOST} shrink-0`}>
+                + Tambah
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-white/35">Paste satu link, klik Tambah. Ulangi kalau mau lebih dari satu.</p>
+
+            {youtubeLinks.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {youtubeLinks.map((link, index) => (
+                  <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-2.5">
+                    <span className="min-w-0 flex-1 truncate text-sm text-white/70">{link}</span>
+                    <button
+                      onClick={() => removeYoutubeLink(index)}
+                      disabled={downloading}
+                      className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1 text-xs text-white/50 transition hover:border-rose-400/30 hover:text-rose-300 disabled:opacity-50"
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-              <p className="text-xs text-white/35">One URL per line · downloaded files appear below</p>
+              <p className="text-xs text-white/35">
+                {youtubeLinks.length === 0
+                  ? 'Belum ada link ditambahkan'
+                  : `${youtubeLinks.length} link siap ${autoUpload ? 'dikonversi & diupload' : 'dikonversi'}`}
+              </p>
               <button onClick={handleYoutubeDownload} disabled={downloading} className={BTN_PRIMARY}>
-                {downloading ? 'Converting…' : (autoUpload ? 'Convert & Upload to Roblox' : 'Download & Convert to MP3')}
+                {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload ke Roblox' : 'Convert ke MP3')}
               </button>
             </div>
 
@@ -651,8 +721,13 @@ export default function Home() {
               }`}
             >
               <span className={`h-2.5 w-2.5 rounded-full ${autoUpload ? 'bg-[#f5d06f]' : 'bg-white/25'}`} />
-              Auto-upload langsung ke Roblox {autoUpload ? 'ON' : 'OFF'}
+              Langsung upload ke Roblox {autoUpload ? 'ON' : 'OFF'}
             </button>
+            <p className="mt-1.5 text-xs text-white/30">
+              {autoUpload
+                ? 'Aktif: setiap lagu otomatis diupload ke Roblox setelah dikonversi.'
+                : 'Mati: lagu hanya dikonversi ke MP3 dan masuk ke daftar Upload di bawah.'}
+            </p>
 
             <details className="mt-5 rounded-xl border border-white/10 bg-black/30">
               <summary className="cursor-pointer px-4 py-3 text-sm text-white/50 transition hover:text-white">
@@ -674,6 +749,58 @@ export default function Home() {
               </div>
             </details>
 
+            {cookieHelpUrl && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setCookieHelpUrl(null)}>
+                <div className="w-full max-w-lg rounded-2xl border border-[#d4af37]/25 bg-[#0d0d10] p-6" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <h3 className="font-serif text-xl text-[#f5d06f]">Oops, kena "not a bot" 🤖</h3>
+                      <p className="mt-1 text-xs text-white/40">YouTube curiga kita robot. Tenang, gampang kok.</p>
+                    </div>
+                    <button onClick={() => setCookieHelpUrl(null)} className="text-white/40 transition hover:text-white">✕</button>
+                  </div>
+
+                  <ol className="mt-5 space-y-3">
+                    {[
+                      ['Install ekstensi', 'Buka Chrome/Edge → Chrome Web Store → cari "Get cookies.txt LOCALLY" → Add to Chrome. (Gratis)'],
+                      ['Login YouTube', 'Buka youtube.com lalu login pakai akun yang sama seperti biasa.'],
+                      ['Export cookies', 'Klik ikon ekstensi di pojok kanan atas → tombol "Export". File cookies.txt akan terdownload.'],
+                      ['Copy isinya', 'Buka file cookies.txt itu (pakai Notepad). Tekan Ctrl+A lalu Ctrl+C.'],
+                      ['Tempel di bawah', 'Klik kotak di bawah ini, tekan Ctrl+V, lalu klik tombol Simpan.'],
+                    ].map(([title, desc], i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#d4af37]/30 text-xs text-[#e6c15c]">{i + 1}</span>
+                        <div>
+                          <div className="text-sm font-medium text-white/90">{title}</div>
+                          <div className="mt-0.5 text-xs leading-relaxed text-white/50">{desc}</div>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+
+                  <textarea
+                    value={youtubeCookies}
+                    onChange={(e) => setYoutubeCookies(e.target.value)}
+                    rows={5}
+                    placeholder={'Tempel isi cookies.txt di sini...'}
+                    className={`${INPUT} mt-5 resize-y font-mono text-xs`}
+                  />
+
+                  <div className="mt-4 flex gap-3">
+                    <button
+                      onClick={() => { setCookieHelpUrl(null); setYoutubeLinks(prev => prev.includes(cookieHelpUrl) ? prev : [...prev, cookieHelpUrl]); }}
+                      className={`${BTN_PRIMARY} flex-1`}
+                    >
+                      Simpan & Coba Lagi
+                    </button>
+                    <button onClick={() => setCookieHelpUrl(null)} className={BTN_GHOST}>
+                      Nanti saja
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {downloadProgress.length > 0 && (
               <div className="mt-5 space-y-2">
                 {downloadProgress.map((item, index) => (
@@ -683,7 +810,9 @@ export default function Home() {
                       item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[#f5d06f]'
                     }`} />
                     <span className="min-w-0 flex-1 truncate text-sm text-white/70">{item.url}</span>
-                    <span className="text-xs capitalize text-white/40">{item.status}</span>
+                    <span className={`text-xs capitalize ${item.status === 'failed' ? 'text-rose-300/80' : 'text-white/40'}`}>
+                      {item.status === 'completed' ? 'Selesai' : item.status === 'failed' ? 'Gagal' : 'Memproses…'}
+                    </span>
                     {item.error && <span className="max-w-[45%] truncate text-xs text-rose-300/80" title={item.error}>{item.error}</span>}
                   </div>
                 ))}
@@ -692,14 +821,18 @@ export default function Home() {
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <SectionHeader num="03" title="Upload Files" />
+            <SectionHeader
+              num="03"
+              title="Upload Files"
+              hint="Lagu dari YouTube yang sudah dikonversi akan otomatis muncul di sini. Kamu juga bisa unggah file MP3 sendiri."
+            />
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => document.getElementById('fileInput')?.click()}
               className="cursor-pointer rounded-xl border border-dashed border-[#d4af37]/25 px-8 py-12 text-center transition hover:border-[#d4af37]/50 hover:bg-[#d4af37]/[0.03]"
             >
-              <p className="text-sm text-white/60">Drag &amp; drop files, or click to browse</p>
+              <p className="text-sm text-white/60">Seret file ke sini, atau klik untuk pilih</p>
               <p className="mt-1 text-xs text-white/30">MP3 · OGG · FLAC · WAV</p>
               <input
                 id="fileInput"
@@ -713,7 +846,7 @@ export default function Home() {
 
             {files.length > 0 && (
               <div className="mt-5 space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/35">Selected · {files.length}</p>
+                <p className="text-xs uppercase tracking-[0.2em] text-white/35">Terpilih · {files.length}</p>
                 {files.map((file, index) => (
                   <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
                     <span className="min-w-0 flex-1 truncate text-sm text-white/80">{file.name}</span>
@@ -721,7 +854,7 @@ export default function Home() {
                       onClick={() => removeFile(index)}
                       className="rounded-lg border border-white/10 px-3 py-1 text-xs text-white/50 transition hover:border-rose-400/30 hover:text-rose-300"
                     >
-                      Remove
+                      Hapus
                     </button>
                   </div>
                 ))}
@@ -730,7 +863,11 @@ export default function Home() {
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <SectionHeader num="04" title="Roblox Account" />
+            <SectionHeader
+              num="04"
+              title="Roblox Account"
+              hint="Isi sekali saja. API Key dari pengembang (fhrlsym), lalu pilih mau upload ke User atau Group dan masukkan ID-nya."
+            />
             <div className="mb-6 grid gap-6 md:grid-cols-2">
               <div>
                 <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl border border-[#d4af37]/20 bg-black/40 p-1.5">
@@ -796,18 +933,18 @@ export default function Home() {
               disabled={uploading}
               className="w-full rounded-xl bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#c9a227] py-5 text-lg font-bold text-black shadow-[0_0_40px_rgba(212,175,55,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:via-white/10 disabled:to-white/10 disabled:text-white/40 disabled:shadow-none"
             >
-              {uploading ? 'Uploading…' : `Upload to Roblox (${files.length} Audio)`}
+              {uploading ? 'Mengupload…' : `Upload ke Roblox (${files.length} Audio)`}
             </button>
             <p className="mt-3 text-center text-xs text-white/35">
               {files.length > 0
-                ? `Ready to upload ${files.length} file(s) to ${targetType === 'user' ? 'user' : 'group'} ${targetType === 'user' ? userId : groupId}`
-                : 'No audio files selected yet'}
+                ? `Siap diupload ${files.length} file ke ${targetType === 'user' ? 'user' : 'group'} ${targetType === 'user' ? userId : groupId}`
+                : 'Belum ada file audio. Convert dari YouTube atau unggah file dulu.'}
             </p>
           </section>
 
           {results.length > 0 && (
             <section className={`${CARD} p-6 md:p-8`}>
-              <SectionHeader num="05" title="Upload Results" right={<button onClick={copyResults} className={BTN_GHOST}>Copy</button>} />
+              <SectionHeader num="05" title="Hasil Upload" right={<button onClick={copyResults} className={BTN_GHOST}>Salin</button>} />
               <div className="space-y-2">
                 {results.map((result, index) => (
                   <div
@@ -864,10 +1001,10 @@ export default function Home() {
           <section className={`${CARD} p-6 md:p-8`}>
             <SectionHeader
               num="06"
-              title="Upload History"
+              title="Riwayat Upload"
               right={
                 <button onClick={() => setShowHistory(!showHistory)} className={BTN_GHOST}>
-                  {showHistory ? 'Hide' : 'Show'}
+                  {showHistory ? 'Sembunyikan' : 'Lihat'}
                 </button>
               }
             />
