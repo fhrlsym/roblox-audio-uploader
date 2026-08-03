@@ -274,15 +274,28 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
     const operationId = pathMatch[1];
 
     let assetId = null;
-    let lastOp = {};
-    for (let attempt = 0; attempt < 30; attempt += 1) {
+    let lastOp = null;
+    for (let attempt = 0; attempt < 90; attempt += 1) {
       await new Promise((r) => setTimeout(r, 1000));
-      const opRes = await fetch(
-        `https://apis.roblox.com/assets/v1/operations/${operationId}`,
-        { headers: { 'x-api-key': apiKey } }
-      );
-      const opData = await opRes.json().catch(() => ({}));
+      let opData = {};
+      try {
+        const opRes = await fetch(
+          `https://apis.roblox.com/assets/v1/operations/${operationId}`,
+          { headers: { 'x-api-key': apiKey } }
+        );
+        opData = await opRes.json().catch(() => ({}));
+      } catch {
+        continue;
+      }
       lastOp = opData;
+
+      if (opData.error && !opData.done) {
+        return res.status(400).json({
+          error: opData.error.message || opData.error.status || 'Operation failed',
+          details: opData,
+        });
+      }
+
       if (opData.done) {
         const assetPath = (opData.response && opData.response.path) || opData.path || '';
         const assetMatch = assetPath.match(/assets\/(\d+)/);
@@ -299,7 +312,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
 
     if (!assetId) {
       return res.status(500).json({
-        error: 'Upload reached Roblox but timed out waiting for the asset ID',
+        error: 'Upload reached Roblox but the asset is still processing',
         details: lastOp,
       });
     }
