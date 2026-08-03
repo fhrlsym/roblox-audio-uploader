@@ -52,6 +52,7 @@ export default function Home() {
   const [groupId, setGroupId] = useState('');
   const [apiKeys, setApiKeys] = useState<string[]>(['']);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [youtubeCookies, setYoutubeCookies] = useState('');
 
   const [youtubeUrls, setYoutubeUrls] = useState('');
   const [speed, setSpeed] = useState(2.30);
@@ -81,6 +82,7 @@ export default function Home() {
         if (s.targetType === 'user' || s.targetType === 'group') setTargetType(s.targetType);
         if (typeof s.speed === 'number') setSpeed(s.speed);
         if (typeof s.amplify === 'number') setAmplify(s.amplify);
+        if (typeof s.youtubeCookies === 'string') setYoutubeCookies(s.youtubeCookies);
       }
     } catch {
       // ignore corrupt saved settings
@@ -97,8 +99,9 @@ export default function Home() {
       targetType,
       speed,
       amplify,
+      youtubeCookies,
     }));
-  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify]);
+  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -218,7 +221,7 @@ export default function Home() {
         const response = await fetch(`${BACKEND_URL}/api/youtube-download`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: url.trim(), speed, amplify }),
+          body: JSON.stringify({ url: url.trim(), speed, amplify, cookies: youtubeCookies }),
         });
 
         const data = await response.json();
@@ -549,6 +552,26 @@ export default function Home() {
                 {downloading ? 'Converting…' : 'Download & Convert to MP3'}
               </button>
             </div>
+
+            <details className="mt-5 rounded-xl border border-white/10 bg-black/30">
+              <summary className="cursor-pointer px-4 py-3 text-sm text-white/50 transition hover:text-white">
+                YouTube Cookies <span className="text-xs text-white/30">(opsional — kalau kena "not a bot")</span>
+              </summary>
+              <div className="px-4 pb-4 pt-2">
+                <textarea
+                  value={youtubeCookies}
+                  onChange={(e) => setYoutubeCookies(e.target.value)}
+                  rows={6}
+                  placeholder={'# Netscape HTTP Cookie File\n# Paste cookies.txt content here'}
+                  className={`${INPUT} resize-y font-mono text-xs`}
+                />
+                <p className="mt-2 text-xs text-white/30">
+                  Cara: install extension <span className="text-white/50">"Get cookies.txt LOCALLY"</span>, buka YouTube
+                  (sudah login) → Export → buka file <span className="text-white/50">cookies.txt</span> → Ctrl+A, Ctrl+C → tempel di atas.
+                  Tersimpan otomatis di browser ini.
+                </p>
+              </div>
+            </details>
 
             {downloadProgress.length > 0 && (
               <div className="mt-5 space-y-2">

@@ -26,10 +26,11 @@ if (process.env.YT_COOKIES_B64) {
   }
 }
 
-async function runYtdl(args) {
+async function runYtdl(args, cookiesFile) {
   const baseArgs = ['--no-warnings', '--no-check-certificates', '--no-playlist'];
-  if (existsSync(COOKIES_PATH)) {
-    baseArgs.push('--cookies', COOKIES_PATH);
+  const cf = cookiesFile || (existsSync(COOKIES_PATH) ? COOKIES_PATH : null);
+  if (cf) {
+    baseArgs.push('--cookies', cf);
   }
   const { stdout, stderr } = await execFileAsync(YTDLP, [...baseArgs, ...args], {
     timeout: 120000,
@@ -79,7 +80,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
 }
 
 app.post('/api/youtube-download', async (req, res) => {
-  const { url, speed = 1.0, amplify = 0 } = req.body;
+  const { url, speed = 1.0, amplify = 0, cookies } = req.body;
 
   if (!url || !/youtube\.com|youtu\.be/.test(url)) {
     return res.status(400).json({ error: 'Invalid YouTube URL' });
@@ -90,12 +91,18 @@ app.post('/api/youtube-download', async (req, res) => {
   const tempAudioPath = join(__dirname, `temp_${videoId}.mp3`);
   const outputPath = join(__dirname, `output_${videoId}.mp3`);
 
+  let cookiesFile = null;
+  if (cookies && typeof cookies === 'string' && cookies.trim()) {
+    cookiesFile = join(__dirname, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
+    writeFileSync(cookiesFile, cookies);
+  }
+
   try {
     const title = String(await runYtdl([
       '--print', 'title',
       '--extractor-args', 'youtube:player_client=tv,android,ios',
       url,
-    ])).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
+    ], cookiesFile)).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
     await runYtdl([
       url,
@@ -106,7 +113,7 @@ app.post('/api/youtube-download', async (req, res) => {
       '--audio-quality', '0',
       '--extractor-args', 'youtube:player_client=tv,android,ios',
       '--retries', '3',
-    ]);
+    ], cookiesFile);
 
     const needsProcessing = parseFloat(speed) !== 1.0 || parseFloat(amplify) !== 0;
 
@@ -142,6 +149,8 @@ app.post('/api/youtube-download', async (req, res) => {
       if (existsSync(f)) unlinkSync(f);
     }
     res.status(500).json({ error: error.message || 'Download failed' });
+  } finally {
+    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
   }
 });
 
