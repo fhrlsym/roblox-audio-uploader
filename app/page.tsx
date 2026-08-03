@@ -228,17 +228,46 @@ export default function Home() {
 
         const result = await response.json();
 
-        if (response.ok && result.assetId) {
-          const status = await checkAssetStatus(result.assetId, apiKey);
-          uploadResults.push({
-            filename: file.name,
-            assetId: result.assetId,
-            status: status,
-            success: true,
-          });
-          
-          const youtubeUrl = youtubeUrls.split('\n')[i]?.trim() || undefined;
-          await saveToDatabase(result.assetId, file.name, status, youtubeUrl);
+        if (response.ok && result.operationId) {
+          let assetId: string | null = null;
+          let status = 'Pending';
+          let opError: string | null = null;
+
+          for (let attempt = 0; attempt < 120; attempt += 1) {
+            await new Promise((r) => setTimeout(r, 3000));
+            const opResponse = await fetch(
+              `${BACKEND_URL}/api/operation-status/${result.operationId}?apiKey=${encodeURIComponent(apiKey)}`
+            );
+            const opData = await opResponse.json();
+
+            if (opData.done) {
+              if (opData.assetId) {
+                assetId = opData.assetId;
+                status = opData.status || 'Pending';
+              } else {
+                opError = opData.error || 'Upload failed during moderation';
+              }
+              break;
+            }
+          }
+
+          if (assetId) {
+            uploadResults.push({
+              filename: file.name,
+              assetId,
+              status,
+              success: true,
+            });
+
+            const youtubeUrl = youtubeUrls.split('\n')[i]?.trim() || undefined;
+            await saveToDatabase(assetId, file.name, status, youtubeUrl);
+          } else {
+            uploadResults.push({
+              filename: file.name,
+              error: opError || 'Upload is still processing after 6 minutes',
+              success: false,
+            });
+          }
         } else {
           uploadResults.push({
             filename: file.name,

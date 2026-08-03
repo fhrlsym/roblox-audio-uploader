@@ -271,58 +271,59 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
     if (!pathMatch) {
       return res.status(500).json({ error: 'No operation ID returned', details: data });
     }
-    const operationId = pathMatch[1];
 
-    let assetId = null;
-    let lastOp = null;
-    for (let attempt = 0; attempt < 90; attempt += 1) {
-      await new Promise((r) => setTimeout(r, 1000));
-      let opData = {};
-      try {
-        const opRes = await fetch(
-          `https://apis.roblox.com/assets/v1/operations/${operationId}`,
-          { headers: { 'x-api-key': apiKey } }
-        );
-        opData = await opRes.json().catch(() => ({}));
-      } catch {
-        continue;
-      }
-      lastOp = opData;
-
-      if (opData.error && !opData.done) {
-        return res.status(400).json({
-          error: opData.error.message || opData.error.status || 'Operation failed',
-          details: opData,
-        });
-      }
-
-      if (opData.done) {
-        const assetPath = (opData.response && opData.response.path) || opData.path || '';
-        const assetMatch = assetPath.match(/assets\/(\d+)/);
-        assetId = assetMatch ? assetMatch[1] : null;
-        if (opData.error && !assetId) {
-          return res.status(400).json({
-            error: opData.error.message || opData.error.status || 'Operation failed',
-            details: opData,
-          });
-        }
-        break;
-      }
-    }
-
-    if (!assetId) {
-      return res.status(500).json({
-        error: 'Upload reached Roblox but the asset is still processing',
-        details: lastOp,
-      });
-    }
-
-    res.json({ assetId });
+    res.json({ operationId: pathMatch[1] });
   } catch (error) {
     console.error('Roblox upload error:', error);
     res.status(500).json({ error: error.message });
   } finally {
     cleanup();
+  }
+});
+
+app.get('/api/operation-status/:operationId', async (req, res) => {
+  const { apiKey } = req.query;
+
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Missing API key' });
+  }
+
+  try {
+    const opRes = await fetch(
+      `https://apis.roblox.com/assets/v1/operations/${req.params.operationId}`,
+      { headers: { 'x-api-key': apiKey } }
+    );
+    const data = await opRes.json().catch(() => ({}));
+
+    if (data.error && !data.done) {
+      return res.status(400).json({ done: true, error: data.error.message || data.error.status || 'Operation failed' });
+    }
+
+    if (!data.done) {
+      return res.json({ done: false });
+    }
+
+    const assetPath = (data.response && data.response.path) || data.path || '';
+    const assetMatch = assetPath.match(/assets\/(\d+)/);
+    const assetId = assetMatch ? assetMatch[1] : null;
+
+    if (!assetId) {
+      return res.status(400).json({ done: true, error: 'Asset upload failed without an asset ID', details: data });
+    }
+
+    let status = 'Pending';
+    const moderation = data.response && data.response.moderationResult;
+    if (moderation) {
+      const m = moderation.moderationState;
+      if (m === 'MODERATION_STATE_APPROVED') status = 'Active';
+      else if (m === 'MODERATION_STATE_REJECTED') status = 'Copyright';
+      else if (m && m.includes('REJECTED')) status = 'Copyright';
+    }
+
+    res.json({ done: true, assetId, status });
+  } catch (error) {
+    console.error('Operation status error:', error);
+    res.json({ done: false, error: 'Could not check upload status' });
   }
 });
 
