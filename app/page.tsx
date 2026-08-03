@@ -242,7 +242,7 @@ export default function Home() {
         } else {
           uploadResults.push({
             filename: file.name,
-            error: result.message || 'Upload failed',
+            error: result.error || result.message || 'Upload failed',
             success: false,
           });
         }

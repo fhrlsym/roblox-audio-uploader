@@ -231,17 +231,25 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
     return res.status(400).json({ error: 'Missing creator ID' });
   }
 
+  const creator = creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId };
+
   const form = new FormData();
-  form.append('assetType', assetType);
-  form.append('displayName', displayName);
-  form.append('description', description);
-  form.append('creationContext', JSON.stringify({
-    creator: creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId },
+  form.append('request', JSON.stringify({
+    assetType,
+    displayName,
+    description,
+    creationContext: { creator },
   }));
   form.append('fileContent', createReadStream(req.file.path), {
     filename: req.file.originalname || 'audio.mp3',
     contentType: req.file.mimetype || 'audio/mpeg',
   });
+
+  const cleanup = () => {
+    setTimeout(() => {
+      if (req.file && existsSync(req.file.path)) unlinkSync(req.file.path);
+    }, 1000);
+  };
 
   try {
     const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
@@ -252,21 +260,56 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
 
     const data = await response.json().catch(() => ({}));
 
-    if (!response.ok || !data.assetId) {
+    if (!response.ok) {
       return res.status(response.status || 500).json({
-        error: data.message || `Upload failed (${response.status})`,
+        error: data.message || data.code || `Upload failed (${response.status})`,
         details: data,
       });
     }
 
-    res.json({ assetId: data.assetId });
+    const pathMatch = (data.path || '').match(/operations\/(.+)/);
+    if (!pathMatch) {
+      return res.status(500).json({ error: 'No operation ID returned', details: data });
+    }
+    const operationId = pathMatch[1];
+
+    let assetId = null;
+    let lastOp = {};
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+      const opRes = await fetch(
+        `https://apis.roblox.com/assets/v1/operations/${operationId}`,
+        { headers: { 'x-api-key': apiKey } }
+      );
+      const opData = await opRes.json().catch(() => ({}));
+      lastOp = opData;
+      if (opData.done) {
+        const assetPath = (opData.response && opData.response.path) || opData.path || '';
+        const assetMatch = assetPath.match(/assets\/(\d+)/);
+        assetId = assetMatch ? assetMatch[1] : null;
+        if (opData.error && !assetId) {
+          return res.status(400).json({
+            error: opData.error.message || opData.error.status || 'Operation failed',
+            details: opData,
+          });
+        }
+        break;
+      }
+    }
+
+    if (!assetId) {
+      return res.status(500).json({
+        error: 'Upload reached Roblox but timed out waiting for the asset ID',
+        details: lastOp,
+      });
+    }
+
+    res.json({ assetId });
   } catch (error) {
     console.error('Roblox upload error:', error);
     res.status(500).json({ error: error.message });
   } finally {
-    setTimeout(() => {
-      if (req.file && existsSync(req.file.path)) unlinkSync(req.file.path);
-    }, 1000);
+    cleanup();
   }
 });
 
