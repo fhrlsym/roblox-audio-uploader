@@ -336,13 +336,19 @@ app.get('/api/asset-status/:assetId', async (req, res) => {
     );
     const data = await response.json().catch(() => ({}));
 
-    let status = 'Failed';
-    if (data.moderationResult && data.moderationResult.moderationState === 'Rejected') {
-      status = 'Copyright';
-    } else if (data.state === 'Active') {
-      status = 'Active';
-    } else if (data.state === 'Pending') {
-      status = 'Pending';
+    let status = 'Pending';
+    const moderation = data.moderationResult && data.moderationResult.moderationState;
+    if (moderation) {
+      if (moderation === 'MODERATION_STATE_APPROVED' || moderation === 'Approved' || moderation === 'Active') {
+        status = 'Active';
+      } else if (moderation === 'MODERATION_STATE_REJECTED' || moderation === 'Rejected') {
+        status = 'Copyright';
+      }
+    } else if (data.state) {
+      if (data.state === 'Active') status = 'Active';
+      else if (data.state === 'Rejected') status = 'Copyright';
+      else if (data.state === 'Pending') status = 'Pending';
+      else status = 'Failed';
     }
 
     res.json({ status, ...data });

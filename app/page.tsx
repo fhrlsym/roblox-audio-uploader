@@ -91,7 +91,10 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated) {
       loadUploadHistory();
-      const interval = setInterval(loadUploadHistory, 30000);
+      const interval = setInterval(() => {
+        loadUploadHistory();
+        refreshPendingStatuses();
+      }, 30000);
       return () => clearInterval(interval);
     }
   }, [isAuthenticated]);
@@ -371,6 +374,25 @@ export default function Home() {
 
     const status = await checkAssetStatus(assetId, validApiKey);
     await updateAssetStatus(assetId, status);
+  };
+
+  const refreshPendingStatuses = async () => {
+    const validApiKey = apiKeys.find(key => key.trim());
+    if (!validApiKey) return;
+
+    const { data } = await supabase
+      .from('audio_uploads')
+      .select('asset_id, status')
+      .eq('status', 'Pending');
+
+    if (!data || data.length === 0) return;
+
+    for (const row of data) {
+      const status = await checkAssetStatus(row.asset_id, validApiKey);
+      if (status !== 'Pending' && status !== row.status) {
+        await updateAssetStatus(row.asset_id, status);
+      }
+    }
   };
 
   const copyResults = () => {
