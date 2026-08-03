@@ -70,7 +70,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
     }
 
     command
-      .audioBitrate(128)
+      .audioBitrate(320)
       .audioCodec('libmp3lame')
       .toFormat('mp3')
       .on('end', resolve)
@@ -199,7 +199,7 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
       }
 
       command
-        .audioBitrate(128)
+      .audioBitrate(320)
         .audioCodec('libmp3lame')
         .toFormat('mp3')
         .on('end', resolve)
