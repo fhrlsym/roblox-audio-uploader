@@ -1,0 +1,8 @@
+node_modules
+bin
+uploads
+temp_*.mp3
+output_*.mp3
+temp_*.m4a
+temp_*.webm
+*.log

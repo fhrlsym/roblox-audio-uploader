@@ -5,3 +5,4 @@ uploads/
 .env
 temp_*
 output_*
+bin/

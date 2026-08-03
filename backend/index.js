@@ -1,9 +1,10 @@
 import express from 'express';
 import cors from 'cors';
-import ytdl from 'ytdl-core';
 import ffmpeg from 'fluent-ffmpeg';
-import { createWriteStream, createReadStream, unlinkSync, existsSync } from 'fs';
-import { pipeline } from 'stream/promises';
+import { createReadStream, unlinkSync, existsSync } from 'fs';
+import { createWriteStream } from 'fs';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import multer from 'multer';
 import FormData from 'form-data';
 import fetch from 'node-fetch';
@@ -12,6 +13,18 @@ import { dirname, join } from 'path';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+const execFileAsync = promisify(execFile);
+
+const YTDLP = process.env.YTDLP_PATH ||
+  join(__dirname, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
+
+async function runYtdl(args) {
+  const { stdout, stderr } = await execFileAsync(YTDLP, args, {
+    timeout: 120000,
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  return stdout;
+}
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
@@ -19,62 +32,94 @@ const upload = multer({ dest: 'uploads/' });
 app.use(cors());
 app.use(express.json());
 
+function getVideoId(url) {
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
+  return m ? m[1] : null;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runFFmpeg(inputPath, outputPath, speed, amplify) {
+  return new Promise((resolve, reject) => {
+    const filters = [];
+    if (parseFloat(speed) !== 1.0) {
+      filters.push(`atempo=${speed}`);
+    }
+    if (parseFloat(amplify) !== 0) {
+      filters.push(`volume=${amplify}dB`);
+    }
+
+    let command = ffmpeg(inputPath);
+    if (filters.length > 0) {
+      command = command.audioFilters(filters);
+    }
+
+    command
+      .audioBitrate(128)
+      .audioCodec('libmp3lame')
+      .toFormat('mp3')
+      .on('end', resolve)
+      .on('error', reject)
+      .save(outputPath);
+  });
+}
+
 app.post('/api/youtube-download', async (req, res) => {
   const { url, speed = 1.0, amplify = 0 } = req.body;
 
-  if (!url || !ytdl.validateURL(url)) {
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
     return res.status(400).json({ error: 'Invalid YouTube URL' });
   }
 
-  const videoId = ytdl.getVideoID(url);
+  const videoId = getVideoId(url) || `video_${Date.now()}`;
+  const tempBase = join(__dirname, `temp_${videoId}`);
   const tempAudioPath = join(__dirname, `temp_${videoId}.mp3`);
   const outputPath = join(__dirname, `output_${videoId}.mp3`);
 
   try {
-    const info = await ytdl.getInfo(url);
-    const title = info.videoDetails.title.replace(/[^\w\s-]/g, '').substring(0, 50);
+    const title = String(await runYtdl([
+      '--print', 'title',
+      '--no-warnings',
+      '--no-check-certificates',
+      '--no-playlist',
+      url,
+    ])).replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
-    const audioStream = ytdl(url, {
-      quality: 'highestaudio',
-      filter: 'audioonly',
-    });
+    await runYtdl([
+      url,
+      '--output', `${tempBase}.%(ext)s`,
+      '--format', 'bestaudio[ext=m4a]/bestaudio/best',
+      '--extract-audio',
+      '--audio-format', 'mp3',
+      '--audio-quality', '0',
+      '--no-warnings',
+      '--no-check-certificates',
+      '--no-playlist',
+      '--retries', '3',
+    ]);
 
-    const writeStream = createWriteStream(tempAudioPath);
-    await pipeline(audioStream, writeStream);
-
-    const needsProcessing = speed !== 1.0 || amplify !== 0;
+    const needsProcessing = parseFloat(speed) !== 1.0 || parseFloat(amplify) !== 0;
 
     if (needsProcessing) {
-      await new Promise((resolve, reject) => {
-        let command = ffmpeg(tempAudioPath);
-
-        const filters = [];
-        if (speed !== 1.0) {
-          filters.push(`atempo=${speed}`);
-        }
-        if (amplify !== 0) {
-          filters.push(`volume=${amplify}dB`);
-        }
-
-        if (filters.length > 0) {
-          command = command.audioFilters(filters);
-        }
-
-        command
-          .audioBitrate(128)
-          .audioCodec('libmp3lame')
-          .toFormat('mp3')
-          .on('end', resolve)
-          .on('error', reject)
-          .save(outputPath);
-      });
-
-      if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
+      if (!existsSync(tempAudioPath)) {
+        await sleep(2000);
+      }
+      if (!existsSync(tempAudioPath)) {
+        throw new Error('MP3 temp file not found after extraction');
+      }
+      if (existsSync(outputPath)) unlinkSync(outputPath);
+      await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
     } else {
       if (existsSync(outputPath)) unlinkSync(outputPath);
+      if (!existsSync(tempAudioPath)) {
+        throw new Error('MP3 temp file not found after extraction');
+      }
       createReadStream(tempAudioPath).pipe(createWriteStream(outputPath));
-      if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
     }
+
+    if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
 
     res.json({
       success: true,
@@ -85,9 +130,10 @@ app.post('/api/youtube-download', async (req, res) => {
 
   } catch (error) {
     console.error('Download error:', error);
-    if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
-    if (existsSync(outputPath)) unlinkSync(outputPath);
-    res.status(500).json({ error: error.message });
+    for (const f of [tempAudioPath, outputPath]) {
+      if (existsSync(f)) unlinkSync(f);
+    }
+    res.status(500).json({ error: error.message || 'Download failed' });
   }
 });
 
