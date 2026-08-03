@@ -1,8 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { createReadStream, unlinkSync, existsSync } from 'fs';
-import { createWriteStream } from 'fs';
+import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import multer from 'multer';
@@ -18,8 +17,21 @@ const execFileAsync = promisify(execFile);
 const YTDLP = process.env.YTDLP_PATH ||
   join(__dirname, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 
+const COOKIES_PATH = join(__dirname, 'cookies.txt');
+if (process.env.YT_COOKIES_B64) {
+  try {
+    writeFileSync(COOKIES_PATH, Buffer.from(process.env.YT_COOKIES_B64, 'base64').toString('utf8'));
+  } catch (e) {
+    console.error('Failed to write cookies file:', e.message);
+  }
+}
+
 async function runYtdl(args) {
-  const { stdout, stderr } = await execFileAsync(YTDLP, args, {
+  const baseArgs = ['--no-warnings', '--no-check-certificates', '--no-playlist'];
+  if (existsSync(COOKIES_PATH)) {
+    baseArgs.push('--cookies', COOKIES_PATH);
+  }
+  const { stdout, stderr } = await execFileAsync(YTDLP, [...baseArgs, ...args], {
     timeout: 120000,
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -81,10 +93,7 @@ app.post('/api/youtube-download', async (req, res) => {
   try {
     const title = String(await runYtdl([
       '--print', 'title',
-      '--no-warnings',
-      '--no-check-certificates',
-      '--no-playlist',
-      '--extractor-args', 'youtube:player_client=android,ios',
+      '--extractor-args', 'youtube:player_client=tv,android,ios',
       url,
     ])).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
@@ -95,10 +104,7 @@ app.post('/api/youtube-download', async (req, res) => {
       '--extract-audio',
       '--audio-format', 'mp3',
       '--audio-quality', '0',
-      '--no-warnings',
-      '--no-check-certificates',
-      '--no-playlist',
-      '--extractor-args', 'youtube:player_client=android,ios',
+      '--extractor-args', 'youtube:player_client=tv,android,ios',
       '--retries', '3',
     ]);
 
