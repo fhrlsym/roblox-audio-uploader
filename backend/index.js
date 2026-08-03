@@ -210,13 +210,11 @@ app.get('/api/download-file/:fileId', (req, res) => {
       console.error('Download error:', err);
     }
     if (existsSync(filePath)) {
-      setTimeout(() => {
-        try {
-          unlinkSync(filePath);
-        } catch (e) {
-          console.error('Cleanup error:', e);
-        }
-      }, 5000);
+      try {
+        unlinkSync(filePath);
+      } catch (e) {
+        console.error('Cleanup error:', e);
+      }
     }
   });
 });
@@ -257,11 +255,9 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
     
     processedFile.pipe(res);
 
-    processedFile.on('end', () => {
-      setTimeout(() => {
-        if (existsSync(inputPath)) unlinkSync(inputPath);
-        if (existsSync(outputPath)) unlinkSync(outputPath);
-      }, 1000);
+    processedFile.on('close', () => {
+      if (existsSync(inputPath)) unlinkSync(inputPath);
+      if (existsSync(outputPath)) unlinkSync(outputPath);
     });
 
   } catch (error) {
@@ -307,9 +303,13 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
       details: error.details,
     });
   } finally {
-    setTimeout(() => {
-      if (req.file && existsSync(req.file.path)) unlinkSync(req.file.path);
-    }, 1000);
+    if (req.file && existsSync(req.file.path)) {
+      try {
+        unlinkSync(req.file.path);
+      } catch(e) {
+        console.error('Cleanup error:', e);
+      }
+    }
   }
 });
 
@@ -356,7 +356,7 @@ app.post('/api/youtube-upload', async (req, res) => {
         details: uploadErr.details,
       });
     } finally {
-      setTimeout(cleanup, 1000);
+      cleanup();
     }
   } catch (error) {
     console.error('Download error:', error);

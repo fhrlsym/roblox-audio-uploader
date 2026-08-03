@@ -4,8 +4,15 @@ import { useState, useEffect } from 'react';
 import { supabase, AudioUpload } from '../lib/supabase';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-const CORRECT_PIN = '515753';
+const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
 const SETTINGS_KEY = 'audioUploader_settings';
+
+type ToastType = 'info' | 'success' | 'error';
+interface ToastMsg {
+  id: number;
+  message: string;
+  type: ToastType;
+}
 
 const CARD = 'rounded-2xl border border-[#d4af37]/15 bg-gradient-to-br from-white/[0.035] via-white/[0.015] to-black/30';
 const INPUT = 'w-full rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-[#d4af37]/50 focus:bg-black/70';
@@ -69,6 +76,15 @@ export default function Home() {
   const [uploadHistory, setUploadHistory] = useState<AudioUpload[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [summary, setSummary] = useState({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
+
+  const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const addToast = (message: string, type: ToastType = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
 
   useEffect(() => {
     const savedAuth = localStorage.getItem('audioUploader_auth');
@@ -228,22 +244,22 @@ export default function Home() {
   const handleYoutubeDownload = async () => {
     const urls = youtubeLinks.filter(url => url.trim());
     if (urls.length === 0) {
-      alert('Tambahkan minimal satu link YouTube dulu');
+      addToast('Tambahkan minimal satu link YouTube dulu', 'error');
       return;
     }
 
     if (autoUpload) {
       const validApiKeys = apiKeys.filter(key => key.trim());
       if (validApiKeys.length === 0) {
-        alert('Auto-upload aktif tapi API Key belum diisi');
+        addToast('Auto-upload aktif tapi API Key belum diisi', 'error');
         return;
       }
       if (targetType === 'user' && !userId.trim()) {
-        alert('Auto-upload aktif tapi User ID belum diisi');
+        addToast('Auto-upload aktif tapi User ID belum diisi', 'error');
         return;
       }
       if (targetType === 'group' && !groupId.trim()) {
-        alert('Auto-upload aktif tapi Group ID belum diisi');
+        addToast('Auto-upload aktif tapi Group ID belum diisi', 'error');
         return;
       }
     }
@@ -362,23 +378,23 @@ export default function Home() {
 
   const uploadToRoblox = async () => {
     if (files.length === 0) {
-      alert('Pilih file dulu, atau convert dari YouTube terlebih dahulu');
+      addToast('Pilih file dulu, atau convert dari YouTube terlebih dahulu', 'error');
       return;
     }
 
     const validApiKeys = apiKeys.filter(key => key.trim());
     if (validApiKeys.length === 0) {
-      alert('Masukkan minimal satu API Key');
+      addToast('Masukkan minimal satu API Key', 'error');
       return;
     }
 
     if (targetType === 'user' && !userId.trim()) {
-      alert('Masukkan User ID');
+      addToast('Masukkan User ID', 'error');
       return;
     }
 
     if (targetType === 'group' && !groupId.trim()) {
-      alert('Masukkan Group ID');
+      addToast('Masukkan Group ID', 'error');
       return;
     }
 
@@ -526,12 +542,12 @@ export default function Home() {
       .map(r => `${r.filename}: ${r.assetId} (${r.status})`)
       .join('\n');
     navigator.clipboard.writeText(text);
-    alert('Hasil sudah disalin ke clipboard!');
+    addToast('Hasil sudah disalin ke clipboard!', 'success');
   };
 
   const copyAssetId = async (assetId: string) => {
     await navigator.clipboard.writeText(assetId);
-    alert('Asset ID disalin!');
+    addToast('Asset ID disalin!', 'success');
   };
 
   if (!isAuthenticated) {
@@ -681,7 +697,18 @@ export default function Home() {
                 + Tambah
               </button>
             </div>
-            <p className="mt-2 text-xs text-white/35">Paste satu link, klik Tambah. Ulangi kalau mau lebih dari satu.</p>
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-xs text-white/35">Paste satu link, klik Tambah. Ulangi kalau mau lebih dari satu.</p>
+              {youtubeLinks.length > 0 && (
+                <button
+                  onClick={() => setYoutubeLinks([])}
+                  disabled={downloading}
+                  className="text-xs text-rose-300/80 transition hover:text-rose-400 disabled:opacity-50"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
 
             {youtubeLinks.length > 0 && (
               <div className="mt-4 space-y-2">
@@ -731,7 +758,7 @@ export default function Home() {
 
             <details className="mt-5 rounded-xl border border-white/10 bg-black/30">
               <summary className="cursor-pointer px-4 py-3 text-sm text-white/50 transition hover:text-white">
-                YouTube Cookies <span className="text-xs text-white/30">(opsional — kalau kena "not a bot")</span>
+                YouTube Cookies <span className="text-xs text-white/30">(opsional — kalau kena &quot;not a bot&quot;)</span>
               </summary>
               <div className="px-4 pb-4 pt-2">
                 <textarea
@@ -742,7 +769,7 @@ export default function Home() {
                   className={`${INPUT} resize-y font-mono text-xs`}
                 />
                 <p className="mt-2 text-xs text-white/30">
-                  Cara: install extension <span className="text-white/50">"Get cookies.txt LOCALLY"</span>, buka YouTube
+                  Cara: install extension <span className="text-white/50">&quot;Get cookies.txt LOCALLY&quot;</span>, buka YouTube
                   (sudah login) → Export → buka file <span className="text-white/50">cookies.txt</span> → Ctrl+A, Ctrl+C → tempel di atas.
                   Tersimpan otomatis di browser ini.
                 </p>
@@ -754,7 +781,7 @@ export default function Home() {
                 <div className="w-full max-w-lg rounded-2xl border border-[#d4af37]/25 bg-[#0d0d10] p-6" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h3 className="font-serif text-xl text-[#f5d06f]">Oops, kena "not a bot" 🤖</h3>
+                      <h3 className="font-serif text-xl text-[#f5d06f]">Oops, kena &quot;not a bot&quot; 🤖</h3>
                       <p className="mt-1 text-xs text-white/40">YouTube curiga kita robot. Tenang, gampang kok.</p>
                     </div>
                     <button onClick={() => setCookieHelpUrl(null)} className="text-white/40 transition hover:text-white">✕</button>
@@ -762,7 +789,7 @@ export default function Home() {
 
                   <ol className="mt-5 space-y-3">
                     {[
-                      ['Install ekstensi', 'Buka Chrome/Edge → Chrome Web Store → cari "Get cookies.txt LOCALLY" → Add to Chrome. (Gratis)'],
+                      ['Install ekstensi', 'Buka Chrome/Edge → Chrome Web Store → cari &quot;Get cookies.txt LOCALLY&quot; → Add to Chrome. (Gratis)'],
                       ['Login YouTube', 'Buka youtube.com lalu login pakai akun yang sama seperti biasa.'],
                       ['Export cookies', 'Klik ikon ekstensi di pojok kanan atas → tombol "Export". File cookies.txt akan terdownload.'],
                       ['Copy isinya', 'Buka file cookies.txt itu (pakai Notepad). Tekan Ctrl+A lalu Ctrl+C.'],
@@ -846,7 +873,15 @@ export default function Home() {
 
             {files.length > 0 && (
               <div className="mt-5 space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-white/35">Terpilih · {files.length}</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs uppercase tracking-[0.2em] text-white/35">Terpilih · {files.length}</p>
+                  <button
+                    onClick={() => setFiles([])}
+                    className="text-xs text-rose-300/80 transition hover:text-rose-400"
+                  >
+                    Clear All Files
+                  </button>
+                </div>
                 {files.map((file, index) => (
                   <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
                     <span className="min-w-0 flex-1 truncate text-sm text-white/80">{file.name}</span>
@@ -1050,6 +1085,21 @@ export default function Home() {
           <p className="font-serif text-lg italic text-[#e6c15c]/70">S2 Studio — Audio Master to Roblox</p>
           <p className="text-[10px] uppercase tracking-[0.3em] text-white/25">Created by fhrlsym</p>
         </footer>
+      </div>
+      {/* Toasts Container */}
+      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+        {toasts.map(t => (
+          <div
+            key={t.id}
+            className={`flex min-w-[200px] items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all ${
+              t.type === 'error' ? 'border-rose-400/20 bg-[#1a0f12] text-rose-300' :
+              t.type === 'success' ? 'border-emerald-400/20 bg-[#0f1a14] text-emerald-300' :
+              'border-white/10 bg-[#121214] text-white/90'
+            }`}
+          >
+            <span className="text-sm font-medium">{t.message}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
