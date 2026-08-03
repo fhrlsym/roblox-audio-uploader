@@ -86,7 +86,7 @@ app.post('/api/youtube-download', async (req, res) => {
       '--no-playlist',
       '--extractor-args', 'youtube:player_client=android,ios',
       url,
-    ])).replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
+    ])).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
     await runYtdl([
       url,
