@@ -16,6 +16,7 @@ const execFileAsync = promisify(execFile);
 
 const YTDLP = process.env.YTDLP_PATH ||
   join(__dirname, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
+const YTDLP_PLUGIN_DIR = '/etc/yt-dlp/plugins';
 
 const COOKIES_PATH = join(__dirname, 'cookies.txt');
 if (process.env.YT_COOKIES_B64) {
@@ -28,6 +29,9 @@ if (process.env.YT_COOKIES_B64) {
 
 async function runYtdl(args, cookiesFile) {
   const baseArgs = ['--no-warnings', '--no-check-certificates', '--no-playlist'];
+  if (existsSync(YTDLP_PLUGIN_DIR)) {
+    baseArgs.push('--plugin-dirs', YTDLP_PLUGIN_DIR);
+  }
   const cf = cookiesFile || (existsSync(COOKIES_PATH) ? COOKIES_PATH : null);
   if (cf) {
     baseArgs.push('--cookies', cf);

@@ -237,12 +237,17 @@ export default function Home() {
           );
         } else {
           setDownloadProgress(prev =>
-            prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0 } : p)
+            prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0, error: data.error || 'Download failed' } : p)
           );
         }
       } catch (error) {
         setDownloadProgress(prev =>
-          prev.map(p => p.url === url ? { ...p, status: 'failed', progress: 0 } : p)
+          prev.map(p => p.url === url ? {
+            ...p,
+            status: 'failed',
+            progress: 0,
+            error: error instanceof Error ? error.message : 'Download failed',
+          } : p)
         );
       }
     }
@@ -583,6 +588,7 @@ export default function Home() {
                     }`} />
                     <span className="min-w-0 flex-1 truncate text-sm text-white/70">{item.url}</span>
                     <span className="text-xs capitalize text-white/40">{item.status}</span>
+                    {item.error && <span className="max-w-[45%] truncate text-xs text-rose-300/80" title={item.error}>{item.error}</span>}
                   </div>
                 ))}
               </div>
