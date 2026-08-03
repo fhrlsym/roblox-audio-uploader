@@ -7,23 +7,35 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:300
 const CORRECT_PIN = '515753';
 const SETTINGS_KEY = 'audioUploader_settings';
 
-const CARD = 'rounded-2xl border border-white/10 bg-white/[0.02] shadow-[0_1px_0_rgba(255,255,255,0.03)]';
-const INPUT = 'w-full rounded-xl border border-white/10 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-white/30 focus:bg-black/60';
+const CARD = 'rounded-2xl border border-[#d4af37]/15 bg-gradient-to-br from-white/[0.035] via-white/[0.015] to-black/30';
+const INPUT = 'w-full rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-[#d4af37]/50 focus:bg-black/70';
 const LABEL = 'mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/40';
-const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-black transition hover:bg-white/90 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/40';
-const BTN_GHOST = 'inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 px-4 py-2 text-sm text-white/70 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50';
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f5d06f] to-[#c9a227] px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:to-white/10 disabled:text-white/40';
+const BTN_GHOST = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[#d4af37]/25 px-4 py-2 text-sm text-[#e6c15c]/80 transition hover:bg-[#d4af37]/10 hover:text-[#f5d06f] disabled:cursor-not-allowed disabled:opacity-50';
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
-    Active: 'border-emerald-400/20 bg-emerald-400/10 text-emerald-300',
-    Pending: 'border-amber-400/20 bg-amber-400/10 text-amber-300',
-    Copyright: 'border-rose-400/20 bg-rose-400/10 text-rose-300',
+    Active: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
+    Pending: 'border-[#d4af37]/30 bg-[#d4af37]/10 text-[#f5d06f]',
+    Copyright: 'border-rose-400/25 bg-rose-400/10 text-rose-300',
     Failed: 'border-white/10 bg-white/5 text-white/50',
   };
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-medium ${styles[status] || styles.Failed}`}>
       {status}
     </span>
+  );
+}
+
+function SectionHeader({ num, title, right }: { num: string; title: string; right?: React.ReactNode }) {
+  return (
+    <div className="mb-6 flex items-center gap-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d4af37]/30 bg-[#d4af37]/[0.06] font-serif text-sm text-[#e6c15c]">
+        {num}
+      </span>
+      <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">{title}</h2>
+      {right && <div className="ml-auto">{right}</div>}
+    </div>
   );
 }
 
@@ -412,14 +424,14 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#08080a] p-4 text-white">
-        <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-500/10 blur-[120px]" />
+        <div className="pointer-events-none absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#d4af37]/[0.08] blur-[130px]" />
         <div className="pointer-events-none absolute -bottom-32 right-1/4 h-72 w-72 rounded-full bg-white/[0.04] blur-[100px]" />
 
         <div className="relative w-full max-w-md">
           <div className="mb-10 text-center">
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-white/40">S2 Studio</p>
-            <h1 className="mt-3 font-serif text-4xl tracking-tight text-white">
-              Audio Master <span className="italic text-white/40">to</span> Roblox
+            <p className="text-[11px] font-medium uppercase tracking-[0.4em] text-[#e6c15c]/70">S2 Studio</p>
+            <h1 className="mt-4 bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#b8860b] bg-clip-text font-serif text-5xl tracking-tight text-transparent">
+              Audio Master <span className="italic">to</span> Roblox
             </h1>
           </div>
 
@@ -458,41 +470,38 @@ export default function Home() {
   return (
     <div className="relative min-h-screen bg-[#08080a] text-white">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
-        <div className="absolute -top-48 right-[-10%] h-[30rem] w-[30rem] rounded-full bg-indigo-500/[0.07] blur-[140px]" />
-        <div className="absolute bottom-[-20%] left-[-10%] h-[26rem] w-[26rem] rounded-full bg-white/[0.03] blur-[120px]" />
+        <div className="absolute -top-48 right-[-8%] h-[34rem] w-[34rem] rounded-full bg-[#d4af37]/[0.07] blur-[150px]" />
+        <div className="absolute left-[-12%] top-1/3 h-[26rem] w-[26rem] rounded-full bg-[#7a5c1f]/[0.12] blur-[130px]" />
+        <div className="absolute bottom-[-18%] right-[-6%] h-[24rem] w-[24rem] rounded-full bg-white/[0.03] blur-[120px]" />
       </div>
 
-      <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-12 md:px-6">
-        <header className="flex flex-wrap items-end justify-between gap-6 pb-10">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-[0.35em] text-white/40">S2 Studio</p>
-            <h1 className="mt-3 font-serif text-4xl tracking-tight text-white md:text-5xl">
-              Audio Master <span className="italic text-white/40">to</span> Roblox
-            </h1>
-            <p className="mt-3 text-sm text-white/40">Convert · Tune · Upload · Track</p>
-          </div>
-          <div className="flex gap-2">
-            {[
-              { label: 'Total', value: summary.total },
-              { label: 'Active', value: summary.active },
-              { label: 'Pending', value: summary.pending },
-              { label: 'Copyright', value: summary.copyright },
-            ].map((stat) => (
-              <div key={stat.label} className="min-w-16 rounded-xl border border-white/10 bg-white/[0.02] px-4 py-3 text-center">
-                <div className="text-xl font-semibold tabular-nums">{stat.value}</div>
-                <div className="mt-0.5 text-[10px] uppercase tracking-[0.15em] text-white/35">{stat.label}</div>
-              </div>
-            ))}
-          </div>
+      <div className="relative mx-auto max-w-5xl px-4 pb-16 pt-8 md:px-6">
+        <header className="relative overflow-hidden rounded-2xl border border-[#d4af37]/15 px-6 py-12 text-center md:px-10">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(212,175,55,0.09),transparent_60%)]" />
+          <p className="text-[11px] font-medium uppercase tracking-[0.4em] text-[#e6c15c]/70">S2 Studio</p>
+          <h1 className="mt-4 bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#b8860b] bg-clip-text font-serif text-5xl tracking-tight text-transparent md:text-6xl">
+            Audio Master <span className="italic">to</span> Roblox
+          </h1>
+          <p className="mt-4 text-sm text-white/40">Convert · Tune · Upload · Track</p>
         </header>
 
-        <main className="space-y-6">
-          <section className={`${CARD} p-6 md:p-8`}>
-            <div className="mb-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Audio Settings</h2>
-              <span className="h-px flex-1 bg-white/10" />
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Total', value: summary.total },
+            { label: 'Active', value: summary.active },
+            { label: 'Pending', value: summary.pending },
+            { label: 'Copyright', value: summary.copyright },
+          ].map((stat) => (
+            <div key={stat.label} className="rounded-2xl border border-[#d4af37]/20 bg-[#d4af37]/[0.03] px-4 py-4 text-center">
+              <div className="text-2xl font-semibold tabular-nums text-[#f5d06f]">{stat.value}</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/35">{stat.label}</div>
             </div>
+          ))}
+        </div>
+
+        <main className="mt-6 space-y-6">
+          <section className={`${CARD} p-6 md:p-8`}>
+            <SectionHeader num="01" title="Audio Settings" />
             <div className="grid gap-6 md:grid-cols-3">
               <div>
                 <label className={LABEL}>Speed (Playback)</label>
@@ -515,9 +524,9 @@ export default function Home() {
                 />
               </div>
               <div className="flex flex-col justify-end">
-                <div className="rounded-xl border border-indigo-400/20 bg-indigo-400/[0.06] px-4 py-2.5">
-                  <div className="text-[10px] uppercase tracking-[0.2em] text-indigo-300/70">Roblox playback</div>
-                  <div className="mt-0.5 font-mono text-lg tabular-nums text-indigo-200">
+                <div className="rounded-xl border border-[#d4af37]/25 bg-gradient-to-br from-[#d4af37]/[0.12] to-transparent px-4 py-2.5">
+                  <div className="text-[10px] uppercase tracking-[0.2em] text-[#e6c15c]/70">Roblox playback</div>
+                  <div className="mt-0.5 font-mono text-lg tabular-nums text-[#f5d06f]">
                     {calculateRobloxPlaybackSpeed()}
                   </div>
                 </div>
@@ -526,11 +535,7 @@ export default function Home() {
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <div className="mb-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">YouTube Converter</h2>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
+            <SectionHeader num="02" title="YouTube Converter" />
             <textarea
               value={youtubeUrls}
               onChange={(e) => setYoutubeUrls(e.target.value)}
@@ -548,10 +553,10 @@ export default function Home() {
             {downloadProgress.length > 0 && (
               <div className="mt-5 space-y-2">
                 {downloadProgress.map((item, index) => (
-                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       item.status === 'completed' ? 'bg-emerald-400' :
-                      item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-amber-400'
+                      item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[#f5d06f]'
                     }`} />
                     <span className="min-w-0 flex-1 truncate text-sm text-white/70">{item.url}</span>
                     <span className="text-xs capitalize text-white/40">{item.status}</span>
@@ -562,17 +567,12 @@ export default function Home() {
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <div className="mb-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload Files</h2>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
-
+            <SectionHeader num="03" title="Upload Files" />
             <div
               onDrop={handleDrop}
               onDragOver={(e) => e.preventDefault()}
               onClick={() => document.getElementById('fileInput')?.click()}
-              className="cursor-pointer rounded-xl border border-dashed border-white/15 px-8 py-12 text-center transition hover:border-white/30 hover:bg-white/[0.02]"
+              className="cursor-pointer rounded-xl border border-dashed border-[#d4af37]/25 px-8 py-12 text-center transition hover:border-[#d4af37]/50 hover:bg-[#d4af37]/[0.03]"
             >
               <p className="text-sm text-white/60">Drag &amp; drop files, or click to browse</p>
               <p className="mt-1 text-xs text-white/30">MP3 · OGG · FLAC · WAV</p>
@@ -590,7 +590,7 @@ export default function Home() {
               <div className="mt-5 space-y-2">
                 <p className="text-xs uppercase tracking-[0.2em] text-white/35">Selected · {files.length}</p>
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/30 px-4 py-3">
+                  <div key={index} className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
                     <span className="min-w-0 flex-1 truncate text-sm text-white/80">{file.name}</span>
                     <button
                       onClick={() => removeFile(index)}
@@ -605,28 +605,24 @@ export default function Home() {
           </section>
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <div className="mb-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Roblox Settings</h2>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
-
-            <div className="mb-6 grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-black/30 p-1.5">
-              {(['user', 'group'] as const).map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setTargetType(type)}
-                  className={`rounded-lg py-2 text-sm font-medium transition ${
-                    targetType === type ? 'bg-white text-black' : 'text-white/50 hover:text-white'
-                  }`}
-                >
-                  {type === 'user' ? 'User' : 'Group'}
-                </button>
-              ))}
-            </div>
-
+            <SectionHeader num="04" title="Roblox Account" />
             <div className="mb-6 grid gap-6 md:grid-cols-2">
               <div>
+                <div className="mb-2 grid grid-cols-2 gap-2 rounded-xl border border-[#d4af37]/20 bg-black/40 p-1.5">
+                  {(['user', 'group'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setTargetType(type)}
+                      className={`rounded-lg py-2 text-sm font-medium transition ${
+                        targetType === type
+                          ? 'bg-gradient-to-r from-[#f5d06f] to-[#c9a227] text-black'
+                          : 'text-white/50 hover:text-white'
+                      }`}
+                    >
+                      {type === 'user' ? 'User' : 'Group'}
+                    </button>
+                  ))}
+                </div>
                 <label className={LABEL}>{targetType === 'user' ? 'User ID' : 'Group ID'}</label>
                 <input
                   type="text"
@@ -636,10 +632,11 @@ export default function Home() {
                   className={INPUT}
                 />
               </div>
+
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <label className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/40">API Keys</label>
-                  <button onClick={addApiKeyField} className="text-[11px] uppercase tracking-[0.15em] text-indigo-300 transition hover:text-indigo-200">
+                  <button onClick={addApiKeyField} className="text-[11px] uppercase tracking-[0.15em] text-[#e6c15c] transition hover:text-[#f5d06f]">
                     + Add key
                   </button>
                 </div>
@@ -666,20 +663,26 @@ export default function Home() {
                 </div>
               </div>
             </div>
+          </section>
 
-            <button onClick={uploadToRoblox} disabled={uploading} className={`${BTN_PRIMARY} w-full py-4 text-base`}>
-              {uploading ? 'Uploading…' : 'Upload to Roblox'}
+          <section className="rounded-2xl border border-[#d4af37]/30 bg-gradient-to-br from-[#d4af37]/[0.08] via-transparent to-transparent p-6 md:p-8">
+            <button
+              onClick={uploadToRoblox}
+              disabled={uploading}
+              className="w-full rounded-xl bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#c9a227] py-5 text-lg font-bold text-black shadow-[0_0_40px_rgba(212,175,55,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:via-white/10 disabled:to-white/10 disabled:text-white/40 disabled:shadow-none"
+            >
+              {uploading ? 'Uploading…' : `Upload to Roblox (${files.length} Audio)`}
             </button>
+            <p className="mt-3 text-center text-xs text-white/35">
+              {files.length > 0
+                ? `Ready to upload ${files.length} file(s) to ${targetType === 'user' ? 'user' : 'group'} ${targetType === 'user' ? userId : groupId}`
+                : 'No audio files selected yet'}
+            </p>
           </section>
 
           {results.length > 0 && (
             <section className={`${CARD} p-6 md:p-8`}>
-              <div className="mb-6 flex items-center gap-3">
-                <span className="h-px flex-1 bg-white/10" />
-                <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload Results</h2>
-                <button onClick={copyResults} className={BTN_GHOST}>Copy</button>
-                <span className="h-px flex-1 bg-white/10" />
-              </div>
+              <SectionHeader num="05" title="Upload Results" right={<button onClick={copyResults} className={BTN_GHOST}>Copy</button>} />
               <div className="space-y-2">
                 {results.map((result, index) => (
                   <div
@@ -695,25 +698,25 @@ export default function Home() {
                           <StatusBadge status={result.status} />
                         </div>
                         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                          <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
                             <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Asset ID</div>
                             <div className="mt-1 flex items-center justify-between gap-2">
                               <span className="truncate font-mono text-base tabular-nums text-white">{result.assetId}</span>
                               <button
                                 onClick={() => copyAssetId(result.assetId)}
-                                className="shrink-0 text-[10px] uppercase tracking-[0.15em] text-indigo-300 transition hover:text-indigo-200"
+                                className="shrink-0 text-[10px] uppercase tracking-[0.15em] text-[#e6c15c] transition hover:text-[#f5d06f]"
                               >
                                 Copy
                               </button>
                             </div>
                           </div>
-                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                          <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
                             <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Roblox Playback</div>
-                            <div className="mt-1 font-mono text-base tabular-nums text-indigo-200">
+                            <div className="mt-1 font-mono text-base tabular-nums text-[#f5d06f]">
                               {calculateRobloxPlaybackSpeed()}
                             </div>
                           </div>
-                          <div className="rounded-lg border border-white/10 bg-black/30 px-4 py-3">
+                          <div className="rounded-lg border border-white/10 bg-black/40 px-4 py-3">
                             <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Tuning</div>
                             <div className="mt-1 font-mono text-base tabular-nums text-white/80">
                               {speed}x · {amplify}dB
@@ -734,19 +737,20 @@ export default function Home() {
           )}
 
           <section className={`${CARD} p-6 md:p-8`}>
-            <div className="mb-6 flex items-center gap-3">
-              <span className="h-px flex-1 bg-white/10" />
-              <h2 className="text-[11px] font-medium uppercase tracking-[0.3em] text-white/45">Upload History</h2>
-              <button onClick={() => setShowHistory(!showHistory)} className={BTN_GHOST}>
-                {showHistory ? 'Hide' : 'Show'}
-              </button>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
+            <SectionHeader
+              num="06"
+              title="Upload History"
+              right={
+                <button onClick={() => setShowHistory(!showHistory)} className={BTN_GHOST}>
+                  {showHistory ? 'Hide' : 'Show'}
+                </button>
+              }
+            />
 
             {showHistory && (
               <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
                 {uploadHistory.map((item) => (
-                  <div key={item.id} className="rounded-xl border border-white/10 bg-black/30 px-4 py-4">
+                  <div key={item.id} className="rounded-xl border border-white/10 bg-black/40 px-4 py-4">
                     <div className="flex flex-wrap items-start justify-between gap-4">
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-sm font-medium text-white/90">{item.name}</div>
@@ -766,7 +770,7 @@ export default function Home() {
                         {item.status === 'Pending' && (
                           <button
                             onClick={() => refreshStatus(item.asset_id)}
-                            className="rounded-lg border border-white/10 px-2.5 py-1 text-[11px] text-white/60 transition hover:bg-white/5 hover:text-white"
+                            className="rounded-lg border border-[#d4af37]/25 px-2.5 py-1 text-[11px] text-[#e6c15c]/80 transition hover:bg-[#d4af37]/10 hover:text-[#f5d06f]"
                           >
                             Refresh
                           </button>
@@ -780,8 +784,8 @@ export default function Home() {
           </section>
         </main>
 
-        <footer className="mt-12 flex flex-col items-center gap-1 border-t border-white/5 pt-8 text-center">
-          <p className="font-serif text-lg italic text-white/60">S2 Studio — Audio Master to Roblox</p>
+        <footer className="mt-12 flex flex-col items-center gap-1 border-t border-[#d4af37]/10 pt-8 text-center">
+          <p className="font-serif text-lg italic text-[#e6c15c]/70">S2 Studio — Audio Master to Roblox</p>
           <p className="text-[10px] uppercase tracking-[0.3em] text-white/25">Created by fhrlsym</p>
         </footer>
       </div>
