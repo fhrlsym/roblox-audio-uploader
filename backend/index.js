@@ -84,7 +84,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   try {
     const title = String(await runYtdl([
       '--print', 'title',
-      '--extractor-args', 'youtube:player_client=tv,android,ios',
+      '--extractor-args', 'youtube:player_client=android',
       url,
     ], cookiesFile)).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
@@ -95,7 +95,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
       '--extract-audio',
       '--audio-format', 'mp3',
       '--audio-quality', '0',
-      '--extractor-args', 'youtube:player_client=tv,android,ios',
+      '--extractor-args', 'youtube:player_client=android',
       '--retries', '3',
     ], cookiesFile);
 
