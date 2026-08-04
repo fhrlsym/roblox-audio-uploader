@@ -1,8 +1,10 @@
 'use client';
 
 import { useState } from 'react';
+import { AlertTriangle, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
+import { CARD, LABEL, BTN_PRIMARY } from '../lib/ui';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
@@ -18,6 +20,12 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
 
   const calculateRobloxSpeed = () => (1 / speed).toFixed(4);
 
+  const fmtDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = Math.round(seconds % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
   const handleTuneAll = async () => {
     if (rawFiles.length === 0) return;
 
@@ -28,23 +36,21 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
 
     for (let i = 0; i < rawFiles.length; i++) {
       const raw = rawFiles[i];
-      
+
       try {
         let blob: Blob;
 
         if (raw.file) {
-          // File upload: process client-side
           blob = await processAudio(raw.file, speed, amplify, (p) => {
             setProgress(((i + p / 100) / rawFiles.length) * 100);
           });
         } else if (raw.fileId) {
-          // YouTube: fetch dari backend, lalu process client-side
           const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/download-file/${raw.fileId}`);
           if (!response.ok) throw new Error('File expired or not found');
-          
+
           const arrayBuffer = await response.arrayBuffer();
           const file = new File([arrayBuffer], raw.name, { type: 'audio/mpeg' });
-          
+
           blob = await processAudio(file, speed, amplify, (p) => {
             setProgress(((i + p / 100) / rawFiles.length) * 100);
           });
@@ -76,40 +82,88 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">2. Audio Tuning</h2>
+    <div className={CARD + ' p-6'}>
+      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-5">2. Audio Tuning</h2>
 
-      {/* Raw Files List */}
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-slate-300 mb-3">Raw Files ({rawFiles.length})</h3>
+        <div className="flex items-center justify-between mb-3">
+          <p className={LABEL}>File ({rawFiles.length})</p>
+          {rawFiles.length > 0 && (
+            <button
+              onClick={() => rawFiles.forEach((f) => onRemoveRaw(f.id))}
+              className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition"
+            >
+              Hapus semua
+            </button>
+          )}
+        </div>
+
         {rawFiles.length === 0 ? (
-          <p className="text-slate-500 text-center py-8">No files yet. Upload or convert from YouTube first.</p>
+          <div className="rounded-xl border border-dashed border-[var(--line)] py-10 text-center">
+            <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
+            <p className="text-sm text-[var(--text-45)]">Belum ada file. Tambah dari Input Audio.</p>
+          </div>
         ) : (
-          <div className="space-y-2 max-h-64 overflow-y-auto">
-            {rawFiles.map((file) => (
-              <div key={file.id} className="bg-slate-800 rounded-lg p-3 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <p className="text-white font-medium truncate">{file.name}</p>
-                  {file.url && <p className="text-slate-500 text-xs truncate">{file.url}</p>}
-                </div>
-                <button
-                  onClick={() => onRemoveRaw(file.id)}
-                  className="ml-3 text-red-400 hover:text-red-300 transition"
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {rawFiles.map((file) => {
+              const overLimit = file.video?.duration
+                ? file.video.duration / speed >= 420
+                : false;
+              return (
+                <div
+                  key={file.id}
+                  className={`flex items-center gap-3 rounded-xl border bg-[var(--surface)] p-2.5 transition ${
+                    overLimit ? 'border-amber-400/25' : 'border-[var(--line)]'
+                  }`}
                 >
-                  ✕
-                </button>
-              </div>
-            ))}
+                  {file.video?.thumbnail ? (
+                    <img
+                      src={file.video.thumbnail}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-10 w-16 shrink-0 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
+                      <Music className="w-4 h-4 text-[var(--text-40)]" />
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm text-[var(--text-90)]">
+                      {file.video?.title || file.name}
+                    </p>
+                    <p className="truncate text-xs text-[var(--text-45)]">
+                      {file.video
+                        ? `${file.video.channel} · ${file.video.durationString}`
+                        : file.file
+                          ? `${(file.size || 0) / (1024 * 1024) > 1 ? ((file.size || 0) / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round((file.size || 0) / 1024)) + ' KB'}`
+                          : ''}
+                    </p>
+                    {overLimit && (
+                      <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300/90">
+                        <AlertTriangle className="w-3 h-3 shrink-0" />
+                        Setelah speed {speed}x jadi ~{fmtDuration(file.video!.duration! / speed)} — lebih dari 7 menit, ditolak Roblox.
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => onRemoveRaw(file.id)}
+                    className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
 
-      {/* Settings */}
-      <div className="space-y-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-slate-300 font-medium">Speed</label>
-            <span className="text-blue-400 font-bold">{speed}x</span>
+          <div className="flex items-center justify-between mb-2">
+            <label className={LABEL}>Speed</label>
+            <span className="font-mono text-sm text-[var(--accent-strong)]">{speed}x</span>
           </div>
           <input
             type="range"
@@ -118,17 +172,18 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
             step="0.1"
             value={speed}
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
-            className="w-full"
+            className="w-full accent-[var(--accent)]"
           />
-          <p className="text-slate-500 text-sm mt-1">
-            Roblox PlaybackSpeed: <span className="text-yellow-400 font-mono">{calculateRobloxSpeed()}</span>
+          <p className="text-xs text-[var(--text-40)] mt-1.5">
+            Roblox PlaybackSpeed:{' '}
+            <span className="font-mono text-[var(--accent-soft)]">{calculateRobloxSpeed()}</span>
           </p>
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-2">
-            <label className="text-slate-300 font-medium">Amplify</label>
-            <span className="text-green-400 font-bold">{amplify > 0 ? '+' : ''}{amplify} dB</span>
+          <div className="flex items-center justify-between mb-2">
+            <label className={LABEL}>Amplify</label>
+            <span className="font-mono text-sm text-emerald-400">{amplify > 0 ? '+' : ''}{amplify} dB</span>
           </div>
           <input
             type="range"
@@ -137,24 +192,33 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
             step="1"
             value={amplify}
             onChange={(e) => setAmplify(parseInt(e.target.value))}
-            className="w-full"
+            className="w-full accent-[var(--accent)]"
           />
         </div>
       </div>
 
-      {/* Tune Button */}
       <button
         onClick={handleTuneAll}
         disabled={tuning || rawFiles.length === 0}
-        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-700 disabled:to-slate-700 disabled:cursor-not-allowed text-white font-bold py-4 px-6 rounded-lg transition shadow-lg"
+        className={BTN_PRIMARY + ' w-full py-3.5 shadow-[0_0_30px_var(--upload-glow)]'}
       >
-        {tuning ? `Tuning... ${Math.round(progress)}%` : `Tune All Files (${rawFiles.length})`}
+        {tuning ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Tuning… {Math.round(progress)}%
+          </>
+        ) : (
+          <>
+            <Wand2 className="w-4 h-4" />
+            Tune Semua ({rawFiles.length})
+          </>
+        )}
       </button>
 
       {tuning && (
-        <div className="mt-3 bg-slate-800 rounded-full h-2 overflow-hidden">
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
           <div
-            className="bg-gradient-to-r from-purple-500 to-blue-500 h-full transition-all duration-300"
+            className="h-full bg-gradient-to-r from-[var(--accent-deep)] to-[var(--accent-strong)] transition-all duration-300"
             style={{ width: `${progress}%` }}
           />
         </div>

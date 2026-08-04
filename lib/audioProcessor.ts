@@ -1,12 +1,19 @@
 // Client-side audio processing (EXACT same as REZZZ)
 
-declare const lamejs: any;
+type LameJsEncoder = {
+  Mp3Encoder: new (channels: number, sampleRate: number, kbps: number) => {
+    encodeBuffer(left: Int16Array, right?: Int16Array): Uint8Array;
+    flush(): Uint8Array;
+  };
+};
+
+declare const lamejs: LameJsEncoder;
 
 function floatTo16(input: Float32Array): Int16Array {
   const out = new Int16Array(input.length);
   for (let i = 0; i < input.length; i++) {
-    let s = Math.max(-1, Math.min(1, input[i]));
-    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    const s = Math.max(-1, Math.min(1, input[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
   }
   return out;
 }
@@ -54,12 +61,13 @@ export async function processAudio(
   onProgress?: (percent: number) => void
 ): Promise<Blob> {
   onProgress?.(10);
-  
+
   const ab = await file.arrayBuffer();
   onProgress?.(20);
-  
-  const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-  let srcBuf = await ctx.decodeAudioData(ab);
+
+  const ctx = new (window.AudioContext ||
+    (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  const srcBuf = await ctx.decodeAudioData(ab);
   onProgress?.(40);
   
   // EXACT REZZZ method: playbackRate (pitch akan berubah)
@@ -103,7 +111,7 @@ export async function processAudio(
   
   rendered = softLimit(rendered, 0.92);
   
-  try { await ctx.close(); } catch (_) {}
+  try { await ctx.close(); } catch { /* ignore */ }
   
   onProgress?.(90);
   const mp3Blob = bufferToMp3(rendered);

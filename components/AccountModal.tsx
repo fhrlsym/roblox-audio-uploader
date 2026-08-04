@@ -31,11 +31,45 @@ interface KeyInfoResult {
   groups: GroupInfo[];
 }
 
+interface AddedAccount {
+  id: string;
+  name: string;
+  type: 'user' | 'group';
+  apiKey: string;
+  userId?: string;
+  groupId?: string;
+  quota?: {
+    usage: number;
+    capacity: number;
+    period?: string;
+  } | null;
+}
+
 interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAccountAdded: (account: any) => void;
+  onAccountAdded: (account: AddedAccount) => void;
   backendUrl: string;
+}
+
+function QuotaBar({ usage, capacity }: { usage?: number; capacity?: number }) {
+  if (usage == null || capacity == null || capacity <= 0) return null;
+  const pct = Math.min(100, (usage / capacity) * 100);
+  const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
+
+  return (
+    <div className="mt-3">
+      <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+        <span>Audio Quota (bulan ini)</span>
+        <span className="font-medium text-slate-300">
+          {usage.toLocaleString()} / {capacity.toLocaleString()}
+        </span>
+      </div>
+      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  );
 }
 
 export default function AccountModal({ isOpen, onClose, onAccountAdded, backendUrl }: AccountModalProps) {
@@ -82,7 +116,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
   const handleSave = () => {
     if (!keyInfo) return;
 
-    const account = {
+    const account: AddedAccount = {
       id: selectedGroupId || keyInfo.owner.id,
       name: selectedGroupId
         ? keyInfo.groups.find((g) => g.id === selectedGroupId)?.name || 'Group'
@@ -100,26 +134,6 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
     setError('');
     setSelectedGroupId('');
     onClose();
-  };
-
-  const QuotaBar = ({ usage, capacity }: { usage?: number; capacity?: number }) => {
-    if (usage == null || capacity == null || capacity <= 0) return null;
-    const pct = Math.min(100, (usage / capacity) * 100);
-    const color = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-500' : 'bg-emerald-500';
-    
-    return (
-      <div className="mt-3">
-        <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
-          <span>Audio Quota (bulan ini)</span>
-          <span className="font-medium text-slate-300">
-            {usage.toLocaleString()} / {capacity.toLocaleString()}
-          </span>
-        </div>
-        <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-          <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -223,7 +237,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
                   </div>
                   <p className="text-sm text-slate-400 truncate">
                     @{keyInfo.owner.name}
-                    {keyInfo.keyName && <span className="text-slate-500"> · key "{keyInfo.keyName}"</span>}
+                    {keyInfo.keyName && <span className="text-slate-500"> · key &quot;{keyInfo.keyName}&quot;</span>}
                   </p>
                 </div>
               </div>

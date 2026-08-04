@@ -1,18 +1,30 @@
 ﻿'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Moon, Sun } from 'lucide-react';
+import { Building2, ChevronDown, Plus, Trash2, User } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
-import UploadHistory from '../components/UploadHistory';
+import UploadHistory, { UploadRecord } from '../components/UploadHistory';
+import { CARD, PANEL, LABEL } from '../lib/ui';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
 const SETTINGS_KEY = 'audioUploader_settings';
+
+const THEMES: { id: string; label: string; swatch: string }[] = [
+  { id: 'gold-dark', label: 'Gold Dark', swatch: 'linear-gradient(135deg, #f5d77f, #b8860b)' },
+  { id: 'light', label: 'Light', swatch: 'linear-gradient(135deg, #ffffff, #e2e8f0)' },
+  { id: 'crimson', label: 'Crimson', swatch: 'linear-gradient(135deg, #ef6a6a, #8b0f2b)' },
+  { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg, #6ee7b7, #047857)' },
+  { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b5a3ff, #4c1d95)' },
+  { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #67e8f9, #0e7490)' },
+  { id: 'sunset', label: 'Sunset', swatch: 'linear-gradient(135deg, #fda4af, #c2410c)' },
+  { id: 'light-ocean', label: 'Light Ocean', swatch: 'linear-gradient(135deg, #dbeafe, #0284c7)' },
+];
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -33,59 +45,35 @@ interface SavedAccount {
   } | null;
 }
 
-interface UploadRecord {
-  id: string;
-  fileName: string;
-  displayName: string;
-  assetId: string;
-  accountName: string;
-  uploadedAt: number;
-  fileSize?: number;
-  duration?: number;
+interface UploadStats {
+  total: number;
+  active: number;
+  pending: number;
+  failed: number;
+  copyright: number;
 }
 
 export default function Home() {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
-  const [theme, setTheme] = useState<'dark' | 'sunset' | 'gold'>('dark');
+  const [pinError, setPinError] = useState(false);
+  const [theme, setTheme] = useState('gold-dark');
+  const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
-  
-  // State management baru
+
   const [rawFiles, setRawFiles] = useState<RawAudioFile[]>([]);
   const [tunedFiles, setTunedFiles] = useState<TunedAudioFile[]>([]);
-  
-  // Roblox accounts
+
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  
-  // Upload history
+
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
-
-  // Load settings
-  useEffect(() => {
-    const saved = localStorage.getItem(SETTINGS_KEY);
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        setTheme(data.theme || 'dark');
-        setYoutubeCookies(data.youtubeCookies || '');
-      } catch (e) {
-        console.error('Failed to load settings:', e);
-      }
-    }
-
-    loadSavedAccounts();
-    loadUploadHistory();
-  }, []);
-
-  // Save settings
-  useEffect(() => {
-    localStorage.setItem(
-      SETTINGS_KEY,
-      JSON.stringify({ theme, youtubeCookies })
-    );
-  }, [theme, youtubeCookies]);
+  const [uploadStats, setUploadStats] = useState<UploadStats>({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
+  const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
+  const statusRefreshLockRef = useRef(false);
+  const selectedAccountRef = useRef<SavedAccount | null>(null);
+  const accountsRef = useRef<SavedAccount[]>([]);
 
   const loadSavedAccounts = async () => {
     try {
@@ -93,11 +81,11 @@ export default function Home() {
         .from('saved_accounts')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       if (!error && data) {
         const apiKeys = JSON.parse(localStorage.getItem('audioUploader_apiKeys') || '{}');
-        
-        const accounts: SavedAccount[] = data.map((row: any) => ({
+
+        const accounts: SavedAccount[] = data.map((row) => ({
           id: row.id,
           name: row.display_name || row.name,
           type: row.type,
@@ -111,12 +99,12 @@ export default function Home() {
           } : null,
         }));
         setSavedAccounts(accounts);
-        if (accounts.length > 0 && !selectedAccount) {
+        if (accounts.length > 0 && !selectedAccountRef.current) {
           setSelectedAccount(accounts[0]);
         }
       }
-    } catch (e) {
-      console.error('Failed to load accounts:', e);
+    } catch {
+      // ignore
     }
   };
 
@@ -127,26 +115,63 @@ export default function Home() {
         .select('*')
         .order('uploaded_at', { ascending: false })
         .limit(50);
-      
+
       if (!error && data) {
-        const history: UploadRecord[] = data.map((row: any) => ({
+        const history: UploadRecord[] = data.map((row) => ({
           id: row.id,
           fileName: row.name,
           displayName: row.name,
           assetId: row.asset_id,
-          accountName: 'Roblox Account',
+          accountName: 'Roblox',
           uploadedAt: new Date(row.uploaded_at).getTime(),
+          status: row.status || 'Pending',
         }));
         setUploadHistory(history);
+        setUploadStats({
+          total: data.length,
+          active: data.filter((d) => d.status === 'Active').length,
+          pending: data.filter((d) => d.status === 'Pending').length,
+          failed: data.filter((d) => d.status === 'Failed').length,
+          copyright: data.filter((d) => d.status === 'Copyright').length,
+        });
       }
-    } catch (e) {
-      console.error('Failed to load history:', e);
+    } catch {
+      // ignore
     }
+  };
+
+  const refreshAccountQuotas = async () => {
+    const withKey = accountsRef.current.filter((a) => a.apiKey.trim());
+    if (withKey.length === 0) return;
+    const results = await Promise.all(
+      withKey.map(async (a) => {
+        try {
+          const response = await fetch(`${BACKEND_URL}/api/roblox/key-info?apiKey=${encodeURIComponent(a.apiKey)}`);
+          const data = await response.json();
+          if (!response.ok || !data.owner) return null;
+          return {
+            id: a.id,
+            usage: data.audioQuota?.usage ?? null,
+            capacity: data.audioQuota?.capacity ?? null,
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+    const updates = results.filter((r): r is NonNullable<typeof r> => r !== null);
+    if (updates.length === 0) return;
+    setSavedAccounts((prev) =>
+      prev.map((a) => {
+        const upd = updates.find((u) => u.id === a.id);
+        return upd ? { ...a, quota: upd.usage != null && upd.capacity != null ? { usage: upd.usage, capacity: upd.capacity } : a.quota } : a;
+      })
+    );
   };
 
   const handleAccountAdded = async (account: SavedAccount) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('saved_accounts')
         .insert({
           id: account.id,
@@ -163,51 +188,115 @@ export default function Home() {
         })
         .select()
         .single();
-      
+
       if (!error) {
         const apiKeys = JSON.parse(localStorage.getItem('audioUploader_apiKeys') || '{}');
         apiKeys[account.id] = account.apiKey;
         localStorage.setItem('audioUploader_apiKeys', JSON.stringify(apiKeys));
-        
         await loadSavedAccounts();
-        const newAccount = savedAccounts.find(a => a.id === account.id) || account;
-        setSelectedAccount(newAccount);
       }
-    } catch (e) {
-      console.error('Failed to save account:', e);
+    } catch {
+      // ignore
     }
   };
 
   const handleDeleteAccount = async (accountId: string) => {
     try {
       await supabase.from('saved_accounts').delete().eq('id', accountId);
-      
       const apiKeys = JSON.parse(localStorage.getItem('audioUploader_apiKeys') || '{}');
       delete apiKeys[accountId];
       localStorage.setItem('audioUploader_apiKeys', JSON.stringify(apiKeys));
-      
+      if (selectedAccountRef.current?.id === accountId) setSelectedAccount(null);
       await loadSavedAccounts();
-    } catch (e) {
-      console.error('Failed to delete account:', e);
+    } catch {
+      // ignore
+    }
+  };
+
+  const checkAssetStatus = async (assetId: string, apiKey: string): Promise<string> => {
+    try {
+      const response = await fetch(`${BACKEND_URL}/api/asset-status/${assetId}?apiKey=${encodeURIComponent(apiKey)}`);
+      const data = await response.json();
+      if (data.moderationResult && data.moderationResult.moderationState === 'Rejected') return 'Copyright';
+      if (data.status) return data.status;
+      if (data.state === 'Active') return 'Active';
+      if (data.state === 'Pending') return 'Pending';
+      return 'Failed';
+    } catch {
+      return 'Pending';
+    }
+  };
+
+  const updateAssetStatus = async (assetId: string, status: string) => {
+    await supabase
+      .from('audio_uploads')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('asset_id', assetId);
+    await loadUploadHistory();
+  };
+
+  const handleRefreshStatus = async (assetId: string) => {
+    const row = uploadHistory.find((h) => h.assetId === assetId);
+    const account = savedAccounts.find((a) => a.id === row?.id) || selectedAccountRef.current;
+    if (!account?.apiKey.trim()) return;
+    setRefreshingIds((prev) => [...prev, assetId]);
+    try {
+      const status = await checkAssetStatus(assetId, account.apiKey);
+      await updateAssetStatus(assetId, status);
+    } finally {
+      setRefreshingIds((prev) => prev.filter((id) => id !== assetId));
+    }
+  };
+
+  const refreshPendingStatuses = async () => {
+    if (statusRefreshLockRef.current) return;
+    statusRefreshLockRef.current = true;
+    try {
+      const { data } = await supabase
+        .from('audio_uploads')
+        .select('asset_id, status, account_id')
+        .eq('status', 'Pending');
+
+      if (!data || data.length === 0) return;
+
+      const tasks = data.map(async (row) => {
+        const account = savedAccounts.find((a) => a.id === row.account_id) || selectedAccountRef.current;
+        if (!account?.apiKey.trim()) return;
+        const status = await checkAssetStatus(row.asset_id, account.apiKey);
+        if (status !== 'Pending' && status !== row.status) {
+          await updateAssetStatus(row.asset_id, status);
+        }
+      });
+
+      const CONCURRENCY = 3;
+      let nextIndex = 0;
+      const worker = async () => {
+        while (nextIndex < tasks.length) {
+          await tasks[nextIndex++];
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, worker));
+    } finally {
+      statusRefreshLockRef.current = false;
     }
   };
 
   const handleUploadSuccess = async (record: UploadRecord) => {
     try {
       await supabase.from('audio_uploads').insert({
-        id: record.id,
         asset_id: record.assetId,
         name: record.fileName,
-        status: 'Active',
-        original_speed: '1',
+        status: record.status || 'Pending',
+        original_speed: 1,
         amplify: 0,
-        roblox_playback_speed: '1',
-        account_id: selectedAccount?.id || null,
+        roblox_playback_speed: 1,
+        account_id: selectedAccountRef.current?.id || null,
+        uploaded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
-      
       await loadUploadHistory();
-    } catch (e) {
-      console.error('Failed to save upload history:', e);
+    } catch {
+      // ignore
     }
   };
 
@@ -215,186 +304,307 @@ export default function Home() {
     try {
       await supabase.from('audio_uploads').delete().neq('id', '');
       setUploadHistory([]);
-    } catch (e) {
-      console.error('Failed to clear history:', e);
+      setUploadStats({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
+    } catch {
+      // ignore
     }
   };
+
+  useEffect(() => {
+    const saved = localStorage.getItem(SETTINGS_KEY);
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setTheme(data.theme || 'gold-dark');
+        setYoutubeCookies(data.youtubeCookies || '');
+      } catch {
+        // ignore
+      }
+    }
+    if (unlocked) {
+      loadSavedAccounts();
+      loadUploadHistory();
+    }
+  }, [unlocked]);
+
+  useEffect(() => {
+    if (unlocked) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ theme, youtubeCookies }));
+    }
+  }, [theme, youtubeCookies, unlocked]);
+
+  useEffect(() => {
+    accountsRef.current = savedAccounts;
+  }, [savedAccounts]);
+
+  useEffect(() => {
+    selectedAccountRef.current = selectedAccount;
+  }, [selectedAccount]);
+
+  useEffect(() => {
+    if (!unlocked) return;
+    loadUploadHistory();
+    loadSavedAccounts();
+    refreshAccountQuotas();
+    const interval = setInterval(() => {
+      loadUploadHistory();
+      refreshPendingStatuses();
+      refreshAccountQuotas();
+    }, 30000);
+    return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unlocked]);
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin === CORRECT_PIN) {
       setUnlocked(true);
       setPin('');
+      setPinError(false);
     } else {
-      alert('Invalid PIN');
+      setPinError(true);
+      setPin('');
     }
   };
 
-  const themeClasses = {
-    dark: 'bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950',
-    sunset: 'bg-gradient-to-br from-orange-950 via-slate-900 to-purple-950',
-    gold: 'bg-gradient-to-br from-yellow-950 via-slate-900 to-amber-950',
-  };
+  const stats = [
+    { label: 'Total', value: uploadStats.total },
+    { label: 'Active', value: uploadStats.active },
+    { label: 'Pending', value: uploadStats.pending },
+    { label: 'Copyright', value: uploadStats.copyright },
+  ];
 
   if (!unlocked) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 flex items-center justify-center p-4">
-        <div className="bg-slate-800 rounded-2xl p-8 shadow-2xl border border-slate-700 max-w-md w-full">
-          <h1 className="text-3xl font-bold text-white mb-6 text-center">S2 Studio</h1>
-          <p className="text-slate-400 mb-6 text-center">Enter PIN to access</p>
-          <form onSubmit={handlePinSubmit}>
+      <div className="relative min-h-screen overflow-hidden bg-[var(--bg)] flex items-center justify-center p-4">
+        <div className="pointer-events-none absolute -top-32 left-1/2 -translate-x-1/2 h-96 w-[42rem] rounded-full bg-[var(--accent)] opacity-10 blur-[120px]" />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-64 w-64 rounded-full bg-[var(--accent)] opacity-[0.06] blur-[100px]" />
+        <div className="modal-enter relative w-full max-w-md rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] p-8 shadow-2xl">
+          <div className="mb-6 text-center">
+            <h1 className="font-serif text-3xl font-semibold tracking-tight">
+              <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
+                S2 Studio
+              </span>
+            </h1>
+            <p className="mt-1 text-xs uppercase tracking-[0.25em] text-[var(--text-40)]">
+              Audio Master to Roblox
+            </p>
+          </div>
+          <form onSubmit={handlePinSubmit} className="space-y-4">
             <input
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="Enter PIN"
-              className="w-full bg-slate-900 text-white px-4 py-3 rounded-lg border border-slate-600 focus:border-blue-500 focus:outline-none mb-4"
               autoFocus
+              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-3 text-center text-2xl tracking-[0.5em] text-[var(--text)] outline-none transition focus:border-[var(--accent-50)]"
             />
+            {pinError && (
+              <p className="text-center text-xs text-rose-300">PIN salah, coba lagi.</p>
+            )}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition"
+              className="w-full rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] py-3 text-sm font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.98]"
             >
               Unlock
             </button>
           </form>
+          <p className="mt-6 text-center text-xs text-[var(--text-35)]">Created by fhrlsym</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`min-h-screen ${themeClasses[theme]} p-4 md:p-8`}>
-      <div className="max-w-7xl mx-auto">
+    <div data-theme={theme} className="relative min-h-screen bg-[var(--bg)] text-[var(--text)]">
+      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 h-96 w-[60rem] rounded-full bg-[var(--glow-1)] blur-[130px]" />
+      <div className="pointer-events-none fixed bottom-0 -left-20 h-72 w-72 rounded-full bg-[var(--glow-2)] blur-[110px]" />
+      <div className="pointer-events-none fixed bottom-10 right-0 h-56 w-56 rounded-full bg-[var(--glow-3)] blur-[100px]" />
+
+      <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-16">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-4xl font-bold text-white mb-2">S2 Studio</h1>
-            <p className="text-slate-400">Audio Master to Roblox</p>
+        <header className={`${CARD} relative mb-6 overflow-hidden p-6 sm:p-8`}>
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--accent-15),transparent_60%)]" />
+          <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-soft)]">
+                S2 Studio
+              </p>
+              <h1 className="mt-1 font-serif text-3xl sm:text-4xl font-semibold tracking-tight">
+                Audio Master{' '}
+                <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
+                  to Roblox
+                </span>
+              </h1>
+              <p className="mt-2 text-sm text-[var(--text-50)]">Convert · Tune · Upload · Track</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <button
+                  onClick={() => setThemeOpen((v) => !v)}
+                  className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-80)] transition hover:border-[var(--accent-30)]"
+                >
+                  <span className="h-3.5 w-3.5 rounded-full" style={{ background: THEMES.find((t) => t.id === theme)?.swatch }} />
+                  <span className="hidden sm:inline text-xs">{THEMES.find((t) => t.id === theme)?.label}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
+                </button>
+                {themeOpen && (
+                  <div className="modal-enter absolute right-0 z-20 mt-2 w-44 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl">
+                    {THEMES.map((t) => (
+                      <button
+                        key={t.id}
+                        onClick={() => {
+                          setTheme(t.id);
+                          setThemeOpen(false);
+                        }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition ${
+                          theme === t.id ? 'bg-[var(--accent-10)] text-[var(--accent-strong)]' : 'text-[var(--text-70)] hover:bg-[var(--surface)]'
+                        }`}
+                      >
+                        <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.swatch }} />
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAccountModal(true)}
+                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+              >
+                <Plus className="w-4 h-4" />
+                Akun
+              </button>
+            </div>
           </div>
-          
-          {/* Theme Selector */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setTheme('dark')}
-              className={`p-3 rounded-lg transition ${theme === 'dark' ? 'bg-slate-700 text-white' : 'bg-slate-800 text-slate-400'}`}
-              title="Dark"
-            >
-              <Moon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setTheme('sunset')}
-              className={`p-3 rounded-lg transition ${theme === 'sunset' ? 'bg-orange-700 text-white' : 'bg-slate-800 text-slate-400'}`}
-              title="Sunset"
-            >
-              <Sun className="w-5 h-5" />
-            </button>
-            <button
-              onClick={() => setTheme('gold')}
-              className={`p-3 rounded-lg transition ${theme === 'gold' ? 'bg-yellow-700 text-white' : 'bg-slate-800 text-slate-400'}`}
-              title="Gold"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-              </svg>
-            </button>
-          </div>
+        </header>
+
+        {/* Stats */}
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {stats.map((stat) => (
+            <div key={stat.label} className={`${PANEL} px-4 py-4 text-center`}>
+              <div className="text-2xl font-semibold tabular-nums text-[var(--text)]">{stat.value}</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--text-40)]">{stat.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* Account Selector */}
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-slate-700/50">
-          <div className="flex items-center justify-between mb-3">
-            <label className="text-sm font-semibold text-white uppercase tracking-wider">Roblox Account</label>
-            <button
-              onClick={() => setShowAccountModal(true)}
-              className="text-xs text-blue-400 hover:text-blue-300 transition-colors font-medium"
-            >
-              + Tambah Akun
-            </button>
+        <div className={`${CARD} mb-6 p-5`}>
+          <div className="mb-3 flex items-center justify-between">
+            <label className={LABEL}>Roblox Account</label>
           </div>
-          
           {savedAccounts.length === 0 ? (
-            <div className="bg-slate-800/50 rounded-xl p-4 text-center border border-slate-700/50">
-              <p className="text-slate-400 text-sm mb-3">Belum ada akun tersimpan</p>
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--line)] p-4">
+              <p className="text-sm text-[var(--text-45)]">Belum ada akun tersimpan.</p>
               <button
                 onClick={() => setShowAccountModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-25)] px-3 py-2 text-xs text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
               >
-                Tambah Akun Pertama
+                <Plus className="w-3.5 h-3.5" />
+                Tambah akun
               </button>
             </div>
           ) : (
             <div className="space-y-2">
-              {savedAccounts.map((account) => (
-                <div
-                  key={account.id}
-                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                    selectedAccount?.id === account.id
-                      ? 'bg-blue-500/10 border-blue-500/50'
-                      : 'bg-slate-800/50 border-slate-700/50 hover:border-slate-600'
-                  }`}
-                >
-                  <button
-                    onClick={() => setSelectedAccount(account)}
-                    className="flex-1 flex items-center gap-3 text-left"
+              {savedAccounts.map((account) => {
+                const selected = selectedAccount?.id === account.id;
+                const pct = account.quota && account.quota.capacity > 0
+                  ? Math.min(100, (account.quota.usage / account.quota.capacity) * 100)
+                  : null;
+                const quotaColor = pct == null ? '' : pct >= 90 ? 'bg-rose-400' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
+                return (
+                  <div
+                    key={account.id}
+                    className={`flex items-center gap-3 rounded-xl border p-3 transition ${
+                      selected
+                        ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
+                        : 'border-[var(--line)] bg-[var(--surface)] hover:border-[var(--accent-25)]'
+                    }`}
                   >
-                    <div className={`w-2 h-2 rounded-full ${selectedAccount?.id === account.id ? 'bg-blue-500' : 'bg-slate-600'}`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{account.name}</p>
-                      <p className="text-xs text-slate-500">
-                        {account.type === 'group' ? 'Group' : 'User'}
-                        {account.quota && (
-                          <span className="ml-2">
-                            {account.quota.usage}/{account.quota.capacity} audio
-                          </span>
+                    <button
+                      onClick={() => setSelectedAccount(account)}
+                      className="flex flex-1 items-center gap-3 text-left min-w-0"
+                    >
+                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
+                        account.type === 'group' ? 'border-[var(--accent-25)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-strong)]'
+                      }`}>
+                        {account.type === 'group' ? (
+                          <Building2 className="w-4 h-4 text-[var(--accent-soft)]" />
+                        ) : (
+                          <User className="w-4 h-4 text-[var(--text-50)]" />
                         )}
-                      </p>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteAccount(account.id)}
-                    className="p-2 text-slate-500 hover:text-red-400 transition-colors"
-                    title="Hapus akun"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{account.name}</p>
+                          {selected && (
+                            <span className="rounded-full bg-[var(--accent-20)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-strong)]">
+                              Aktif
+                            </span>
+                          )}
+                        </div>
+                        {account.quota && (
+                          <div className="mt-1.5">
+                            <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
+                              <span>Kuota audio bulan ini</span>
+                              <span className="tabular-nums text-[var(--text-50)]">
+                                {account.quota.usage.toLocaleString('id-ID')} / {account.quota.capacity.toLocaleString('id-ID')}
+                              </span>
+                            </div>
+                            <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[var(--surface-strong)]">
+                              <div className={`h-full rounded-full ${quotaColor}`} style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteAccount(account.id)}
+                      className="shrink-0 p-2 text-[var(--text-40)] transition hover:text-rose-300"
+                      title="Hapus akun"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* YouTube Cookies */}
-        <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-5 mb-6 border border-slate-700/50">
-          <label className="text-sm font-semibold text-white uppercase tracking-wider mb-3 block">YouTube Cookies (optional)</label>
-          <textarea
-            value={youtubeCookies}
-            onChange={(e) => setYoutubeCookies(e.target.value)}
-            placeholder="Paste Netscape cookies format..."
-            className="w-full bg-slate-800/50 text-white px-4 py-3 rounded-xl border border-slate-700/50 focus:border-blue-500/50 focus:outline-none text-sm font-mono resize-none"
-            rows={3}
-          />
-          <p className="text-xs text-slate-500 mt-2">
-            Untuk download audio dari YouTube yang memerlukan login
-          </p>
-        </div>
+        <details className={`${CARD} mb-6 group`}>
+          <summary className="flex cursor-pointer items-center justify-between p-5 text-sm font-medium text-[var(--text-80)]">
+            YouTube Cookies (optional)
+            <ChevronDown className="w-4 h-4 text-[var(--text-40)] transition group-open:rotate-180" />
+          </summary>
+          <div className="px-5 pb-5">
+            <textarea
+              value={youtubeCookies}
+              onChange={(e) => setYoutubeCookies(e.target.value)}
+              placeholder="Paste Netscape cookies format..."
+              rows={3}
+              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-3 font-mono text-xs text-[var(--text)] outline-none transition focus:border-[var(--accent-50)]"
+            />
+            <p className="mt-2 text-xs text-[var(--text-40)]">
+              Untuk mengunduh audio YouTube yang memerlukan login.
+            </p>
+          </div>
+        </details>
 
-        {/* 3 Main Sections */}
+        {/* Sections */}
         <div className="space-y-6">
           <InputSection
             onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
             backendUrl={BACKEND_URL}
             youtubeCookies={youtubeCookies}
           />
-
           <TuningSection
             rawFiles={rawFiles}
             onTuningComplete={(tuned) => setTunedFiles((prev) => [...prev, ...tuned])}
             onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
           />
-
           <OutputSection
             tunedFiles={tunedFiles}
             onRemoveTuned={(id) => setTunedFiles((prev) => prev.filter((f) => f.id !== id))}
@@ -404,28 +614,34 @@ export default function Home() {
           />
         </div>
 
-        {/* Upload History */}
+        {/* History */}
         <div className="mt-6">
-          <UploadHistory history={uploadHistory} onClear={handleClearHistory} />
+          <UploadHistory
+            history={uploadHistory}
+            onClear={handleClearHistory}
+            onRefresh={handleRefreshStatus}
+            refreshingIds={refreshingIds}
+          />
         </div>
-
-        {/* Account Modal */}
-        <AccountModal
-          isOpen={showAccountModal}
-          onClose={() => setShowAccountModal(false)}
-          onAccountAdded={handleAccountAdded}
-          backendUrl={BACKEND_URL}
-        />
 
         {/* Footer */}
-        <div className="mt-12 text-center text-slate-500 text-sm">
-          <p>S2 Studio — Audio Master to Roblox</p>
-          <p>Created by fhrlsym</p>
-          <p className="text-xs mt-2">
-            backend: <span className="font-mono text-slate-400">{BACKEND_URL}</span>
+        <footer className="mt-12 text-center">
+          <p className="font-serif text-lg">
+            <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
+              S2 Studio
+            </span>
           </p>
-        </div>
+          <p className="mt-1 text-xs text-[var(--text-40)]">Audio Master to Roblox · Created by fhrlsym</p>
+          <p className="mt-1 font-mono text-[10px] text-[var(--text-30)]">backend: {BACKEND_URL}</p>
+        </footer>
       </div>
+
+      <AccountModal
+        isOpen={showAccountModal}
+        onClose={() => setShowAccountModal(false)}
+        onAccountAdded={handleAccountAdded}
+        backendUrl={BACKEND_URL}
+      />
     </div>
   );
 }

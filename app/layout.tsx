@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -35,7 +36,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <head>
-        <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+        <Script
+          src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"
+          strategy="beforeInteractive"
+        />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

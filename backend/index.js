@@ -77,12 +77,6 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-function clampSpeed(speed) {
-  const n = parseFloat(speed);
-  if (!Number.isFinite(n) || n <= 0) return 1.0;
-  return Math.min(100, Math.max(0.5, n));
-}
-
 async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   return new Promise((resolve, reject) => {
     const filters = [];

@@ -1,23 +1,36 @@
 'use client';
 
 import { useState } from 'react';
+import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-react';
 import { TunedAudioFile, UploadResult } from '../types/audio';
+import { StatusBadge } from './StatusBadge';
+import { CARD, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+
+interface AccountLike {
+  id: string;
+  name: string;
+  type: 'user' | 'group';
+  apiKey: string;
+}
+
+interface UploadRecordResult {
+  id: string;
+  fileName: string;
+  displayName: string;
+  assetId: string;
+  accountName: string;
+  uploadedAt: number;
+  fileSize?: number;
+  duration?: number;
+  status?: string;
+}
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
   onRemoveTuned: (id: string) => void;
   backendUrl: string;
-  selectedAccount: any;
-  onUploadSuccess?: (record: {
-    id: string;
-    fileName: string;
-    displayName: string;
-    assetId: string;
-    accountName: string;
-    uploadedAt: number;
-    fileSize?: number;
-    duration?: number;
-  }) => void;
+  selectedAccount: AccountLike | null;
+  onUploadSuccess?: (record: UploadRecordResult) => void;
 }
 
 export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, selectedAccount, onUploadSuccess }: OutputSectionProps) {
@@ -35,16 +48,19 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     URL.revokeObjectURL(url);
   };
 
+  const copyAssetId = (assetId: string) => {
+    navigator.clipboard.writeText(`rbxassetid://${assetId}`);
+  };
+
   const handleUploadToRoblox = async (file: TunedAudioFile) => {
     if (!selectedAccount || !selectedAccount.apiKey) {
-      alert('Please select a Roblox account first');
+      alert('Pilih akun Roblox terlebih dahulu');
       return;
     }
 
     setUploading((prev) => ({ ...prev, [file.id]: true }));
 
     try {
-      // Upload file to backend
       const formData = new FormData();
       formData.append('file', file.blob, file.tunedName);
       formData.append('displayName', file.tunedName);
@@ -61,7 +77,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       const data = await response.json();
 
       if (response.ok && data.operationId) {
-        // Poll for moderation result
         let assetId: string | null = null;
         let status = 'Pending';
         let opError: string | null = null;
@@ -90,8 +105,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             ...prev,
             [file.id]: { filename: file.tunedName, assetId, status, success: true },
           }));
-          
-          // Add to history
+
           if (onUploadSuccess) {
             onUploadSuccess({
               id: `${Date.now()}-${file.id}`,
@@ -101,6 +115,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
               accountName: selectedAccount.name,
               uploadedAt: Date.now(),
               fileSize: file.blob.size,
+              status,
             });
           }
         } else {
@@ -124,15 +139,13 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   };
 
   return (
-    <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
-      <h2 className="text-xl font-bold text-white mb-4">3. Output & Upload</h2>
+    <div className={CARD + ' p-6'}>
+      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-5">3. Output & Upload</h2>
 
       {tunedFiles.length === 0 ? (
-        <div className="text-center py-12">
-          <svg className="w-16 h-16 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="text-slate-500 text-sm">Belum ada file yang di-tune</p>
+        <div className="rounded-xl border border-dashed border-[var(--line)] py-12 text-center">
+          <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
+          <p className="text-sm text-[var(--text-45)]">Belum ada file yang di-tune.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -141,69 +154,80 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             const isUploading = uploading[file.id];
 
             return (
-              <div key={file.id} className="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700/50">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate text-sm">{file.tunedName}</p>
-                    <p className="text-slate-400 text-xs mt-1">
-                      Speed: {file.speed}x · Amplify: {file.amplify > 0 ? '+' : ''}{file.amplify}dB · 
-                      Roblox: {(1 / file.speed).toFixed(4)}
+              <div
+                key={file.id}
+                className={`stagger-enter rounded-xl border p-4 transition ${
+                  result?.success
+                    ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
+                    : result
+                      ? 'border-rose-400/15 bg-rose-400/[0.04]'
+                      : 'border-[var(--line)] bg-[var(--surface)]'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-[var(--text-90)]">{file.tunedName}</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-45)]">
+                      Speed {file.speed}x · Amplify {file.amplify > 0 ? '+' : ''}{file.amplify}dB · Playback{' '}
+                      <span className="font-mono text-[var(--accent-soft)]">{(1 / file.speed).toFixed(4)}</span>
                     </p>
                   </div>
                   <button
                     onClick={() => onRemoveTuned(file.id)}
-                    className="ml-3 text-slate-500 hover:text-red-400 transition"
+                    className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
 
                 {result && (
-                  <div className={`mb-3 p-3 rounded-lg border ${
-                    result.success 
-                      ? 'bg-emerald-500/10 border-emerald-500/30' 
-                      : 'bg-red-500/10 border-red-500/30'
-                  }`}>
+                  <div className="mt-3">
                     {result.success ? (
-                      <div>
-                        <p className="text-emerald-400 font-semibold text-sm flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          Upload Berhasil
-                        </p>
-                        <p className="text-slate-300 text-xs mt-1">Asset ID: {result.assetId}</p>
-                        <p className="text-slate-400 text-xs">Status: {result.status}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <StatusBadge status={result.status || 'Pending'} />
+                        <span className="inline-flex items-center gap-1 font-mono text-xs text-[var(--text-60)]">
+                          rbxassetid://{result.assetId}
+                        </span>
+                        <button
+                          onClick={() => copyAssetId(result.assetId!)}
+                          className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--text-50)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-soft)]"
+                        >
+                          <Copy className="w-3 h-3" />
+                          Salin
+                        </button>
                       </div>
                     ) : (
-                      <div>
-                        <p className="text-red-400 font-semibold text-sm flex items-center gap-2">
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                          Upload Gagal
-                        </p>
-                        <p className="text-slate-300 text-xs mt-1">{result.error}</p>
-                      </div>
+                      <p className="text-xs text-rose-300">{result.error}</p>
                     )}
                   </div>
                 )}
 
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleDownload(file)}
-                    className="flex-1 bg-blue-600/90 hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
-                  >
-                    Download MP3
+                <div className="mt-4 flex gap-2">
+                  <button onClick={() => handleDownload(file)} className={BTN_GHOST + ' flex-1'}>
+                    <Download className="w-4 h-4" />
+                    MP3
                   </button>
                   <button
                     onClick={() => handleUploadToRoblox(file)}
                     disabled={isUploading || !!result}
-                    className="flex-1 bg-emerald-600/90 hover:bg-emerald-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+                    className={BTN_PRIMARY + ' flex-1'}
                   >
-                    {isUploading ? 'Uploading...' : result ? 'Uploaded' : 'Upload to Roblox'}
+                    {isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Uploading…
+                      </>
+                    ) : result?.success ? (
+                      <>
+                        <CloudUpload className="w-4 h-4" />
+                        Uploaded
+                      </>
+                    ) : (
+                      <>
+                        <CloudUpload className="w-4 h-4" />
+                        Upload ke Roblox
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
