@@ -105,6 +105,8 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
       filters.push(`volume=${amplify}dB`);
     }
 
+    console.log('[FFmpeg] Filters:', filters.join(','));
+
     let command = ffmpeg(inputPath);
     if (filters.length > 0) {
       command = command.audioFilters(filters);
@@ -116,6 +118,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
       .audioFrequency(48000)
       .toFormat('mp3')
       .outputOptions('-map_metadata', '-1')
+      .on('start', (cmd) => console.log('[FFmpeg] Command:', cmd))
       .on('end', resolve)
       .on('error', reject)
       .save(outputPath);
