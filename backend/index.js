@@ -92,7 +92,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   try {
     const title = String(await runYtdl([
       '--print', 'title',
-      '--extractor-args', 'youtube:player_client=web_safari,android',
+      '--extractor-args', 'youtube:player_client=mweb,android_vr,web_safari,android',
       url,
     ], cookiesFile)).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
@@ -103,7 +103,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
       '--extract-audio',
       '--audio-format', 'vorbis',
       '--audio-quality', '0',
-      '--extractor-args', 'youtube:player_client=web_safari,android',
+      '--extractor-args', 'youtube:player_client=mweb,android_vr,web_safari,android',
       '--retries', '3',
     ], cookiesFile);
 
@@ -208,7 +208,7 @@ app.post('/api/youtube-info', async (req, res) => {
     const stdout = await runYtdl([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
-      '--extractor-args', 'youtube:player_client=web_safari,android',
+      '--extractor-args', 'youtube:player_client=mweb,android_vr,web_safari,android',
       url,
     ]);
 

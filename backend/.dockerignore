@@ -5,4 +5,6 @@ temp_*.mp3
 output_*.mp3
 temp_*.m4a
 temp_*.webm
+temp_*.ogg
+output_*.ogg
 *.log

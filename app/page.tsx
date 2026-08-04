@@ -268,6 +268,9 @@ export default function Home() {
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal mengambil info video';
+      if (/sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha/i.test(message)) {
+        setCookieHelpUrl(candidate);
+      }
       setYoutubeLinks(prev =>
         prev.map(l => l.url === candidate ? { ...l, loading: false, error: message } : l)
       );
