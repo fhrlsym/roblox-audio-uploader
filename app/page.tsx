@@ -636,6 +636,7 @@ export default function Home() {
             onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
             backendUrl={BACKEND_URL}
             youtubeCookies={youtubeCookies}
+            onYoutubeCookiesChange={setYoutubeCookies}
           />
           <TuningSection
             rawFiles={rawFiles}
@@ -669,7 +670,7 @@ export default function Home() {
             </span>
           </p>
           <p className="mt-1 text-xs text-[var(--text-40)]">Audio Master to Roblox · Created by fhrlsym</p>
-          <p className="mt-1 font-mono text-[10px] text-[var(--text-30)]">backend: {BACKEND_URL}</p>
+          <p className="mt-1 font-mono text-[10px] text-[var(--text-30)]">V.123142</p>
         </footer>
       </div>
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Check, Clock, Loader2, Music, Play, Plus, Trash2, Upload } from 'lucide-react';
+import { Check, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
 import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 
@@ -16,17 +16,29 @@ interface InputSectionProps {
   onFilesAdded: (files: RawAudioFile[]) => void;
   backendUrl: string;
   youtubeCookies: string;
+  onYoutubeCookiesChange: (cookies: string) => void;
 }
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
 
-export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies }: InputSectionProps) {
+export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies, onYoutubeCookiesChange }: InputSectionProps) {
   const [activeTab, setActiveTab] = useState<'file' | 'youtube'>('youtube');
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [converting, setConverting] = useState(false);
   const [converted, setConverted] = useState<Record<string, boolean>>({});
+  const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isBotError = (message: string) =>
+    /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|bot/i.test(message);
+
+  const retryLink = (url: string) => {
+    setYoutubeLinks((prev) =>
+      prev.map((l) => (l.url === url ? { ...l, loading: true, error: undefined, video: undefined } : l))
+    );
+    fetchYoutubeInfo(url);
+  };
 
   const fetchYoutubeInfo = async (candidate: string) => {
     try {
@@ -44,6 +56,9 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies 
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal mengambil info video';
+      if (isBotError(message)) {
+        setCookieHelpUrl(candidate);
+      }
       setYoutubeLinks((prev) =>
         prev.map((l) => (l.url === candidate ? { ...l, loading: false, error: message } : l))
       );
@@ -136,6 +151,9 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies 
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Download failed';
+        if (isBotError(message)) {
+          setCookieHelpUrl(link.url);
+        }
         setYoutubeLinks((prev) =>
           prev.map((l) => (l.url === link.url ? { ...l, error: message } : l))
         );
@@ -290,12 +308,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies 
                         <p className="mt-0.5 text-xs text-rose-300">{link.error}</p>
                       </div>
                       <button
-                        onClick={() => {
-                          setYoutubeLinks((prev) =>
-                            prev.map((l) => (l.url === link.url ? { ...l, loading: true, error: undefined } : l))
-                          );
-                          fetchYoutubeInfo(link.url);
-                        }}
+                        onClick={() => retryLink(link.url)}
                         className="shrink-0 text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
                       >
                         Coba lagi
@@ -336,6 +349,80 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies 
               {doneCount} audio siap di-tune di bagian berikutnya.
             </p>
           )}
+        </div>
+      )}
+
+      {/* Cookie Help Popup */}
+      {cookieHelpUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setCookieHelpUrl(null)}
+        >
+          <div
+            className="modal-enter w-full max-w-lg rounded-2xl border border-[var(--accent-25)] bg-[var(--panel)] p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="font-serif text-xl text-[var(--accent-strong)]">
+                  Oops, kena &quot;not a bot&quot; bot check
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-40)]">
+                  YouTube curiga kita robot. Tenang, gampang kok.
+                </p>
+              </div>
+              <button
+                onClick={() => setCookieHelpUrl(null)}
+                className="p-1 text-[var(--text-40)] transition hover:text-[var(--text)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <ol className="mt-5 space-y-3">
+              {[
+                ['Install ekstensi', 'Buka Chrome/Edge → Chrome Web Store → cari "Get cookies.txt LOCALLY" → Add to Chrome. (Gratis)'],
+                ['Login YouTube', 'Buka youtube.com lalu login pakai akun yang sama seperti biasa.'],
+                ['Export cookies', 'Klik ikon ekstensi di pojok kanan atas → tombol "Export". File cookies.txt akan terdownload.'],
+                ['Copy isinya', 'Buka file cookies.txt itu (pakai Notepad). Tekan Ctrl+A lalu Ctrl+C.'],
+                ['Tempel di bawah', 'Klik kotak di bawah ini, tekan Ctrl+V, lalu klik tombol Simpan.'],
+              ].map(([title, desc], i) => (
+                <li key={i} className="flex gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--accent-30)] text-xs text-[var(--accent-soft)]">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div className="text-sm font-medium text-[var(--text-90)]">{title}</div>
+                    <div className="mt-0.5 text-xs leading-relaxed text-[var(--text-50)]">{desc}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            <textarea
+              value={youtubeCookies}
+              onChange={(e) => onYoutubeCookiesChange(e.target.value)}
+              rows={5}
+              placeholder="Tempel isi cookies.txt di sini..."
+              className={INPUT + ' mt-5 resize-y font-mono text-xs'}
+            />
+
+            <div className="mt-4 flex gap-3">
+              <button
+                onClick={() => {
+                  const url = cookieHelpUrl;
+                  setCookieHelpUrl(null);
+                  retryLink(url);
+                }}
+                className={BTN_PRIMARY + ' flex-1'}
+              >
+                Simpan & Coba Lagi
+              </button>
+              <button onClick={() => setCookieHelpUrl(null)} className={BTN_GHOST}>
+                Nanti saja
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

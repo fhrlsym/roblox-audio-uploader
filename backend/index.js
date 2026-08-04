@@ -29,7 +29,9 @@ async function runYtdl(args, cookiesFile) {
   return stdout;
 }
 
-const YOUTUBE_CLIENTS = ['android', 'ios', 'tv'];
+// Urutan klien disusun dari yang paling sering lolos cek bot tanpa cookies.
+// android_vr & web_safari umumnya paling toleran; tv cenderung kena "Sign in".
+const YOUTUBE_CLIENTS = ['android_vr', 'web_safari', 'ios', 'web', 'android', 'mweb', 'tv'];
 
 function isBotError(message) {
   return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human/i.test(message || '');
@@ -64,6 +66,14 @@ app.use(express.json());
 function getVideoId(url) {
   const m = url.match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/);
   return m ? m[1] : null;
+}
+
+function cleanYoutubeUrl(url) {
+  const id = getVideoId(url);
+  if (!id) return url;
+  // Buang parameter playlist/radio (list=RD..., start_radio=1, dsb)
+  // agar yt-dlp tidak diperlakukan sebagai playlist.
+  return `https://www.youtube.com/watch?v=${id}`;
 }
 
 function sleep(ms) {
@@ -127,7 +137,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
     const stdout = String(await runYtdlWithClients([
       '--print', 'title',
       '--no-simulate',
-      url,
+      cleanYoutubeUrl(url),
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
       '--retries', '3',
@@ -244,7 +254,7 @@ app.post('/api/youtube-info', async (req, res) => {
     const stdout = await runYtdlWithClients([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
-      url,
+      cleanYoutubeUrl(url),
     ], cookiesFile);
 
     const [title = '', durationString = '', duration = '0', thumbnail = '', channel = '', id = ''] =
