@@ -63,11 +63,12 @@ export async function processAudio(
   let srcBuf = await ctx.decodeAudioData(ab);
   onProgress?.(40);
   
-  // Force 48kHz seperti REZZZ untuk konsistensi Roblox
+  // Force 48kHz mono untuk konsistensi Roblox (seperti REZZZ)
   const targetRate = 48000;
+  const targetChannels = 1; // Force mono
   const duration = srcBuf.duration / speedVal;
   const frames = Math.max(1, Math.ceil(duration * targetRate));
-  const offline = new OfflineAudioContext(srcBuf.numberOfChannels, frames, targetRate);
+  const offline = new OfflineAudioContext(targetChannels, frames, targetRate);
   
   const source = offline.createBufferSource();
   source.buffer = srcBuf;
@@ -103,6 +104,21 @@ export async function processAudio(
   onProgress?.(80);
   
   rendered = softLimit(rendered, 0.92);
+  
+  // Normalize audio untuk konsistensi pitch di Roblox
+  for (let c = 0; c < rendered.numberOfChannels; c++) {
+    const data = rendered.getChannelData(c);
+    let maxVal = 0;
+    for (let i = 0; i < data.length; i++) {
+      maxVal = Math.max(maxVal, Math.abs(data[i]));
+    }
+    if (maxVal > 0 && maxVal < 0.95) {
+      const scale = 0.92 / maxVal;
+      for (let i = 0; i < data.length; i++) {
+        data[i] *= scale;
+      }
+    }
+  }
   
   try { await ctx.close(); } catch (_) {}
   
