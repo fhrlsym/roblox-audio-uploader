@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { supabase, AudioUpload, SavedAccountRow } from '../lib/supabase';
+import { processAudio } from '../lib/audioProcessor';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -32,6 +33,7 @@ interface YoutubeLinkEntry {
 
 interface UploadFileEntry {
   file?: File;
+  blob?: Blob;
   fileId?: string;
   name?: string;
   video?: VideoInfo;
@@ -286,6 +288,8 @@ export default function Home() {
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgressItem[]>([]);
   const [autoUpload, setAutoUpload] = useState(false);
   const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
+  const [converting, setConverting] = useState(false);
+  const [convertProgress, setConvertProgress] = useState<{file: File, progress: number}[]>([]);
 
   const [uploadHistory, setUploadHistory] = useState<AudioUpload[]>([]);
   const [summary, setSummary] = useState({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
@@ -704,6 +708,43 @@ export default function Home() {
     setYoutubeLinks(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleClientSideConvert = async () => {
+    const filesToConvert = files.filter(f => f.file && !f.blob);
+    if (filesToConvert.length === 0) {
+      addToast('Tambahkan file audio terlebih dahulu', 'error');
+      return;
+    }
+
+    setConverting(true);
+    setConvertProgress(filesToConvert.map(f => ({ file: f.file!, progress: 0 })));
+
+    try {
+      for (let i = 0; i < filesToConvert.length; i++) {
+        const entry = filesToConvert[i];
+        const file = entry.file!;
+
+        const blob = await processAudio(file, speed, amplify, (progress) => {
+          setConvertProgress(prev => 
+            prev.map((p, idx) => idx === i ? { ...p, progress } : p)
+          );
+        });
+
+        const newName = file.name.replace(/\.[^/.]+$/, '') + `${speed}x.mp3`;
+        setFiles(prev => prev.map(f => 
+          f.file === file ? { ...f, blob, name: newName } : f
+        ));
+      }
+
+      addToast(`${filesToConvert.length} file berhasil di-convert`, 'success');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Convert gagal';
+      addToast(message, 'error');
+    } finally {
+      setConverting(false);
+      setConvertProgress([]);
+    }
+  };
+
   const handleYoutubeDownload = async () => {
     if (downloadLockRef.current) return;
     const urls = youtubeLinks.filter(l => l.url.trim());
@@ -903,11 +944,12 @@ export default function Home() {
               }),
             });
           } else {
-            const file = entry.file!;
+            const fileToUpload = entry.blob || entry.file!;
+            const fileName = entry.name || entry.file?.name || 'audio.mp3';
             const formData = new FormData();
-            formData.append('file', file);
+            formData.append('file', fileToUpload, fileName);
             formData.append('assetType', 'Audio');
-            formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
+            formData.append('displayName', fileName.replace(/\.[^/.]+$/, ''));
             formData.append('description', description);
             formData.append('creatorType', selectedAccount.type);
             formData.append('creatorId', selectedAccount.id);
@@ -1494,6 +1536,33 @@ export default function Home() {
                       ))}
                     </div>
                   </>
+                )}
+
+                {files.length > 0 && files.some(f => f.file && !f.blob) && (
+                  <button
+                    onClick={handleClientSideConvert}
+                    disabled={converting}
+                    className={`${BTN_PRIMARY} mt-4 flex w-full items-center justify-center gap-2`}
+                  >
+                    <IconFile />
+                    {converting ? 'Converting…' : 'Convert ke MP3'}
+                  </button>
+                )}
+
+                {convertProgress.length > 0 && (
+                  <div className="mt-4 max-h-60 space-y-2 overflow-y-auto pr-1">
+                    {convertProgress.map((item, index) => (
+                      <div key={index} className="stagger-enter rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs">
+                        <div className="flex items-center justify-between">
+                          <span className="truncate text-[var(--text-70)]">{item.file.name}</span>
+                          <span className="text-[var(--text-40)]">{item.progress}%</span>
+                        </div>
+                        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-[var(--surface-soft)]">
+                          <div className="h-full rounded-full bg-[var(--accent-strong)] transition-all" style={{ width: `${item.progress}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
                   </>
                 )}
