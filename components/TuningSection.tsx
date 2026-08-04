@@ -33,6 +33,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
     setProgress(0);
 
     const results: TunedAudioFile[] = [];
+    const succeededIds: string[] = [];
 
     for (let i = 0; i < rawFiles.length; i++) {
       const raw = rawFiles[i];
@@ -69,6 +70,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
           amplify,
           sourceId: raw.id,
         });
+        succeededIds.push(raw.id);
 
         setProgress(((i + 1) / rawFiles.length) * 100);
       } catch (error) {
@@ -77,15 +79,20 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
     }
 
     onTuningComplete(results);
+    // Refresh file list: remove files that were successfully tuned.
+    const done = new Set(succeededIds);
+    rawFiles.forEach((f) => {
+      if (done.has(f.id)) onRemoveRaw(f.id);
+    });
     setTuning(false);
     setProgress(0);
   };
 
   return (
-    <div className={CARD + ' p-6'}>
-      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-5">2. Audio Tuning</h2>
+    <div className={CARD + ' p-4'}>
+      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">2. Audio Tuning</h2>
 
-      <div className="mb-6">
+      <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className={LABEL}>File ({rawFiles.length})</p>
           {rawFiles.length > 0 && (
@@ -99,7 +106,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
         </div>
 
         {rawFiles.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--line)] py-10 text-center">
+          <div className="rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
             <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
             <p className="text-sm text-[var(--text-45)]">Belum ada file. Tambah dari Input Audio.</p>
           </div>
@@ -159,7 +166,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={LABEL}>Speed</label>

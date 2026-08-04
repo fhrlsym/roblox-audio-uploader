@@ -148,11 +148,11 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   };
 
   return (
-    <div className={CARD + ' p-6'}>
-      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-5">3. Output & Upload</h2>
+    <div className={CARD + ' p-4'}>
+      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">3. Output & Upload</h2>
 
       {tunedFiles.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-12 text-center">
+        <div className="rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
           <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
           <p className="text-sm text-[var(--text-45)]">Belum ada file yang di-tune.</p>
         </div>
@@ -214,7 +214,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                               onClick={() => copyAssetId(result.assetId!)}
                               className="group inline-flex items-center gap-1.5 font-mono text-sm text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)]"
                             >
-                              rbxassetid://{result.assetId}
+                              {result.assetId}
                               <Copy className="w-3 h-3 opacity-50 transition group-hover:opacity-100" />
                             </button>
                           </div>

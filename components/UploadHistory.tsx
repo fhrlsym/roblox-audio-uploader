@@ -96,7 +96,7 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
                 title="Salin asset ID"
               >
                 <code className="text-[11px] text-[var(--accent-soft)] font-mono">
-                  rbxassetid://{record.assetId}
+                  {record.assetId}
                 </code>
                 <Copy className="w-3 h-3 text-[var(--text-40)] transition group-hover:text-[var(--accent-soft)]" />
               </button>

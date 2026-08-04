@@ -199,10 +199,13 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
 async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Untitled', description = '', creatorType = 'user', creatorId, apiKey }) {
   const creator = creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId };
 
+  // Roblox caps displayName at 50 chars. Strip any extension, then truncate.
+  const safeName = String(displayName || 'Untitled').replace(/\.[^/.]+$/, '').slice(0, 50).trim() || 'Untitled';
+
   const form = new FormData();
   form.append('request', JSON.stringify({
     assetType,
-    displayName,
+    displayName: safeName,
     description,
     creationContext: {
       assetPrivacy: 'default',
@@ -211,7 +214,7 @@ async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Un
     },
   }));
   form.append('fileContent', createReadStream(filePath), {
-    filename: `${displayName}.mp3`,
+    filename: `${safeName}.mp3`,
     contentType: 'audio/mpeg',
   });
 

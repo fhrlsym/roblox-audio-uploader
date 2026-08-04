@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Check, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
+import { Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
 import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 
@@ -26,7 +26,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [converting, setConverting] = useState(false);
-  const [converted, setConverted] = useState<Record<string, boolean>>({});
+  const [convertedCount, setConvertedCount] = useState(0);
   const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,16 +92,10 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
 
   const removeLink = (url: string) => {
     setYoutubeLinks((prev) => prev.filter((l) => l.url !== url));
-    setConverted((prev) => {
-      const next = { ...prev };
-      delete next[url];
-      return next;
-    });
   };
 
   const clearLinks = () => {
     setYoutubeLinks([]);
-    setConverted({});
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,6 +120,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
     setConverting(true);
 
     const results: RawAudioFile[] = [];
+    const succeeded: string[] = [];
 
     for (const link of targets) {
       try {
@@ -145,7 +140,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
             url: link.url,
             video: link.video,
           });
-          setConverted((prev) => ({ ...prev, [link.url]: true }));
+          succeeded.push(link.url);
         } else {
           throw new Error(data.error || 'Download failed');
         }
@@ -162,17 +157,21 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
 
     if (results.length > 0) {
       onFilesAdded(results);
+      setConvertedCount((c) => c + results.length);
+      // Refresh antrian: remove links that already succeeded so queue stays clean.
+      const done = new Set(succeeded);
+      setYoutubeLinks((prev) => prev.filter((l) => !done.has(l.url)));
     }
 
     setConverting(false);
   };
 
   const readyCount = youtubeLinks.filter((l) => l.video).length;
-  const doneCount = Object.keys(converted).filter((u) => youtubeLinks.some((l) => l.url === u)).length;
+  const doneCount = convertedCount;
 
   return (
-    <div className={CARD + ' p-6'}>
-      <div className="flex items-center justify-between mb-5">
+    <div className={CARD + ' p-4'}>
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">1. Input Audio</h2>
         <div className="flex gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-0.5">
           <button
@@ -204,7 +203,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
         <div>
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-[var(--line)] rounded-xl p-10 text-center transition hover:border-[var(--accent-30)] hover:bg-[var(--accent-06)]"
+            className="w-full border-2 border-dashed border-[var(--line)] rounded-xl p-6 text-center transition hover:border-[var(--accent-30)] hover:bg-[var(--accent-06)]"
           >
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)]">
               <Upload className="w-5 h-5 text-[var(--text-50)]" />
@@ -288,9 +287,6 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
                           {link.video.channel || 'YouTube'} · {link.video.durationString}
                         </p>
                       </div>
-                      {converted[link.url] ? (
-                        <Check className="w-4 h-4 shrink-0 text-emerald-400" />
-                      ) : null}
                       <button
                         onClick={() => removeLink(link.url)}
                         className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"

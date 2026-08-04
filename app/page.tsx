@@ -440,22 +440,22 @@ export default function Home() {
       <div className="pointer-events-none fixed bottom-0 -left-20 h-72 w-72 rounded-full bg-[var(--glow-2)] blur-[110px]" />
       <div className="pointer-events-none fixed bottom-10 right-0 h-56 w-56 rounded-full bg-[var(--glow-3)] blur-[100px]" />
 
-      <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-16">
+      <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-12">
         {/* Header */}
-        <header className={`${CARD} relative mb-6 p-6 sm:p-8`}>
+        <header className={`${CARD} relative mb-4 p-5 sm:p-6`}>
           <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top_right,var(--accent-15),transparent_60%)]" />
-          <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div className="relative flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-soft)]">
                 S2 Studio
               </p>
-              <h1 className="mt-1 font-serif text-3xl sm:text-4xl font-semibold tracking-tight">
+              <h1 className="mt-0.5 font-serif text-2xl sm:text-3xl font-semibold tracking-tight">
                 Audio Master{' '}
                 <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
                   to Roblox
                 </span>
               </h1>
-              <p className="mt-2 text-sm text-[var(--text-50)]">Convert · Tune · Upload · Track</p>
+              <p className="mt-1 text-sm text-[var(--text-50)]">Convert · Tune · Upload · Track</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="relative">
@@ -492,17 +492,17 @@ export default function Home() {
         </header>
 
         {/* Stats */}
-        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className={`${PANEL} px-4 py-4 text-center`}>
+            <div key={stat.label} className={`${PANEL} px-4 py-3 text-center`}>
               <div className="text-2xl font-semibold tabular-nums text-[var(--text)]">{stat.value}</div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.2em] text-[var(--text-40)]">{stat.label}</div>
+              <div className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--text-40)]">{stat.label}</div>
             </div>
           ))}
         </div>
 
         {/* Account Selector */}
-        <div className={`${CARD} mb-6 p-5`}>
+        <div className={`${CARD} mb-4 p-4`}>
           <div className="mb-3 flex items-center justify-between">
             <label className={LABEL}>Roblox Account</label>
             <button
@@ -611,12 +611,12 @@ export default function Home() {
         </div>
 
         {/* YouTube Cookies */}
-        <details className={`${CARD} mb-6 group`}>
-          <summary className="flex cursor-pointer items-center justify-between p-5 text-sm font-medium text-[var(--text-80)]">
+        <details className={`${CARD} mb-4 group`}>
+          <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-medium text-[var(--text-80)]">
             YouTube Cookies (optional)
             <ChevronDown className="w-4 h-4 text-[var(--text-40)] transition group-open:rotate-180" />
           </summary>
-          <div className="px-5 pb-5">
+          <div className="px-4 pb-4">
             <textarea
               value={youtubeCookies}
               onChange={(e) => setYoutubeCookies(e.target.value)}
@@ -631,7 +631,7 @@ export default function Home() {
         </details>
 
         {/* Sections */}
-        <div className="space-y-6">
+        <div className="space-y-4">
           <InputSection
             onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
             backendUrl={BACKEND_URL}
@@ -653,7 +653,7 @@ export default function Home() {
         </div>
 
         {/* History */}
-        <div className="mt-6">
+        <div className="mt-5">
           <UploadHistory
             history={uploadHistory}
             onClear={handleClearHistory}
@@ -663,7 +663,7 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="mt-12 text-center">
+        <footer className="mt-8 text-center">
           <p className="font-serif text-lg">
             <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
               S2 Studio
