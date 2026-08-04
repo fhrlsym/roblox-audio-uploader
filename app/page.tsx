@@ -88,6 +88,8 @@ interface UploadResult {
   assetId?: string;
   status?: string;
   error?: string;
+  pending?: boolean;
+  step?: 'uploading' | 'moderating';
 }
 
 interface DownloadProgressItem {
@@ -834,88 +836,111 @@ export default function Home() {
     }
 
     setUploading(true);
-    setResults([]);
+    setResults(files.map((entry) => ({
+      filename: entry.file.name,
+      success: false,
+      pending: true,
+      step: 'uploading',
+    })));
 
-    const uploadResults: UploadResult[] = [];
+    const updateResult = (index: number, patch: Partial<UploadResult>) =>
+      setResults(prev => prev.map((r, i) => i === index ? { ...r, ...patch } : r));
 
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i].file;
-      const apiKey = selectedAccount.apiKey;
+    const CONCURRENCY = 3;
+    let nextIndex = 0;
 
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('assetType', 'Audio');
-        formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
-        formData.append('description', `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`);
-        formData.append('creatorType', selectedAccount.type);
-        formData.append('creatorId', selectedAccount.id);
-        formData.append('apiKey', apiKey);
+    const worker = async () => {
+      while (nextIndex < files.length) {
+        const i = nextIndex++;
+        const file = files[i].file;
+        const apiKey = selectedAccount.apiKey;
 
-        const response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
-          method: 'POST',
-          body: formData,
-        });
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('assetType', 'Audio');
+          formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
+          formData.append('description', `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`);
+          formData.append('creatorType', selectedAccount.type);
+          formData.append('creatorId', selectedAccount.id);
+          formData.append('apiKey', apiKey);
 
-        const result = await response.json();
+          const response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
+            method: 'POST',
+            body: formData,
+          });
 
-        if (response.ok && result.operationId) {
-          let assetId: string | null = null;
-          let status = 'Pending';
-          let opError: string | null = null;
+          const result = await response.json();
 
-          for (let attempt = 0; attempt < 120; attempt += 1) {
-            await new Promise((r) => setTimeout(r, 3000));
-            const opResponse = await fetch(
-              `${BACKEND_URL}/api/operation-status/${result.operationId}?apiKey=${encodeURIComponent(apiKey)}`
-            );
-            const opData = await opResponse.json();
+          if (response.ok && result.operationId) {
+            updateResult(i, { step: 'moderating' });
 
-            if (opData.done) {
-              if (opData.assetId) {
-                assetId = opData.assetId;
-                status = opData.status || 'Pending';
-              } else {
-                opError = opData.error || 'Upload failed during moderation';
+            let assetId: string | null = null;
+            let status = 'Pending';
+            let opError: string | null = null;
+
+            for (let attempt = 0; attempt < 120; attempt += 1) {
+              await new Promise((r) => setTimeout(r, 3000));
+              const opResponse = await fetch(
+                `${BACKEND_URL}/api/operation-status/${result.operationId}?apiKey=${encodeURIComponent(apiKey)}`
+              );
+              const opData = await opResponse.json();
+
+              if (opData.done) {
+                if (opData.assetId) {
+                  assetId = opData.assetId;
+                  status = opData.status || 'Pending';
+                } else {
+                  opError = opData.error || 'Upload failed during moderation';
+                }
+                break;
               }
-              break;
             }
-          }
 
-          if (assetId) {
-            uploadResults.push({
-              filename: file.name,
-              assetId,
-              status,
-              success: true,
-            });
+            if (assetId) {
+              updateResult(i, {
+                filename: file.name,
+                assetId,
+                status,
+                success: true,
+                pending: false,
+                step: undefined,
+              });
 
-            const youtubeUrl = youtubeLinks[i]?.url?.trim() || undefined;
-            await saveToDatabase(assetId, file.name, status, youtubeUrl, selectedAccount?.id);
+              const youtubeUrl = youtubeLinks[i]?.url?.trim() || undefined;
+              await saveToDatabase(assetId, file.name, status, youtubeUrl, selectedAccount?.id);
+            } else {
+              updateResult(i, {
+                filename: file.name,
+                error: opError || 'Upload is still processing after 6 minutes',
+                success: false,
+                pending: false,
+                step: undefined,
+              });
+            }
           } else {
-            uploadResults.push({
+            updateResult(i, {
               filename: file.name,
-              error: opError || 'Upload is still processing after 6 minutes',
+              error: result.error || result.message || 'Upload failed',
               success: false,
+              pending: false,
+              step: undefined,
             });
           }
-        } else {
-          uploadResults.push({
+        } catch (error) {
+          updateResult(i, {
             filename: file.name,
-            error: result.error || result.message || 'Upload failed',
+            error: error instanceof Error ? error.message : 'Upload failed',
             success: false,
+            pending: false,
+            step: undefined,
           });
         }
-      } catch (error) {
-        uploadResults.push({
-          filename: file.name,
-          error: error instanceof Error ? error.message : 'Upload failed',
-          success: false,
-        });
       }
-    }
+    };
 
-    setResults(uploadResults);
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, files.length) }, worker));
+
     setUploading(false);
     setFiles([]);
     setYoutubeLinks([]);
@@ -1544,11 +1569,27 @@ export default function Home() {
                           <div
                             key={index}
                             className={`stagger-enter rounded-lg border px-4 py-3 ${
+                              result.pending ? 'border-[var(--accent-30)] bg-[var(--accent-10)]' :
                               result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
                             }`}
                             style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}
                           >
-                            {result.success ? (
+                            {result.pending ? (
+                              <>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-70)]">{result.filename}</div>
+                                  <span className="shrink-0 animate-pulse rounded-full border border-[var(--accent-30)] bg-[var(--surface-strong)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-strong)]">
+                                    {result.step === 'moderating' ? 'Moderasi Roblox' : 'Mengunggah…'}
+                                  </span>
+                                </div>
+                                <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-40)]">
+                                  <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-[var(--accent-30)] border-t-transparent" />
+                                  {result.step === 'moderating'
+                                    ? 'Menunggu Roblox memproses audio…'
+                                    : 'Mengirim file ke Roblox…'}
+                                </div>
+                              </>
+                            ) : result.success ? (
                               <>
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{result.filename}</div>

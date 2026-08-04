@@ -77,6 +77,36 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   });
 }
 
+function probeAudioCodec(inputPath) {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(inputPath, (err, data) => {
+      if (err) return resolve(null);
+      const stream = data.streams && data.streams.find((s) => s.codec_type === 'audio');
+      resolve(stream ? stream.codec_name : null);
+    });
+  });
+}
+
+function runFFmpegSmart(inputPath, outputPath) {
+  return probeAudioCodec(inputPath).then((codec) => {
+    const copyable = codec === 'vorbis' || codec === 'opus';
+    return new Promise((resolve, reject) => {
+      let command = ffmpeg(inputPath);
+      if (copyable) {
+        command = command.audioCodec('copy');
+      } else {
+        command = command.audioCodec('libvorbis').audioBitrate(128);
+      }
+      command
+        .toFormat('ogg')
+        .outputOptions('-map_metadata', '-1')
+        .on('end', resolve)
+        .on('error', reject)
+        .save(outputPath);
+    });
+  });
+}
+
 async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
   const tempBase = join(__dirname, `temp_${videoId}`);
@@ -325,7 +355,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
 
   try {
     const processedPath = `${req.file.path}_clean.ogg`;
-    await runFFmpeg(req.file.path, processedPath, 1.0, 0);
+    await runFFmpegSmart(req.file.path, processedPath);
     const operationId = await uploadToRoblox(processedPath, {
       assetType,
       displayName,
