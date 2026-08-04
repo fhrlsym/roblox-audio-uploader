@@ -30,7 +30,9 @@ interface YoutubeLinkEntry {
 }
 
 interface UploadFileEntry {
-  file: File;
+  file?: File;
+  fileId?: string;
+  name?: string;
   video?: VideoInfo;
 }
 
@@ -773,10 +775,7 @@ export default function Home() {
           const data = await response.json();
 
           if (data.success) {
-            const fileResponse = await fetch(`${BACKEND_URL}/api/download-file/${data.fileId}`);
-            const blob = await fileResponse.blob();
-            const file = new File([blob], data.filename, { type: 'audio/ogg' });
-            setFiles(prev => [...prev, { file, video: entry.video }]);
+            setFiles(prev => [...prev, { fileId: data.fileId, name: data.filename, video: entry.video }]);
           } else {
             throw new Error(data.error || 'Download failed');
           }
@@ -837,7 +836,7 @@ export default function Home() {
 
     setUploading(true);
     setResults(files.map((entry) => ({
-      filename: entry.file.name,
+      filename: entry.name || entry.file?.name || 'audio',
       success: false,
       pending: true,
       step: 'uploading',
@@ -852,23 +851,43 @@ export default function Home() {
     const worker = async () => {
       while (nextIndex < files.length) {
         const i = nextIndex++;
-        const file = files[i].file;
+        const entry = files[i];
         const apiKey = selectedAccount.apiKey;
+        const filename = entry.name || entry.file?.name || 'audio';
 
         try {
-          const formData = new FormData();
-          formData.append('file', file);
-          formData.append('assetType', 'Audio');
-          formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
-          formData.append('description', `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`);
-          formData.append('creatorType', selectedAccount.type);
-          formData.append('creatorId', selectedAccount.id);
-          formData.append('apiKey', apiKey);
+          const description = `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`;
+          let response: Response;
 
-          const response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
-            method: 'POST',
-            body: formData,
-          });
+          if (entry.fileId) {
+            response = await fetch(`${BACKEND_URL}/api/upload-converted`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                fileId: entry.fileId,
+                displayName: (entry.name || entry.file?.name || 'audio').replace(/\.[^/.]+$/, ''),
+                description,
+                creatorType: selectedAccount.type,
+                creatorId: selectedAccount.id,
+                apiKey,
+              }),
+            });
+          } else {
+            const file = entry.file!;
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('assetType', 'Audio');
+            formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
+            formData.append('description', description);
+            formData.append('creatorType', selectedAccount.type);
+            formData.append('creatorId', selectedAccount.id);
+            formData.append('apiKey', apiKey);
+
+            response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
+              method: 'POST',
+              body: formData,
+            });
+          }
 
           const result = await response.json();
 
@@ -899,7 +918,7 @@ export default function Home() {
 
             if (assetId) {
               updateResult(i, {
-                filename: file.name,
+                filename,
                 assetId,
                 status,
                 success: true,
@@ -908,10 +927,10 @@ export default function Home() {
               });
 
               const youtubeUrl = youtubeLinks[i]?.url?.trim() || undefined;
-              await saveToDatabase(assetId, file.name, status, youtubeUrl, selectedAccount?.id);
+              await saveToDatabase(assetId, filename, status, youtubeUrl, selectedAccount?.id);
             } else {
               updateResult(i, {
-                filename: file.name,
+                filename,
                 error: opError || 'Upload is still processing after 6 minutes',
                 success: false,
                 pending: false,
@@ -920,7 +939,7 @@ export default function Home() {
             }
           } else {
             updateResult(i, {
-              filename: file.name,
+              filename,
               error: result.error || result.message || 'Upload failed',
               success: false,
               pending: false,
@@ -929,7 +948,7 @@ export default function Home() {
           }
         } catch (error) {
           updateResult(i, {
-            filename: file.name,
+            filename,
             error: error instanceof Error ? error.message : 'Upload failed',
             success: false,
             pending: false,
@@ -1389,10 +1408,10 @@ export default function Home() {
                           )}
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-[var(--text-90)]">
-                              {entry.video?.title || entry.file.name.replace(/\.[^/.]+$/, '')}
+                              {entry.video?.title || (entry.name || entry.file?.name || 'Audio').replace(/\.[^/.]+$/, '')}
                             </p>
                             <p className="mt-0.5 truncate text-xs text-[var(--text-45)]">
-                              {entry.video ? `${entry.video.channel} · ${entry.video.durationString}` : entry.file.name}
+                              {entry.video ? `${entry.video.channel} · ${entry.video.durationString}` : (entry.name || entry.file?.name || '')}
                             </p>
                           </div>
                           <button

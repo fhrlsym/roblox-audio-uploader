@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
+import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync, readdirSync, statSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import multer from 'multer';
@@ -109,8 +109,9 @@ function runFFmpegSmart(inputPath, outputPath) {
 
 async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
-  const tempBase = join(__dirname, `temp_${videoId}`);
-  const outputPath = join(__dirname, `output_${videoId}.ogg`);
+  const runId = `${videoId}_${Date.now()}`;
+  const tempBase = join(__dirname, `temp_${runId}`);
+  const outputPath = join(__dirname, `output_${runId}.ogg`);
 
   let cookiesFile = null;
   if (cookies && typeof cookies === 'string' && cookies.trim()) {
@@ -119,7 +120,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   }
 
   const findTempFile = () => {
-    const match = readdirSync(__dirname).find((f) => f.startsWith(`temp_${videoId}.`));
+    const match = readdirSync(__dirname).find((f) => f.startsWith(`temp_${runId}.`));
     return match ? join(__dirname, match) : null;
   };
 
@@ -150,7 +151,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
 
     if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
 
-    return { title, outputPath, fileId: `output_${videoId}`, cleanup: () => {
+    return { title, outputPath, fileId: `output_${runId}`, cleanup: () => {
       for (const f of [tempAudioPath, outputPath]) {
         if (existsSync(f)) unlinkSync(f);
       }
@@ -383,6 +384,77 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
     }
   }
 });
+
+app.post('/api/upload-converted', async (req, res) => {
+  const {
+    fileId,
+    displayName,
+    description = '',
+    creatorType = 'user',
+    creatorId,
+    apiKey,
+  } = req.body;
+
+  if (!fileId) {
+    return res.status(400).json({ error: 'Missing fileId' });
+  }
+  if (!creatorId) {
+    return res.status(400).json({ error: 'Missing creator ID' });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Missing API key' });
+  }
+
+  const filePath = join(__dirname, `${fileId}.ogg`);
+  if (!existsSync(filePath)) {
+    return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
+  }
+
+  try {
+    const operationId = await uploadToRoblox(filePath, {
+      assetType: 'Audio',
+      displayName: displayName || fileId,
+      description,
+      creatorType,
+      creatorId,
+      apiKey,
+    });
+    res.json({ operationId });
+  } catch (error) {
+    console.error('Roblox upload (converted) error:', error);
+    res.status(error.status || 500).json({
+      error: error.message || 'Upload failed',
+      details: error.details,
+    });
+  } finally {
+    if (existsSync(filePath)) {
+      try { unlinkSync(filePath); } catch (e) { console.error('Cleanup error:', e); }
+    }
+  }
+});
+
+function sweepOldFiles() {
+  const cutoff = Date.now() - 45 * 60 * 1000;
+  const check = (dir, prefix) => {
+    let entries;
+    try { entries = readdirSync(dir); } catch { return; }
+    for (const f of entries) {
+      if (prefix && !f.startsWith(prefix)) continue;
+      try {
+        const p = join(dir, f);
+        const st = statSync(p);
+        if (st.isFile() && st.mtimeMs < cutoff) {
+          unlinkSync(p);
+          console.log('Swept old file:', f);
+        }
+      } catch { /* ignore */ }
+    }
+  };
+  check(__dirname, 'output_');
+  check(__dirname, 'temp_');
+  check(join(__dirname, 'uploads'), '');
+}
+setInterval(sweepOldFiles, 10 * 60 * 1000);
 
 app.post('/api/youtube-upload', async (req, res) => {
   const {
