@@ -22,6 +22,7 @@ interface GroupInfo {
   id: string;
   name: string;
   memberCount?: number;
+  hasVerifiedBadge?: boolean;
   thumbnail?: string;
 }
 
@@ -40,6 +41,11 @@ interface AddedAccount {
   apiKey: string;
   userId?: string;
   groupId?: string;
+  displayName?: string;
+  memberCount?: number;
+  hasVerifiedBadge?: boolean;
+  thumbnail?: string | null;
+  ownerName?: string | null;
   quota?: {
     usage: number;
     capacity: number;
@@ -118,15 +124,23 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
   const handleSave = () => {
     if (!keyInfo) return;
 
+    const isGroup = !!selectedGroupId;
+    const group = isGroup ? keyInfo.groups.find((g) => g.id === selectedGroupId) : undefined;
+
     const account: AddedAccount = {
       id: selectedGroupId || keyInfo.owner.id,
-      name: selectedGroupId
-        ? keyInfo.groups.find((g) => g.id === selectedGroupId)?.name || 'Group'
+      name: isGroup
+        ? group?.name || 'Group'
         : keyInfo.owner.displayName || keyInfo.owner.name,
-      type: selectedGroupId ? 'group' : 'user',
+      type: isGroup ? 'group' : 'user',
       apiKey: apiKey.trim(),
       userId: keyInfo.owner.id,
       groupId: selectedGroupId || undefined,
+      displayName: keyInfo.owner.displayName || undefined,
+      memberCount: group?.memberCount,
+      hasVerifiedBadge: isGroup ? (group?.hasVerifiedBadge ?? false) : (keyInfo.owner.hasVerifiedBadge ?? false),
+      thumbnail: isGroup ? (group?.thumbnail ?? null) : (keyInfo.owner.thumbnail ?? null),
+      ownerName: keyInfo.owner.name,
       quota: keyInfo.audioQuota,
     };
 

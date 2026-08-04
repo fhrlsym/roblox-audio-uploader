@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Building2, ChevronDown, Plus, Trash2, User } from 'lucide-react';
+import { Building2, Check, ChevronDown, Plus, Trash2, User } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
@@ -39,6 +39,11 @@ interface SavedAccount {
   apiKey: string;
   userId?: string;
   groupId?: string;
+  displayName?: string;
+  memberCount?: number;
+  hasVerifiedBadge?: boolean;
+  thumbnail?: string | null;
+  ownerName?: string | null;
   quota?: {
     usage: number;
     capacity: number;
@@ -93,6 +98,11 @@ export default function Home() {
           apiKey: row.api_key || apiKeys[row.id] || '',
           userId: row.owner_id,
           groupId: row.type === 'group' ? row.id : undefined,
+          displayName: row.display_name || undefined,
+          memberCount: row.member_count ?? undefined,
+          hasVerifiedBadge: !!row.has_verified_badge,
+          thumbnail: row.thumbnail || null,
+          ownerName: row.owner_name || null,
           quota: row.audio_usage != null && row.audio_capacity != null ? {
             usage: row.audio_usage,
             capacity: row.audio_capacity,
@@ -182,12 +192,12 @@ export default function Home() {
             id: account.id,
             type: account.type,
             name: account.name,
-            display_name: account.name,
-            member_count: 0,
-            has_verified_badge: false,
-            thumbnail: null,
+            display_name: account.displayName || account.name,
+            member_count: account.memberCount || 0,
+            has_verified_badge: account.hasVerifiedBadge || false,
+            thumbnail: account.thumbnail || null,
             owner_id: account.userId,
-            owner_name: null,
+            owner_name: account.ownerName || null,
             audio_usage: account.quota?.usage || null,
             audio_capacity: account.quota?.capacity || null,
             api_key: account.apiKey,
@@ -528,24 +538,49 @@ export default function Home() {
                       onClick={() => setSelectedAccount(account)}
                       className="flex flex-1 items-center gap-3 text-left min-w-0"
                     >
-                      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border ${
-                        account.type === 'group' ? 'border-[var(--accent-25)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-strong)]'
-                      }`}>
-                        {account.type === 'group' ? (
-                          <Building2 className="w-4 h-4 text-[var(--accent-soft)]" />
-                        ) : (
-                          <User className="w-4 h-4 text-[var(--text-50)]" />
-                        )}
-                      </div>
+                      {account.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={account.thumbnail}
+                          alt={account.name}
+                          className="h-10 w-10 shrink-0 rounded-lg border border-[var(--line)] object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
+                          account.type === 'group' ? 'border-[var(--accent-25)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-strong)]'
+                        }`}>
+                          {account.type === 'group' ? (
+                            <Building2 className="w-4 h-4 text-[var(--accent-soft)]" />
+                          ) : (
+                            <User className="w-4 h-4 text-[var(--text-50)]" />
+                          )}
+                        </div>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-sm font-medium text-[var(--text-90)]">{account.name}</p>
+                          {account.hasVerifiedBadge && (
+                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-strong)] text-[9px] font-bold text-[var(--on-accent)]">
+                              <Check className="w-2.5 h-2.5" />
+                            </span>
+                          )}
                           {selected && (
                             <span className="rounded-full bg-[var(--accent-20)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-strong)]">
                               Aktif
                             </span>
                           )}
                         </div>
+                        <p className="truncate text-[11px] text-[var(--text-45)]">
+                          {account.type === 'user' ? `@${account.name}` : account.name}
+                          {account.memberCount != null && ` · ${account.memberCount.toLocaleString('id-ID')} member`}
+                          {account.id && ` · ID ${account.id}`}
+                        </p>
+                        {account.type === 'group' && account.ownerName && (
+                          <p className="truncate text-[10px] text-[var(--accent-soft)]">
+                            milik @{account.ownerName} · menyimpan aset di group ini
+                          </p>
+                        )}
                         {account.quota && (
                           <div className="mt-1.5">
                             <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">

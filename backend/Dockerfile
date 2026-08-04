@@ -4,12 +4,14 @@ FROM node:22-bookworm-slim
 # Bump YTDLP_VERSION to update.
 ARG YTDLP_VERSION=2026.07.04
 
+# yt-dlp_linux is a self-contained binary (bundles Python) so we don't need
+# a system python3. ffmpeg is required for audio processing.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \
-    && curl -L -o /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp \
+    && curl -L -o /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux \
     && chmod +x /usr/local/bin/yt-dlp
 
 WORKDIR /srv/backend
