@@ -658,7 +658,7 @@ export default function Home() {
       const response = await fetch(`${BACKEND_URL}/api/youtube-info`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: candidate }),
+        body: JSON.stringify({ url: candidate, cookies: youtubeCookies }),
       });
       const data = await response.json();
       if (!response.ok || !data.success) {

@@ -29,6 +29,32 @@ async function runYtdl(args, cookiesFile) {
   return stdout;
 }
 
+const YOUTUBE_CLIENTS = ['android', 'ios', 'tv'];
+
+function isBotError(message) {
+  return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human/i.test(message || '');
+}
+
+function isFormatError(message) {
+  return /no audio formats|requested format.*not available|format.*not found|doesn't contain any.*audio/i.test(message || '');
+}
+
+async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
+  let lastError;
+  for (const client of clients) {
+    try {
+      return await runYtdl([...args, '--extractor-args', `youtube:player_client=${client}`], cookiesFile);
+    } catch (err) {
+      lastError = err;
+      const msg = err.message || '';
+      if (!isBotError(msg) && !isFormatError(msg)) {
+        throw err;
+      }
+    }
+  }
+  throw lastError;
+}
+
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
@@ -144,13 +170,12 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   };
 
   try {
-    const stdout = String(await runYtdl([
+    const stdout = String(await runYtdlWithClients([
       '--print', 'title',
       '--no-simulate',
       url,
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
-      '--extractor-args', 'youtube:player_client=android',
       '--retries', '3',
     ], cookiesFile));
 
@@ -250,19 +275,24 @@ app.post('/api/youtube-download', async (req, res) => {
 });
 
 app.post('/api/youtube-info', async (req, res) => {
-  const { url } = req.body;
+  const { url, cookies } = req.body;
 
   if (!url || !/youtube\.com|youtu\.be/.test(url)) {
     return res.status(400).json({ error: 'Invalid YouTube URL' });
   }
 
+  let cookiesFile = null;
+  if (cookies && typeof cookies === 'string' && cookies.trim()) {
+    cookiesFile = join(__dirname, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
+    writeFileSync(cookiesFile, cookies);
+  }
+
   try {
-    const stdout = await runYtdl([
+    const stdout = await runYtdlWithClients([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
-      '--extractor-args', 'youtube:player_client=android',
       url,
-    ]);
+    ], cookiesFile);
 
     const [title = '', durationString = '', duration = '0', thumbnail = '', channel = '', id = ''] =
       stdout.split('\n').map((s) => s.trim());
@@ -281,6 +311,8 @@ app.post('/api/youtube-info', async (req, res) => {
   } catch (error) {
     console.error('YouTube info error:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch video info' });
+  } finally {
+    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
   }
 });
 
