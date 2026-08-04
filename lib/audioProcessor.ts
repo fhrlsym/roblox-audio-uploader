@@ -63,8 +63,8 @@ export async function processAudio(
   let srcBuf = await ctx.decodeAudioData(ab);
   onProgress?.(40);
   
-  // Pakai sample rate asli seperti REZZZ AUDIO
-  const targetRate = srcBuf.sampleRate;
+  // Force 48kHz seperti REZZZ untuk konsistensi Roblox
+  const targetRate = 48000;
   const duration = srcBuf.duration / speedVal;
   const frames = Math.max(1, Math.ceil(duration * targetRate));
   const offline = new OfflineAudioContext(srcBuf.numberOfChannels, frames, targetRate);
