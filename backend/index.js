@@ -51,12 +51,31 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+const MAX_AUDIO_SECONDS = 420;
+
+function atempoFilters(speed) {
+  const s = parseFloat(speed);
+  if (!Number.isFinite(s) || s === 1.0) return [];
+  const filters = [];
+  let remaining = s;
+  while (remaining > 2.0) { filters.push('atempo=2.0'); remaining /= 2; }
+  while (remaining < 0.5) { filters.push('atempo=0.5'); remaining *= 2; }
+  if (Math.abs(remaining - 1.0) > 0.0001) filters.push(`atempo=${remaining}`);
+  return filters;
+}
+
+function probeDuration(inputPath) {
+  return new Promise((resolve) => {
+    ffmpeg.ffprobe(inputPath, (err, data) => {
+      if (err || !data || !data.format) return resolve(null);
+      resolve(Number.isFinite(data.format.duration) ? data.format.duration : null);
+    });
+  });
+}
+
 async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   return new Promise((resolve, reject) => {
-    const filters = [];
-    if (parseFloat(speed) !== 1.0) {
-      filters.push(`atempo=${speed}`);
-    }
+    const filters = [...atempoFilters(speed)];
     if (parseFloat(amplify) !== 0) {
       filters.push(`volume=${amplify}dB`);
     }
@@ -295,10 +314,7 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
     await new Promise((resolve, reject) => {
       let command = ffmpeg(inputPath);
 
-      const filters = [];
-      if (parseFloat(speed) !== 1.0) {
-        filters.push(`atempo=${speed}`);
-      }
+      const filters = [...atempoFilters(speed)];
       if (parseFloat(amplify) !== 0) {
         filters.push(`volume=${amplify}dB`);
       }
@@ -357,6 +373,12 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
   try {
     const processedPath = `${req.file.path}_clean.ogg`;
     await runFFmpegSmart(req.file.path, processedPath);
+    const durationSec = await probeDuration(processedPath);
+    if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
+      return res.status(400).json({
+        error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu coba lagi.`,
+      });
+    }
     const operationId = await uploadToRoblox(processedPath, {
       assetType,
       displayName,
@@ -408,6 +430,13 @@ app.post('/api/upload-converted', async (req, res) => {
   const filePath = join(__dirname, `${fileId}.ogg`);
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
+  }
+
+  const durationSec = await probeDuration(filePath);
+  if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
+    return res.status(400).json({
+      error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu convert ulang.`,
+    });
   }
 
   try {

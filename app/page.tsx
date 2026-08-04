@@ -18,6 +18,7 @@ interface VideoInfo {
   id: string;
   title: string;
   durationString: string;
+  duration?: number;
   thumbnail: string;
   channel: string;
 }
@@ -118,6 +119,13 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
   { id: 'sunset', label: 'Sunset', swatch: 'linear-gradient(135deg, #fda4af, #c2410c)' },
   { id: 'light-ocean', label: 'Light Ocean', swatch: 'linear-gradient(135deg, #dbeafe, #0284c7)' },
 ];
+
+function fmtSec(seconds: number): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -1443,6 +1451,11 @@ export default function Home() {
                             <p className="mt-0.5 truncate text-xs text-[var(--text-45)]">
                               {entry.video ? `${entry.video.channel} · ${entry.video.durationString}` : (entry.name || entry.file?.name || '')}
                             </p>
+                            {entry.video && entry.video.duration && (entry.video.duration / speed) >= 420 && (
+                              <p className="mt-0.5 text-[10px] font-semibold text-amber-300">
+                                ⚠ Setelah speed {speed}x durasi ~{fmtSec(entry.video.duration / speed)} — lebih dari 7 menit, akan ditolak Roblox
+                              </p>
+                            )}
                           </div>
                           <button
                             onClick={() => removeFile(index)}
