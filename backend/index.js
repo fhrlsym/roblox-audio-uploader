@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync, readdirSync, statSync } from 'fs';
+import { createReadStream, writeFileSync, unlinkSync, existsSync, readdirSync, statSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import multer from 'multer';
@@ -22,7 +22,7 @@ async function runYtdl(args, cookiesFile) {
   if (cookiesFile) {
     baseArgs.push('--cookies', cookiesFile);
   }
-  const { stdout, stderr } = await execFileAsync(YTDLP, [...baseArgs, ...args], {
+  const { stdout } = await execFileAsync(YTDLP, [...baseArgs, ...args], {
     timeout: 120000,
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -77,31 +77,19 @@ function formatDuration(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-const MAX_AUDIO_SECONDS = 420;
-
-function atempoFilters(speed) {
-  const s = parseFloat(speed);
-  if (!Number.isFinite(s) || s === 1.0) return [];
-  const filters = [];
-  let remaining = s;
-  while (remaining > 2.0) { filters.push('atempo=2.0'); remaining /= 2; }
-  while (remaining < 0.5) { filters.push('atempo=0.5'); remaining *= 2; }
-  if (Math.abs(remaining - 1.0) > 0.0001) filters.push(`atempo=${remaining}`);
-  return filters;
-}
-
-function probeDuration(inputPath) {
-  return new Promise((resolve) => {
-    ffmpeg.ffprobe(inputPath, (err, data) => {
-      if (err || !data || !data.format) return resolve(null);
-      resolve(Number.isFinite(data.format.duration) ? data.format.duration : null);
-    });
-  });
+function clampSpeed(speed) {
+  const n = parseFloat(speed);
+  if (!Number.isFinite(n) || n <= 0) return 1.0;
+  return Math.min(100, Math.max(0.5, n));
 }
 
 async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   return new Promise((resolve, reject) => {
-    const filters = [...atempoFilters(speed)];
+    const filters = [];
+    const safeSpeed = clampSpeed(speed);
+    if (safeSpeed !== 1.0) {
+      filters.push(`atempo=${safeSpeed}`);
+    }
     if (parseFloat(amplify) !== 0) {
       filters.push(`volume=${amplify}dB`);
     }
@@ -114,21 +102,6 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
     command
       .audioBitrate(128)
       .audioCodec('libvorbis')
-      .toFormat('ogg')
-      .outputOptions('-map_metadata', '-1')
-      .on('end', resolve)
-      .on('error', reject)
-      .save(outputPath);
-  });
-}
-
-function runFFmpegNormalize(inputPath, outputPath) {
-  return new Promise((resolve, reject) => {
-    ffmpeg(inputPath)
-      .audioCodec('libvorbis')
-      .audioBitrate(128)
-      .audioChannels(2)
-      .audioFrequency(44100)
       .toFormat('ogg')
       .outputOptions('-map_metadata', '-1')
       .on('end', resolve)
@@ -246,11 +219,10 @@ app.post('/api/youtube-download', async (req, res) => {
   }
 
   try {
-    const { title, outputPath, fileId, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
+    const { title, fileId } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
     res.json({
       success: true,
       filename: `${title}.ogg`,
-      path: outputPath,
       fileId,
     });
   } catch (error) {
@@ -301,74 +273,6 @@ app.post('/api/youtube-info', async (req, res) => {
   }
 });
 
-app.get('/api/download-file/:fileId', (req, res) => {
-  const filePath = join(__dirname, `${req.params.fileId}.ogg`);
-  
-  if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'File not found' });
-  }
-
-  res.download(filePath, (err) => {
-    if (err) {
-      console.error('Download error:', err);
-    }
-    if (existsSync(filePath)) {
-      try {
-        unlinkSync(filePath);
-      } catch (e) {
-        console.error('Cleanup error:', e);
-      }
-    }
-  });
-});
-
-app.post('/api/process-audio', upload.single('file'), async (req, res) => {
-  const { speed = 1.0, amplify = 0 } = req.body;
-  const inputPath = req.file.path;
-  const outputPath = `${inputPath}_processed.ogg`;
-
-  try {
-    await new Promise((resolve, reject) => {
-      let command = ffmpeg(inputPath);
-
-      const filters = [...atempoFilters(speed)];
-      if (parseFloat(amplify) !== 0) {
-        filters.push(`volume=${amplify}dB`);
-      }
-
-      if (filters.length > 0) {
-        command = command.audioFilters(filters);
-      }
-
-      command
-        .audioBitrate(128)
-        .audioCodec('libvorbis')
-        .toFormat('ogg')
-        .outputOptions('-map_metadata', '-1')
-        .on('end', resolve)
-        .on('error', reject)
-        .save(outputPath);
-    });
-
-    const processedFile = createReadStream(outputPath);
-    res.setHeader('Content-Type', 'audio/ogg');
-    res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname.replace(/\.\w+$/, '')}.ogg"`);
-    
-    processedFile.pipe(res);
-
-    processedFile.on('close', () => {
-      if (existsSync(inputPath)) unlinkSync(inputPath);
-      if (existsSync(outputPath)) unlinkSync(outputPath);
-    });
-
-  } catch (error) {
-    console.error('Processing error:', error);
-    if (existsSync(inputPath)) unlinkSync(inputPath);
-    if (existsSync(outputPath)) unlinkSync(outputPath);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
   const {
     assetType = 'Audio',
@@ -389,14 +293,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
 
   try {
     const processedPath = `${req.file.path}_clean.ogg`;
-    await runFFmpegNormalize(req.file.path, processedPath);
-    const durationSec = await probeDuration(processedPath);
-    console.log(`Upload-to-roblox ${req.file.originalname}: duration=${durationSec}s`);
-    if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
-      return res.status(400).json({
-        error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu coba lagi.`,
-      });
-    }
+    await runFFmpeg(req.file.path, processedPath, 1.0, 0);
     const operationId = await uploadToRoblox(processedPath, {
       assetType,
       displayName,
@@ -405,7 +302,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
       creatorId,
       apiKey,
     });
-    res.json({ operationId, durationSec });
+    res.json({ operationId });
   } catch (error) {
     console.error('Roblox upload error:', error);
     res.status(error.status || 500).json({
@@ -450,19 +347,8 @@ app.post('/api/upload-converted', async (req, res) => {
     return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
   }
 
-  const normPath = `${filePath}_norm.ogg`;
-
   try {
-    await runFFmpegNormalize(filePath, normPath);
-    const durationSec = await probeDuration(normPath);
-    console.log(`Upload-converted ${fileId}: duration=${durationSec}s`);
-    if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
-      return res.status(400).json({
-        error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu convert ulang.`,
-      });
-    }
-
-    const operationId = await uploadToRoblox(normPath, {
+    const operationId = await uploadToRoblox(filePath, {
       assetType: 'Audio',
       displayName: displayName || fileId,
       description,
@@ -470,7 +356,7 @@ app.post('/api/upload-converted', async (req, res) => {
       creatorId,
       apiKey,
     });
-    res.json({ operationId, durationSec });
+    res.json({ operationId });
   } catch (error) {
     console.error('Roblox upload (converted) error:', error);
     res.status(error.status || 500).json({
@@ -478,10 +364,8 @@ app.post('/api/upload-converted', async (req, res) => {
       details: error.details,
     });
   } finally {
-    for (const p of [filePath, normPath]) {
-      if (existsSync(p)) {
-        try { unlinkSync(p); } catch (e) { console.error('Cleanup error:', e); }
-      }
+    if (existsSync(filePath)) {
+      try { unlinkSync(filePath); } catch (e) { console.error('Cleanup error:', e); }
     }
   }
 });
@@ -783,7 +667,7 @@ app.get('/api/roblox/key-info', async (req, res) => {
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error('introspect failed');
       introspect = data;
-    } catch (e) {
+    } catch {
       return res.status(401).json({ error: 'API key tidak valid. Periksa kembali API key-nya.' });
     }
 

@@ -245,15 +245,6 @@ function IconPlus() {
   );
 }
 
-function IconLink() {
-  return (
-    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-    </svg>
-  );
-}
-
 function maskApiKey(key?: string | null) {
   if (!key) return null;
   const trimmed = key.trim();
@@ -432,7 +423,8 @@ export default function Home() {
   };
 
   const calculateRobloxPlaybackSpeed = () => {
-    return (1 / speed).toFixed(4);
+    const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
+    return (1 / Math.min(100, Math.max(0.5, s))).toFixed(4);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -477,7 +469,6 @@ export default function Home() {
     member_count: a.memberCount ?? null,
     has_verified_badge: a.hasVerifiedBadge ?? false,
     thumbnail: a.thumbnail ?? null,
-    api_key: a.apiKey,
     owner_id: a.ownerId ?? null,
     owner_name: a.ownerName ?? null,
     audio_usage: a.audioUsage ?? null,
@@ -492,7 +483,7 @@ export default function Home() {
     memberCount: r.member_count ?? undefined,
     hasVerifiedBadge: !!r.has_verified_badge,
     thumbnail: r.thumbnail ?? null,
-    apiKey: r.api_key || '',
+    apiKey: '',
     ownerId: r.owner_id ?? undefined,
     ownerName: r.owner_name ?? undefined,
     audioUsage: r.audio_usage ?? undefined,
@@ -507,9 +498,18 @@ export default function Home() {
         .order('created_at', { ascending: true });
       if (error) throw error;
       if (data && data.length > 0) {
-        const accounts = data.map(rowToAccount);
-        setSavedAccounts(accounts);
-        refreshAccountQuotas(accounts);
+        const localAccounts = savedAccounts;
+        const merged = data.map(row => {
+          const local = localAccounts.find(a => a.id === row.id && a.type === row.type);
+          return { ...rowToAccount(row), apiKey: local?.apiKey || '' };
+        });
+        localAccounts.forEach(a => {
+          if (!merged.some(m => m.id === a.id && m.type === a.type)) {
+            merged.push(a);
+          }
+        });
+        setSavedAccounts(merged);
+        refreshAccountQuotas(merged);
       } else if (savedAccounts.length > 0) {
         const { error: upsertError } = await supabase
           .from('saved_accounts')
@@ -1918,6 +1918,8 @@ export default function Home() {
                   <input
                     type="number"
                     step="0.01"
+                    min="0.5"
+                    max="100"
                     value={speed}
                     onChange={(e) => setSpeed(parseFloat(e.target.value))}
                     className={INPUT}

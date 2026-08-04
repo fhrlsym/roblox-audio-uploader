@@ -1,6 +1,7 @@
 -- Jalankan di Supabase Dashboard: SQL Editor
--- 1) Perbaiki tabel akun Roblox tersimpan (shared: semua pengguna melihat & memakai daftar yang sama)
---    + tambah kolom api_key (API key per akun, ikut tersimpan)
+-- 1) Tabel akun Roblox tersimpan (shared: metadata akun saja)
+--    NOTE: api_key TIDAK disimpan di sini (keamanan). API key hanya ada di localStorage pengguna.
+--    Jika tabel lama masih punya kolom api_key, hapus dengan: alter table public.saved_accounts drop column if exists api_key;
 
 create table if not exists public.saved_accounts (
   id text not null,
@@ -10,7 +11,6 @@ create table if not exists public.saved_accounts (
   member_count bigint,
   has_verified_badge boolean default false,
   thumbnail text,
-  api_key text,
   owner_id text,
   owner_name text,
   audio_usage bigint,
@@ -31,10 +31,7 @@ create policy "saved_accounts_insert" on public.saved_accounts
 create policy "saved_accounts_delete" on public.saved_accounts
   for delete using (true);
 
--- 2) Jika tabel saved_accounts SUDAH dibuat tanpa kolom api_key, jalankan baris ini saja:
--- alter table public.saved_accounts add column if not exists api_key text;
-
--- 2b) Kolom pemilik & kuota audio (cache; kuota di-refresh otomatis dari Roblox tiap load/interval)
+-- 2) Kolom pemilik & kuota audio (cache; kuota di-refresh otomatis dari Roblox tiap load/interval)
 alter table public.saved_accounts add column if not exists owner_id text;
 alter table public.saved_accounts add column if not exists owner_name text;
 alter table public.saved_accounts add column if not exists audio_usage bigint;
