@@ -35,6 +35,7 @@ interface UploadFileEntry {
   fileId?: string;
   name?: string;
   video?: VideoInfo;
+  url?: string;
 }
 
 interface RobloxAccount {
@@ -296,6 +297,7 @@ export default function Home() {
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const [backendInfo, setBackendInfo] = useState<{ commit?: string | null; startedAt?: string | null } | null>(null);
   const downloadLockRef = useRef(false);
+  const uploadLockRef = useRef(false);
   const statusRefreshLockRef = useRef(false);
   const savedAccountsRef = useRef<RobloxAccount[]>([]);
   const resultsRef = useRef<UploadResult[]>([]);
@@ -426,6 +428,9 @@ export default function Home() {
     const s = Number.isFinite(speed) && speed > 0 ? speed : 1;
     return (1 / Math.min(100, Math.max(0.5, s))).toFixed(4);
   };
+
+  const playbackSummary = () =>
+    `Playback ${calculateRobloxPlaybackSpeed()} · Speed ${speed}x · Amplify ${amplify}dB`;
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -787,7 +792,17 @@ export default function Home() {
           const data = await response.json();
 
           if (data.success) {
-            setFiles(prev => [...prev, { fileId: data.fileId, name: data.filename, video: entry.video }]);
+            const cleanUrl = url.trim();
+            setFiles(prev => {
+              const existingIndex = prev.findIndex(f => f.url === cleanUrl);
+              const newEntry: UploadFileEntry = { fileId: data.fileId, name: data.filename, video: entry.video, url: cleanUrl };
+              if (existingIndex >= 0) {
+                const next = [...prev];
+                next[existingIndex] = newEntry;
+                return next;
+              }
+              return [...prev, newEntry];
+            });
           } else {
             throw new Error(data.error || 'Download failed');
           }
@@ -831,6 +846,8 @@ export default function Home() {
   };
 
   const uploadToRoblox = async () => {
+    if (uploadLockRef.current) return;
+
     if (files.length === 0) {
       addToast('Pilih file dulu, atau convert dari YouTube terlebih dahulu', 'error');
       return;
@@ -846,6 +863,7 @@ export default function Home() {
       return;
     }
 
+    uploadLockRef.current = true;
     setUploading(true);
     setResults(files.map((entry) => ({
       filename: entry.name || entry.file?.name || 'audio',
@@ -979,6 +997,7 @@ export default function Home() {
     setUploading(false);
     setFiles([]);
     setYoutubeLinks([]);
+    uploadLockRef.current = false;
   };
 
   const checkAssetStatus = async (assetId: string, apiKey: string): Promise<string> => {
@@ -1456,6 +1475,9 @@ export default function Home() {
                             <p className="mt-0.5 truncate text-xs text-[var(--text-45)]">
                               {entry.video ? `${entry.video.channel} · ${entry.video.durationString}` : (entry.name || entry.file?.name || '')}
                             </p>
+                            <p className="mt-0.5 text-[10px] font-medium text-[var(--text-40)]">
+                              {playbackSummary()}
+                            </p>
                             {entry.video && entry.video.duration && (entry.video.duration / speed) >= 420 && (
                               <p className="mt-0.5 text-[10px] font-semibold text-amber-300">
                                 ⚠ Setelah speed {speed}x durasi ~{fmtSec(entry.video.duration / speed)} — lebih dari 7 menit, akan ditolak Roblox
@@ -1649,6 +1671,7 @@ export default function Home() {
                                     {result.step === 'moderating' ? 'Moderasi Roblox' : 'Mengunggah…'}
                                   </span>
                                 </div>
+                                <div className="mt-1 text-xs text-[var(--text-40)]">{playbackSummary()}</div>
                                 <div className="mt-2 flex items-center gap-2 text-xs text-[var(--text-40)]">
                                   <span className="h-3 w-3 shrink-0 animate-spin rounded-full border-2 border-[var(--accent-30)] border-t-transparent" />
                                   {result.step === 'moderating'
@@ -1667,6 +1690,7 @@ export default function Home() {
                                     <StatusBadge status={result.status || 'Failed'} />
                                   </div>
                                 </div>
+                                <div className="mt-1 text-xs text-[var(--text-40)]">{playbackSummary()}</div>
                                 <div className="mt-2 flex items-center gap-2 text-xs">
                                   {result.durationSec != null && (
                                     <>
@@ -1692,6 +1716,7 @@ export default function Home() {
                                     Gagal
                                   </span>
                                 </div>
+                                <div className="mt-1 text-xs text-[var(--text-40)]">{playbackSummary()}</div>
                                 {result.durationSec != null && (
                                   <div className="mt-1 text-xs text-[var(--text-50)]">Durasi terdeteksi: {fmtSec(result.durationSec)}</div>
                                 )}
