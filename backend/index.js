@@ -184,7 +184,11 @@ async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Un
     assetType,
     displayName,
     description,
-    creationContext: { creator },
+    creationContext: {
+      assetPrivacy: 'default',
+      creator,
+      expectedPrice: 0,
+    },
   }));
   form.append('fileContent', createReadStream(filePath), {
     filename: `${displayName}.mp3`,
@@ -200,7 +204,16 @@ async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Un
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    const err = new Error(data.message || data.code || `Upload failed (${response.status})`);
+    const rob = (Array.isArray(data.errors) && data.errors[0]) ? data.errors[0] : null;
+    const message =
+      rob?.userFacingMessage ||
+      rob?.message ||
+      data.userFacingMessage ||
+      data.message ||
+      data.code ||
+      `Upload failed (${response.status})`;
+    console.error('[Roblox Upload Error]', response.status, JSON.stringify(data));
+    const err = new Error(message);
     err.details = data;
     err.status = response.status;
     throw err;

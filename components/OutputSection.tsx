@@ -69,9 +69,10 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     setUploading((prev) => ({ ...prev, [file.id]: true }));
 
     try {
+      const displayName = file.tunedName.replace(/\.[^/.]+$/, '');
       const formData = new FormData();
       formData.append('file', file.blob, file.tunedName);
-      formData.append('displayName', file.tunedName);
+      formData.append('displayName', displayName);
       formData.append('description', `Speed: ${file.speed}x | Amplify: ${file.amplify}dB | Roblox Playback: ${(1 / file.speed).toFixed(4)}`);
       formData.append('creatorType', selectedAccount.type);
       formData.append('creatorId', selectedAccount.id);
