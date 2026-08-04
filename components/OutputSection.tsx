@@ -8,9 +8,19 @@ interface OutputSectionProps {
   onRemoveTuned: (id: string) => void;
   backendUrl: string;
   selectedAccount: any;
+  onUploadSuccess?: (record: {
+    id: string;
+    fileName: string;
+    displayName: string;
+    assetId: string;
+    accountName: string;
+    uploadedAt: number;
+    fileSize?: number;
+    duration?: number;
+  }) => void;
 }
 
-export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, selectedAccount }: OutputSectionProps) {
+export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, selectedAccount, onUploadSuccess }: OutputSectionProps) {
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
 
@@ -80,6 +90,19 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             ...prev,
             [file.id]: { filename: file.tunedName, assetId, status, success: true },
           }));
+          
+          // Add to history
+          if (onUploadSuccess) {
+            onUploadSuccess({
+              id: `${Date.now()}-${file.id}`,
+              fileName: file.tunedName,
+              displayName: file.tunedName,
+              assetId,
+              accountName: selectedAccount.name,
+              uploadedAt: Date.now(),
+              fileSize: file.blob.size,
+            });
+          }
         } else {
           setUploadResults((prev) => ({
             ...prev,
@@ -101,11 +124,16 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   };
 
   return (
-    <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-6 shadow-xl border border-slate-700">
-      <h2 className="text-2xl font-bold text-white mb-4">3. Output</h2>
+    <div className="bg-slate-800/30 backdrop-blur-sm rounded-2xl p-6 border border-slate-700/50">
+      <h2 className="text-xl font-bold text-white mb-4">3. Output & Upload</h2>
 
       {tunedFiles.length === 0 ? (
-        <p className="text-slate-500 text-center py-8">No tuned files yet. Tune your raw files first.</p>
+        <div className="text-center py-12">
+          <svg className="w-16 h-16 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-slate-500 text-sm">Belum ada file yang di-tune</p>
+        </div>
       ) : (
         <div className="space-y-3">
           {tunedFiles.map((file) => {
@@ -113,57 +141,69 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             const isUploading = uploading[file.id];
 
             return (
-              <div key={file.id} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+              <div key={file.id} className="bg-slate-800/50 backdrop-blur rounded-xl p-4 border border-slate-700/50">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-semibold truncate">{file.tunedName}</p>
-                    <p className="text-slate-400 text-sm">
+                    <p className="text-white font-semibold truncate text-sm">{file.tunedName}</p>
+                    <p className="text-slate-400 text-xs mt-1">
                       Speed: {file.speed}x · Amplify: {file.amplify > 0 ? '+' : ''}{file.amplify}dB · 
                       Roblox: {(1 / file.speed).toFixed(4)}
                     </p>
                   </div>
                   <button
                     onClick={() => onRemoveTuned(file.id)}
-                    className="ml-3 text-red-400 hover:text-red-300 transition"
+                    className="ml-3 text-slate-500 hover:text-red-400 transition"
                   >
-                    ✕
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                   </button>
                 </div>
 
-                {/* Result */}
                 {result && (
-                  <div className={`mb-3 p-3 rounded-lg ${
-                    result.success ? 'bg-green-900/30 border border-green-700' : 'bg-red-900/30 border border-red-700'
+                  <div className={`mb-3 p-3 rounded-lg border ${
+                    result.success 
+                      ? 'bg-emerald-500/10 border-emerald-500/30' 
+                      : 'bg-red-500/10 border-red-500/30'
                   }`}>
                     {result.success ? (
                       <div>
-                        <p className="text-green-400 font-semibold">✓ Uploaded Successfully</p>
-                        <p className="text-slate-300 text-sm">Asset ID: {result.assetId}</p>
-                        <p className="text-slate-400 text-sm">Status: {result.status}</p>
+                        <p className="text-emerald-400 font-semibold text-sm flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Upload Berhasil
+                        </p>
+                        <p className="text-slate-300 text-xs mt-1">Asset ID: {result.assetId}</p>
+                        <p className="text-slate-400 text-xs">Status: {result.status}</p>
                       </div>
                     ) : (
                       <div>
-                        <p className="text-red-400 font-semibold">✕ Upload Failed</p>
-                        <p className="text-slate-300 text-sm">{result.error}</p>
+                        <p className="text-red-400 font-semibold text-sm flex items-center gap-2">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                          Upload Gagal
+                        </p>
+                        <p className="text-slate-300 text-xs mt-1">{result.error}</p>
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Actions */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleDownload(file)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition"
+                    className="flex-1 bg-blue-600/90 hover:bg-blue-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
                   >
-                    📥 Download MP3
+                    Download MP3
                   </button>
                   <button
                     onClick={() => handleUploadToRoblox(file)}
                     disabled={isUploading || !!result}
-                    className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-2 px-4 rounded-lg transition"
+                    className="flex-1 bg-emerald-600/90 hover:bg-emerald-600 disabled:bg-slate-700 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
                   >
-                    {isUploading ? '⏳ Uploading...' : result ? '✓ Uploaded' : '🚀 Upload to Roblox'}
+                    {isUploading ? 'Uploading...' : result ? 'Uploaded' : 'Upload to Roblox'}
                   </button>
                 </div>
               </div>
