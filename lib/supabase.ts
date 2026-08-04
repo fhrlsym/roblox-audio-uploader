@@ -17,3 +17,14 @@ export type AudioUpload = {
   uploaded_at: string;
   updated_at: string;
 };
+
+export type SavedAccountRow = {
+  id: string;
+  type: 'user' | 'group';
+  name: string;
+  display_name?: string | null;
+  member_count?: number | null;
+  has_verified_badge?: boolean | null;
+  thumbnail?: string | null;
+  created_at?: string;
+};

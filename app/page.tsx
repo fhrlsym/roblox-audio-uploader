@@ -1,7 +1,7 @@
 ﻿'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { supabase, AudioUpload } from '../lib/supabase';
+import { supabase, AudioUpload, SavedAccountRow } from '../lib/supabase';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -188,6 +188,7 @@ export default function Home() {
   useEffect(() => {
     if (isAuthenticated) {
       loadUploadHistory();
+      loadSavedAccountsFromDb();
       const interval = setInterval(() => {
         loadUploadHistory();
         refreshPendingStatuses();
@@ -300,10 +301,62 @@ export default function Home() {
     }
   };
 
-  const removeAccount = (id: string) => {
+  const accountToRow = (a: RobloxAccount): SavedAccountRow => ({
+    id: a.id,
+    type: a.type,
+    name: a.name,
+    display_name: a.displayName ?? null,
+    member_count: a.memberCount ?? null,
+    has_verified_badge: a.hasVerifiedBadge ?? false,
+    thumbnail: a.thumbnail ?? null,
+  });
+
+  const rowToAccount = (r: SavedAccountRow): RobloxAccount => ({
+    id: r.id,
+    type: r.type,
+    name: r.name,
+    displayName: r.display_name ?? undefined,
+    memberCount: r.member_count ?? undefined,
+    hasVerifiedBadge: !!r.has_verified_badge,
+    thumbnail: r.thumbnail ?? null,
+  });
+
+  const loadSavedAccountsFromDb = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('saved_accounts')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setSavedAccounts(data.map(rowToAccount));
+      } else if (savedAccounts.length > 0) {
+        const { error: upsertError } = await supabase
+          .from('saved_accounts')
+          .upsert(savedAccounts.map(accountToRow));
+        if (upsertError) throw upsertError;
+      }
+    } catch (e) {
+      console.error('Gagal memuat akun dari database:', e);
+    }
+  };
+
+  const removeAccount = async (id: string) => {
+    const account = savedAccounts.find(a => a.id === id);
     setSavedAccounts(prev => prev.filter(a => a.id !== id));
     if (selectedAccountId === id) {
       setSelectedAccountId('');
+    }
+    if (account) {
+      try {
+        await supabase
+          .from('saved_accounts')
+          .delete()
+          .eq('id', account.id)
+          .eq('type', account.type);
+      } catch (e) {
+        console.error('Gagal menghapus akun dari database:', e);
+      }
     }
   };
 
@@ -335,13 +388,20 @@ export default function Home() {
     setAccountSearching(false);
   };
 
-  const addSavedAccount = () => {
+  const addSavedAccount = async () => {
     if (!accountLookup) return;
     const account = accountLookup;
     setSavedAccounts(prev => {
       if (prev.some(a => a.id === account.id && a.type === account.type)) return prev;
       return [...prev, account];
     });
+    try {
+      const { error } = await supabase.from('saved_accounts').upsert(accountToRow(account));
+      if (error) throw error;
+    } catch (e) {
+      console.error('Gagal menyimpan akun ke database:', e);
+      addToast('Akun tersimpan lokal saja (gagal sync database)', 'error');
+    }
     selectAccount(account);
     setShowAccountSearch(false);
     setAccountUrl('');
