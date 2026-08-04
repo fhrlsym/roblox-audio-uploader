@@ -5,7 +5,7 @@ import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-reac
 import { TunedAudioFile, UploadResult } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
-import { CARD, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { CARD, BTN_PRIMARY } from '../lib/ui';
 
 interface AccountLike {
   id: string;
@@ -147,6 +147,21 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     }
   };
 
+  const handleUploadAll = async () => {
+    if (!selectedAccount || !selectedAccount.apiKey) {
+      toast('Pilih akun Roblox terlebih dahulu di bagian Roblox Account', 'error');
+      return;
+    }
+    const targets = tunedFiles.filter((f) => !uploadResults[f.id]?.success && !uploading[f.id]);
+    if (targets.length === 0) return;
+    for (const file of targets) {
+      await handleUploadToRoblox(file);
+    }
+  };
+
+  const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;
+  const uploadingAny = Object.values(uploading).some(Boolean);
+
   return (
     <div className={CARD + ' p-4'}>
       <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">3. Output & Upload</h2>
@@ -160,7 +175,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         <div className="space-y-3">
           {tunedFiles.map((file) => {
             const result = uploadResults[file.id];
-            const isUploading = uploading[file.id];
 
             return (
               <div
@@ -181,12 +195,21 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                       <span className="font-mono text-[var(--accent-soft)]">{(1 / file.speed).toFixed(4)}</span>
                     </p>
                   </div>
-                  <button
-                    onClick={() => onRemoveTuned(file.id)}
-                    className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => handleDownload(file)}
+                      className="p-1.5 text-[var(--text-40)] transition hover:text-[var(--accent-soft)]"
+                      title="Unduh MP3"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => onRemoveTuned(file.id)}
+                      className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {result && (
@@ -231,38 +254,31 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                     )}
                   </div>
                 )}
-
-                <div className="mt-4 flex gap-2">
-                  <button onClick={() => handleDownload(file)} className={BTN_GHOST + ' flex-1'}>
-                    <Download className="w-4 h-4" />
-                    MP3
-                  </button>
-                  <button
-                    onClick={() => handleUploadToRoblox(file)}
-                    disabled={isUploading || !!result}
-                    className={BTN_PRIMARY + ' flex-1'}
-                  >
-                    {isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Uploading…
-                      </>
-                    ) : result?.success ? (
-                      <>
-                        <CloudUpload className="w-4 h-4" />
-                        Uploaded
-                      </>
-                    ) : (
-                      <>
-                        <CloudUpload className="w-4 h-4" />
-                        Upload ke Roblox
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             );
           })}
+        </div>
+      )}
+
+      {tunedFiles.length > 0 && (
+        <div className="mt-4">
+          <button
+            onClick={handleUploadAll}
+            disabled={uploadingAny || pendingCount === 0}
+            className={BTN_PRIMARY + ' w-full py-3'}
+          >
+            {uploadingAny ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Uploading…
+              </>
+            ) : (
+              <>
+                <CloudUpload className="w-4 h-4" />
+                Upload Semua ke Roblox ({pendingCount})
+              </>
+            )}
+          </button>
         </div>
       )}
     </div>
