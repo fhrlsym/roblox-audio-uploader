@@ -64,6 +64,19 @@ async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) 
   throw lastError;
 }
 
+// Coba tanpa cookies dulu (android_vr/android/default umumnya cukup);
+// cookies hanya dipakai jika kena bot-check "Sign in to confirm".
+async function runYtCommand(args, cookiesFile) {
+  try {
+    return await runYtdlWithClients(args, null);
+  } catch (err) {
+    if (cookiesFile && isBotError(err.message)) {
+      return await runYtdlWithClients(args, cookiesFile);
+    }
+    throw err;
+  }
+}
+
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
@@ -141,7 +154,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   };
 
   try {
-    const stdout = String(await runYtdlWithClients([
+    const stdout = String(await runYtCommand([
       '--print', 'title',
       '--no-simulate',
       cleanYoutubeUrl(url),
@@ -271,7 +284,7 @@ app.post('/api/youtube-info', async (req, res) => {
   }
 
   try {
-    const stdout = await runYtdlWithClients([
+    const stdout = await runYtCommand([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
       cleanYoutubeUrl(url),
