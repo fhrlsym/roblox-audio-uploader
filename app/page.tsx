@@ -14,11 +14,12 @@ interface ToastMsg {
   type: ToastType;
 }
 
+const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 const CARD = 'rounded-2xl border border-[#d4af37]/15 bg-gradient-to-br from-white/[0.035] via-white/[0.015] to-black/30';
-const INPUT = 'w-full rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition focus:border-[#d4af37]/50 focus:bg-black/70';
+const INPUT = 'w-full rounded-xl border border-white/10 bg-black/50 px-4 py-2.5 text-sm text-white placeholder:text-white/25 outline-none transition-colors focus:border-[#d4af37]/50 focus:bg-black/70';
 const LABEL = 'mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-white/40';
-const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f5d06f] to-[#c9a227] px-5 py-3 text-sm font-semibold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:to-white/10 disabled:text-white/40';
-const BTN_GHOST = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[#d4af37]/25 px-4 py-2 text-sm text-[#e6c15c]/80 transition hover:bg-[#d4af37]/10 hover:text-[#f5d06f] disabled:cursor-not-allowed disabled:opacity-50';
+const BTN_PRIMARY = 'inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#f5d06f] to-[#c9a227] px-5 py-3 text-sm font-semibold text-black transition-transform duration-150 active:scale-[0.97] hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:to-white/10 disabled:text-white/40 disabled:active:scale-100';
+const BTN_GHOST = 'inline-flex items-center justify-center gap-2 rounded-xl border border-[#d4af37]/25 px-4 py-2 text-sm text-[#e6c15c]/80 transition-colors duration-150 hover:bg-[#d4af37]/10 hover:text-[#f5d06f] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50';
 
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -564,7 +565,7 @@ export default function Home() {
             </h1>
           </div>
 
-          <div className={`${CARD} p-8`}>
+          <div className={`${CARD} modal-enter p-8`}>
             <form onSubmit={handlePinSubmit} className="space-y-5">
               <div>
                 <label className={LABEL}>Access PIN</label>
@@ -578,7 +579,7 @@ export default function Home() {
                   autoFocus
                 />
                 {pinError && (
-                  <p className="mt-2 text-center text-xs text-rose-300">Incorrect PIN</p>
+                  <p className="toast-enter mt-2 text-center text-xs text-rose-300">Incorrect PIN</p>
                 )}
               </div>
 
@@ -778,13 +779,13 @@ export default function Home() {
 
             {cookieHelpUrl && (
               <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setCookieHelpUrl(null)}>
-                <div className="w-full max-w-lg rounded-2xl border border-[#d4af37]/25 bg-[#0d0d10] p-6" onClick={(e) => e.stopPropagation()}>
+                <div className="modal-enter w-full max-w-lg rounded-2xl border border-[#d4af37]/25 bg-[#0d0d10] p-6" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="font-serif text-xl text-[#f5d06f]">Oops, kena &quot;not a bot&quot; 🤖</h3>
                       <p className="mt-1 text-xs text-white/40">YouTube curiga kita robot. Tenang, gampang kok.</p>
                     </div>
-                    <button onClick={() => setCookieHelpUrl(null)} className="text-white/40 transition hover:text-white">✕</button>
+                    <button onClick={() => setCookieHelpUrl(null)} className="text-white/40 transition-colors hover:text-white active:scale-95">✕</button>
                   </div>
 
                   <ol className="mt-5 space-y-3">
@@ -831,7 +832,7 @@ export default function Home() {
             {downloadProgress.length > 0 && (
               <div className="mt-5 space-y-2">
                 {downloadProgress.map((item, index) => (
-                  <div key={index} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3">
+                  <div key={index} className="stagger-enter flex items-center gap-3 rounded-xl border border-white/10 bg-black/40 px-4 py-3" style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}>
                     <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       item.status === 'completed' ? 'bg-emerald-400' :
                       item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[#f5d06f]'
@@ -966,7 +967,7 @@ export default function Home() {
             <button
               onClick={uploadToRoblox}
               disabled={uploading}
-              className="w-full rounded-xl bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#c9a227] py-5 text-lg font-bold text-black shadow-[0_0_40px_rgba(212,175,55,0.25)] transition hover:brightness-110 disabled:cursor-not-allowed disabled:from-white/10 disabled:via-white/10 disabled:to-white/10 disabled:text-white/40 disabled:shadow-none"
+              className="w-full rounded-xl bg-gradient-to-r from-[#f5d06f] via-[#e6c15c] to-[#c9a227] py-5 text-lg font-bold text-black shadow-[0_0_40px_rgba(212,175,55,0.25)] transition-transform duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-white/10 disabled:via-white/10 disabled:to-white/10 disabled:text-white/40 disabled:shadow-none disabled:active:scale-100"
             >
               {uploading ? 'Mengupload…' : `Upload ke Roblox (${files.length} Audio)`}
             </button>
@@ -984,9 +985,10 @@ export default function Home() {
                 {results.map((result, index) => (
                   <div
                     key={index}
-                    className={`rounded-xl border px-4 py-5 ${
+                    className={`stagger-enter rounded-xl border px-4 py-5 ${
                       result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
                     }`}
+                    style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}
                   >
                     {result.success ? (
                       <>
@@ -1091,11 +1093,7 @@ export default function Home() {
         {toasts.map(t => (
           <div
             key={t.id}
-            className={`flex min-w-[200px] items-center gap-3 rounded-xl border px-4 py-3 shadow-lg transition-all ${
-              t.type === 'error' ? 'border-rose-400/20 bg-[#1a0f12] text-rose-300' :
-              t.type === 'success' ? 'border-emerald-400/20 bg-[#0f1a14] text-emerald-300' :
-              'border-white/10 bg-[#121214] text-white/90'
-            }`}
+            className={`toast-enter flex min-w-[200px] items-center gap-3 rounded-xl border px-4 py-3 shadow-lg ${t.type === 'error' ? 'border-rose-400/20 bg-[#1a0f12] text-rose-300' : t.type === 'success' ? 'border-emerald-400/20 bg-[#0f1a14] text-emerald-300' : 'border-white/10 bg-[#121214] text-white/90'}`}
           >
             <span className="text-sm font-medium">{t.message}</span>
           </div>
