@@ -122,6 +122,7 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
 function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     Active: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
+    Success: 'border-emerald-400/25 bg-emerald-400/10 text-emerald-300',
     Pending: 'border-[var(--accent-30)] bg-[var(--accent-10)] text-[var(--accent-strong)]',
     Copyright: 'border-rose-400/25 bg-rose-400/10 text-rose-300',
     Failed: 'border-[var(--line)] bg-[var(--surface-soft)] text-[var(--text-50)]',
@@ -293,9 +294,11 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
 
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
+  const [backendInfo, setBackendInfo] = useState<{ commit?: string | null; startedAt?: string | null } | null>(null);
   const downloadLockRef = useRef(false);
   const statusRefreshLockRef = useRef(false);
   const savedAccountsRef = useRef<RobloxAccount[]>([]);
+  const resultsRef = useRef<UploadResult[]>([]);
   const addToast = (message: string, type: ToastType = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -1035,12 +1038,39 @@ export default function Home() {
   };
 
   useEffect(() => {
+    let cancelled = false;
+    fetch(`${BACKEND_URL}/api/version`)
+      .then(r => r.json())
+      .then((info) => { if (!cancelled) setBackendInfo(info); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => {
+    resultsRef.current = results;
+  }, [results]);
+
+  const refreshPendingResults = async () => {
+    const account = selectedAccount;
+    if (!account?.apiKey.trim()) return;
+    const pending = resultsRef.current.filter(r => r.success && r.assetId && r.status === 'Pending');
+    if (pending.length === 0) return;
+    for (const r of pending) {
+      const status = await checkAssetStatus(r.assetId!, account.apiKey);
+      if (status !== 'Pending') {
+        setResults(prev => prev.map(x => x.assetId === r.assetId ? { ...x, status } : x));
+      }
+    }
+  };
+
+  useEffect(() => {
     if (isAuthenticated) {
       loadUploadHistory();
       loadSavedAccountsFromDb();
       const interval = setInterval(() => {
         loadUploadHistory();
         refreshPendingStatuses();
+        refreshPendingResults();
         refreshAccountQuotas(savedAccountsRef.current);
       }, 30000);
       return () => clearInterval(interval);
@@ -1957,6 +1987,9 @@ export default function Home() {
         <footer className="mt-12 flex flex-col items-center gap-1 border-t border-[var(--accent-10)] pt-8 text-center">
           <p className="font-serif text-lg italic text-[var(--accent-soft)]/70">S2 Studio — Audio Master to Roblox</p>
           <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--text-25)]">Created by fhrlsym</p>
+          <p className="font-mono text-[10px] text-[var(--text-25)]">
+            backend: {backendInfo?.commit ? `#${backendInfo.commit.slice(0, 7)}` : 'offline'}
+          </p>
         </footer>
       </div>
 

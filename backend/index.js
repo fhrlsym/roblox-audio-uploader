@@ -521,12 +521,21 @@ app.get('/api/operation-status/:operationId', async (req, res) => {
     );
     const data = await opRes.json().catch(() => ({}));
 
-    if (data.error && !data.done) {
-      return res.status(400).json({ done: true, error: data.error.message || data.error.status || 'Operation failed' });
-    }
-
     if (!data.done) {
       return res.json({ done: false });
+    }
+
+    if (data.error) {
+      const raw = typeof data.error === 'string' ? data.error : (data.error.message || data.error.status || JSON.stringify(data.error));
+      const rawLower = (raw + ' ' + (data.error.status || '')).toLowerCase();
+      const status = /reject|copyright|flag|moderat|denied|infring|disallowed|invalid/i.test(rawLower) ? 'Copyright' : 'Failed';
+      return res.json({
+        done: true,
+        status,
+        error: status === 'Copyright'
+          ? 'Ditolak moderasi Roblox (kemungkinan hak cipta).'
+          : `Upload ditolak Roblox: ${raw}`,
+      });
     }
 
     const resp = data.response || {};
@@ -536,15 +545,15 @@ app.get('/api/operation-status/:operationId', async (req, res) => {
       || null;
 
     if (!assetId) {
-      return res.status(400).json({ done: true, error: 'Asset upload failed without an asset ID', details: data });
+      return res.status(400).json({ done: true, error: 'Upload gagal tanpa ID aset. Kemungkinan ditolak moderasi Roblox.', details: data });
     }
 
     let status = 'Pending';
     const moderation = resp.moderationResult;
     if (moderation) {
       const m = moderation.moderationState;
-      if (m === 'MODERATION_STATE_APPROVED') status = 'Active';
-      else if (m === 'MODERATION_STATE_REJECTED') status = 'Copyright';
+      if (m === 'MODERATION_STATE_APPROVED' || m === 'Approved') status = 'Active';
+      else if (m === 'MODERATION_STATE_REJECTED' || m === 'Rejected') status = 'Copyright';
       else if (m && m.includes('REJECTED')) status = 'Copyright';
     }
 
@@ -821,7 +830,16 @@ app.get('/api/roblox/key-info', async (req, res) => {
   }
 });
 
+process.env.STARTED_AT = process.env.STARTED_AT || new Date().toISOString();
+
 const PORT = process.env.PORT || 3001;
+
+app.get('/api/version', (req, res) => {
+  res.json({
+    commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null,
+    startedAt: process.env.STARTED_AT || null,
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
