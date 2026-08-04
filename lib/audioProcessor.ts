@@ -1,5 +1,7 @@
 // Client-side audio processing dengan lamejs (seperti REZZZ AUDIO)
-import lamejs from 'lamejs';
+// lamejs loaded from CDN (layout.tsx)
+
+declare const lamejs: any;
 
 function floatTo16(input: Float32Array): Int16Array {
   const out = new Int16Array(input.length);
@@ -27,7 +29,7 @@ function softLimit(buffer: AudioBuffer, threshold = 0.92): AudioBuffer {
 function bufferToMp3(buffer: AudioBuffer): Blob {
   const ch = buffer.numberOfChannels;
   const rate = buffer.sampleRate;
-  const enc = new lamejs.Mp3Encoder(ch, rate, 256);
+  const enc = new lamejs.Mp3Encoder(ch, rate, 320);
   const left = floatTo16(buffer.getChannelData(0));
   const right = ch > 1 ? floatTo16(buffer.getChannelData(1)) : left;
   const blocks: Uint8Array[] = [];

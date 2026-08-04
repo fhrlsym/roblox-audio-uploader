@@ -34,6 +34,9 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
+      <head>
+        <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
