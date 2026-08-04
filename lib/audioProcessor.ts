@@ -1,5 +1,5 @@
-// Client-side audio processing dengan lamejs (seperti REZZZ AUDIO)
-// lamejs loaded from CDN (layout.tsx)
+// Client-side audio processing dengan tempo stretching (preserve pitch seperti REZZZ)
+import * as Tone from 'tone';
 
 declare const lamejs: any;
 
@@ -24,6 +24,60 @@ function softLimit(buffer: AudioBuffer, threshold = 0.92): AudioBuffer {
     }
   }
   return buffer;
+}
+
+// Simple phase vocoder for time stretching (preserve pitch)
+function timeStretch(buffer: AudioBuffer, rate: number): AudioBuffer {
+  if (rate === 1.0) return buffer;
+  
+  const targetRate = 48000;
+  const channels = buffer.numberOfChannels;
+  const newLength = Math.floor(buffer.length / rate);
+  const newBuffer = new AudioContext({ sampleRate: targetRate }).createBuffer(channels, newLength, targetRate);
+  
+  // Simple overlap-add with grain size
+  const grainSize = 4096;
+  const hopSize = Math.floor(grainSize / rate);
+  
+  for (let ch = 0; ch < channels; ch++) {
+    const inputData = buffer.getChannelData(ch);
+    const outputData = newBuffer.getChannelData(ch);
+    
+    // Hanning window
+    const window = new Float32Array(grainSize);
+    for (let i = 0; i < grainSize; i++) {
+      window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (grainSize - 1)));
+    }
+    
+    let outputPos = 0;
+    let inputPos = 0;
+    
+    while (outputPos < newLength && inputPos < inputData.length - grainSize) {
+      // Copy grain with window
+      for (let i = 0; i < grainSize && outputPos + i < outputData.length; i++) {
+        const inIdx = Math.floor(inputPos + i);
+        if (inIdx < inputData.length) {
+          outputData[outputPos + i] += inputData[inIdx] * window[i];
+        }
+      }
+      
+      outputPos += hopSize;
+      inputPos += grainSize;
+    }
+    
+    // Normalize
+    let maxVal = 0;
+    for (let i = 0; i < outputData.length; i++) {
+      maxVal = Math.max(maxVal, Math.abs(outputData[i]));
+    }
+    if (maxVal > 0) {
+      for (let i = 0; i < outputData.length; i++) {
+        outputData[i] /= maxVal;
+      }
+    }
+  }
+  
+  return newBuffer;
 }
 
 function bufferToMp3(buffer: AudioBuffer): Blob {
@@ -63,16 +117,17 @@ export async function processAudio(
   let srcBuf = await ctx.decodeAudioData(ab);
   onProgress?.(40);
   
-  // Force 48kHz mono untuk konsistensi Roblox (seperti REZZZ)
+  // TIME STRETCH dengan preserve pitch (seperti REZZZ atempo)
+  const stretched = timeStretch(srcBuf, speedVal);
+  onProgress?.(60);
+  
+  // Apply gain + filters ke hasil stretch
   const targetRate = 48000;
-  const targetChannels = 1; // Force mono
-  const duration = srcBuf.duration / speedVal;
-  const frames = Math.max(1, Math.ceil(duration * targetRate));
-  const offline = new OfflineAudioContext(targetChannels, frames, targetRate);
+  const frames = stretched.length;
+  const offline = new OfflineAudioContext(stretched.numberOfChannels, frames, targetRate);
   
   const source = offline.createBufferSource();
-  source.buffer = srcBuf;
-  source.playbackRate.value = speedVal;
+  source.buffer = stretched;
   
   const gain = offline.createGain();
   gain.gain.value = Math.pow(10, dbVal / 20);
@@ -84,12 +139,10 @@ export async function processAudio(
   peak.Q.value = 0.7;
   peak.gain.value = 0.8;
   
-  // Anti-alias filter untuk speed tinggi
+  // Anti-alias filter
   const lp = offline.createBiquadFilter();
   lp.type = 'lowpass';
-  const nyquist = targetRate * 0.5;
-  const cut = Math.min(nyquist * 0.92, Math.max(12000, nyquist / Math.max(1, speedVal * 0.55)));
-  lp.frequency.value = cut;
+  lp.frequency.value = Math.min(20000, targetRate * 0.45);
   lp.Q.value = 0.707;
   
   source.connect(peak);
@@ -98,27 +151,10 @@ export async function processAudio(
   lp.connect(offline.destination);
   
   source.start(0);
-  onProgress?.(60);
-  
   let rendered = await offline.startRendering();
   onProgress?.(80);
   
   rendered = softLimit(rendered, 0.92);
-  
-  // Normalize audio untuk konsistensi pitch di Roblox
-  for (let c = 0; c < rendered.numberOfChannels; c++) {
-    const data = rendered.getChannelData(c);
-    let maxVal = 0;
-    for (let i = 0; i < data.length; i++) {
-      maxVal = Math.max(maxVal, Math.abs(data[i]));
-    }
-    if (maxVal > 0 && maxVal < 0.95) {
-      const scale = 0.92 / maxVal;
-      for (let i = 0; i < data.length; i++) {
-        data[i] *= scale;
-      }
-    }
-  }
   
   try { await ctx.close(); } catch (_) {}
   
