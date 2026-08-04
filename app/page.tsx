@@ -34,6 +34,16 @@ interface UploadFileEntry {
   video?: VideoInfo;
 }
 
+interface RobloxAccount {
+  id: string;
+  type: 'user' | 'group';
+  name: string;
+  displayName?: string;
+  memberCount?: number;
+  hasVerifiedBadge?: boolean;
+  thumbnail?: string | null;
+}
+
 const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 const CARD = 'rounded-2xl border border-[var(--accent-15)] bg-gradient-to-br from-[var(--card-from)] via-[var(--card-via)] to-[var(--card-to)]';
 const INPUT = 'w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-25)] outline-none transition-colors focus:border-[var(--accent-50)] focus:bg-[var(--surface-focus)]';
@@ -80,6 +90,14 @@ export default function Home() {
   const [apiKeys, setApiKeys] = useState<string[]>(['']);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
+
+  const [savedAccounts, setSavedAccounts] = useState<RobloxAccount[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+  const [showAccountSearch, setShowAccountSearch] = useState(false);
+  const [accountUrl, setAccountUrl] = useState('');
+  const [accountLookup, setAccountLookup] = useState<RobloxAccount | null>(null);
+  const [accountLookupError, setAccountLookupError] = useState('');
+  const [accountSearching, setAccountSearching] = useState(false);
 
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [youtubeLinkInput, setYoutubeLinkInput] = useState('');
@@ -129,6 +147,20 @@ export default function Home() {
         if (typeof s.youtubeCookies === 'string') setYoutubeCookies(s.youtubeCookies);
         if (typeof s.autoUpload === 'boolean') setAutoUpload(s.autoUpload);
         if (typeof s.theme === 'string') setTheme(s.theme);
+        if (Array.isArray(s.savedAccounts) && s.savedAccounts.length > 0) setSavedAccounts(s.savedAccounts);
+        if (typeof s.selectedAccountId === 'string') setSelectedAccountId(s.selectedAccountId);
+
+        const legacyId = s.targetType === 'group' ? (s.groupId || '') : (s.userId || '');
+        const hasSavedAccounts = Array.isArray(s.savedAccounts) && s.savedAccounts.length > 0;
+        if (!hasSavedAccounts && legacyId.trim()) {
+          setSavedAccounts([{
+            id: legacyId.trim(),
+            type: s.targetType === 'group' ? 'group' : 'user',
+            name: s.targetType === 'group' ? `Group ${legacyId.trim()}` : `User ${legacyId.trim()}`,
+            thumbnail: null,
+          }]);
+          setSelectedAccountId(legacyId.trim());
+        }
       }
     } catch {
       // ignore corrupt saved settings
@@ -148,8 +180,10 @@ export default function Home() {
       youtubeCookies,
       autoUpload,
       theme,
+      savedAccounts,
+      selectedAccountId,
     }));
-  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies, autoUpload, theme]);
+  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies, autoUpload, theme, savedAccounts, selectedAccountId]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -252,6 +286,69 @@ export default function Home() {
     }
   };
 
+  const selectedAccount = savedAccounts.find(a => a.id === selectedAccountId) || null;
+
+  const selectAccount = (account: RobloxAccount) => {
+    setSelectedAccountId(account.id);
+    setTargetType(account.type);
+    if (account.type === 'user') {
+      setUserId(account.id);
+      setGroupId('');
+    } else {
+      setGroupId(account.id);
+      setUserId('');
+    }
+  };
+
+  const removeAccount = (id: string) => {
+    setSavedAccounts(prev => prev.filter(a => a.id !== id));
+    if (selectedAccountId === id) {
+      setSelectedAccountId('');
+    }
+  };
+
+  const searchRobloxAccounts = async () => {
+    const url = accountUrl.trim();
+    if (!url) {
+      addToast('Tempel URL profile atau group Roblox dulu', 'error');
+      return;
+    }
+    if (!/roblox\.com\/users\/\d+/.test(url) && !/roblox\.com\/(?:communities|groups)\/\d+/.test(url) && !/^\d+$/.test(url)) {
+      addToast('Format URL tidak valid. Gunakan link profile (/users/{id}) atau group (/communities/{id} atau /groups/{id})', 'error');
+      return;
+    }
+    setAccountSearching(true);
+    setAccountLookup(null);
+    setAccountLookupError('');
+    try {
+      const response = await fetch(
+        `${BACKEND_URL}/api/roblox/lookup?url=${encodeURIComponent(url)}`
+      );
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Gagal mencari akun');
+      if (!data.result) throw new Error('Akun tidak ditemukan');
+      setAccountLookup(data.result);
+    } catch (error) {
+      setAccountLookupError(error instanceof Error ? error.message : 'Gagal mencari akun');
+      addToast(error instanceof Error ? error.message : 'Gagal mencari akun', 'error');
+    }
+    setAccountSearching(false);
+  };
+
+  const addSavedAccount = () => {
+    if (!accountLookup) return;
+    const account = accountLookup;
+    setSavedAccounts(prev => {
+      if (prev.some(a => a.id === account.id && a.type === account.type)) return prev;
+      return [...prev, account];
+    });
+    selectAccount(account);
+    setShowAccountSearch(false);
+    setAccountUrl('');
+    setAccountLookup(null);
+    addToast(`${account.type === 'user' ? 'User' : 'Group'} "${account.displayName || account.name}" ditambahkan`, 'success');
+  };
+
   const fetchYoutubeInfo = async (candidate: string) => {
     try {
       const response = await fetch(`${BACKEND_URL}/api/youtube-info`, {
@@ -313,12 +410,8 @@ export default function Home() {
         addToast('Auto-upload aktif tapi API Key belum diisi', 'error');
         return;
       }
-      if (targetType === 'user' && !userId.trim()) {
-        addToast('Auto-upload aktif tapi User ID belum diisi', 'error');
-        return;
-      }
-      if (targetType === 'group' && !groupId.trim()) {
-        addToast('Auto-upload aktif tapi Group ID belum diisi', 'error');
+      if (!selectedAccount) {
+        addToast('Auto-upload aktif tapi akun Roblox belum dipilih', 'error');
         return;
       }
     }
@@ -340,8 +433,8 @@ export default function Home() {
               amplify,
               cookies: youtubeCookies,
               description: `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`,
-              creatorType: targetType,
-              creatorId: targetType === 'group' ? groupId : userId,
+              creatorType: selectedAccount?.type,
+              creatorId: selectedAccount?.id,
               apiKey,
             }),
           });
@@ -448,13 +541,8 @@ export default function Home() {
       return;
     }
 
-    if (targetType === 'user' && !userId.trim()) {
-      addToast('Masukkan User ID', 'error');
-      return;
-    }
-
-    if (targetType === 'group' && !groupId.trim()) {
-      addToast('Masukkan Group ID', 'error');
+    if (!selectedAccount) {
+      addToast('Pilih akun Roblox terlebih dahulu', 'error');
       return;
     }
 
@@ -473,8 +561,8 @@ export default function Home() {
         formData.append('assetType', 'Audio');
         formData.append('displayName', file.name.replace(/\.[^/.]+$/, ''));
         formData.append('description', `Speed: ${speed}x | Amplify: ${amplify}dB | Roblox Playback: ${calculateRobloxPlaybackSpeed()}`);
-        formData.append('creatorType', targetType);
-        formData.append('creatorId', targetType === 'group' ? groupId : userId);
+        formData.append('creatorType', selectedAccount.type);
+        formData.append('creatorId', selectedAccount.id);
         formData.append('apiKey', apiKey);
 
         const response = await fetch(`${BACKEND_URL}/api/upload-to-roblox`, {
@@ -974,34 +1062,140 @@ export default function Home() {
                 <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Roblox Account</h3>
                 
                 <div className="space-y-4">
-                  {/* User/Group Toggle */}
-                  <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--accent-20)] bg-[var(--surface)] p-1">
-                    {(['user', 'group'] as const).map((type) => (
+                  {/* Saved Accounts */}
+                  <div>
+                    <div className="mb-2 flex items-center justify-between">
+                      <label className="text-xs text-[var(--text-40)]">Akun Roblox</label>
                       <button
-                        key={type}
-                        onClick={() => setTargetType(type)}
-                        className={`rounded py-2 text-sm font-medium transition-all active:scale-95 ${
-                          targetType === type
-                            ? 'bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)]'
-                            : 'text-[var(--text-50)] hover:text-[var(--text)]'
-                        }`}
+                        onClick={() => setShowAccountSearch(v => !v)}
+                        className="text-xs text-[var(--accent-soft)] transition-colors hover:text-[var(--accent-strong)]"
                       >
-                        {type === 'user' ? 'User' : 'Group'}
+                        {showAccountSearch ? '− Tutup' : '+ Tambah Akun'}
                       </button>
-                    ))}
+                    </div>
+
+                    {savedAccounts.length === 0 ? (
+                      <div className="rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-xs text-[var(--text-40)]">
+                        Belum ada akun tersimpan. Klik <span className="text-[var(--accent-soft)]">+ Tambah Akun</span> untuk mencari username / nama group.
+                      </div>
+                    ) : (
+                      <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1">
+                        {savedAccounts.map(account => (
+                          <button
+                            key={`${account.type}-${account.id}`}
+                            onClick={() => selectAccount(account)}
+                            className={`flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all active:scale-[0.98] ${
+                              selectedAccountId === account.id
+                                ? 'border-[var(--accent-strong)] bg-[var(--accent-10)] shadow-[0_0_18px_var(--upload-glow)]'
+                                : 'border-[var(--line)] bg-[var(--surface)] hover:border-[var(--accent-30)]'
+                            }`}
+                          >
+                            {account.thumbnail ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={account.thumbnail}
+                                alt={account.name}
+                                className="h-10 w-10 shrink-0 rounded-lg object-cover"
+                                referrerPolicy="no-referrer"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent-soft)]">
+                                {account.type === 'user' ? '👤' : '👥'}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="truncate text-sm font-medium text-[var(--text-90)]">
+                                {account.displayName && account.displayName !== account.name ? account.displayName : account.name}
+                              </div>
+                              <div className="truncate text-[11px] text-[var(--text-40)]">
+                                {account.type === 'user' ? `@${account.name}` : account.name}
+                                {account.memberCount != null && ` · ${account.memberCount.toLocaleString('id-ID')} member`}
+                              </div>
+                            </div>
+                            {selectedAccountId === account.id && (
+                              <span className="text-[var(--accent-strong)]">✓</span>
+                            )}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); removeAccount(account.id); }}
+                              className="shrink-0 rounded-lg px-1.5 py-0.5 text-xs text-[var(--text-35)] transition-colors hover:bg-rose-400/10 hover:text-rose-300"
+                              title="Hapus akun"
+                            >
+                              ✕
+                            </button>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* ID Input */}
-                  <div>
-                    <label className="mb-2 block text-xs text-[var(--text-40)]">{targetType === 'user' ? 'User ID' : 'Group ID'}</label>
-                    <input
-                      type="text"
-                      value={targetType === 'user' ? userId : groupId}
-                      onChange={(e) => targetType === 'user' ? setUserId(e.target.value) : setGroupId(e.target.value)}
-                      placeholder={`Enter ${targetType === 'user' ? 'User' : 'Group'} ID`}
-                      className={INPUT}
-                    />
-                  </div>
+                  {/* Account Search Panel */}
+                  {showAccountSearch && (
+                    <div className="space-y-3 rounded-xl border border-[var(--accent-20)] bg-[var(--surface)] p-3">
+                      <p className="text-[11px] leading-relaxed text-[var(--text-40)]">
+                        Buka profile atau group di Roblox, salin link-nya, lalu tempel di sini. ID akan diekstrak otomatis.
+                      </p>
+
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={accountUrl}
+                          onChange={(e) => { setAccountUrl(e.target.value); setAccountLookup(null); setAccountLookupError(''); }}
+                          onKeyDown={(e) => e.key === 'Enter' && searchRobloxAccounts()}
+                          placeholder="https://www.roblox.com/users/{id}/profile"
+                          className={INPUT}
+                        />
+                        <button
+                          onClick={searchRobloxAccounts}
+                          disabled={accountSearching}
+                          className="shrink-0 rounded-xl bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-transform active:scale-95 disabled:from-[var(--surface-soft)] disabled:to-[var(--surface-soft)] disabled:text-[var(--text-40)]"
+                        >
+                          {accountSearching ? '…' : 'Cek'}
+                        </button>
+                      </div>
+
+                      {accountLookupError && (
+                        <p className="text-xs text-rose-300/80">{accountLookupError}</p>
+                      )}
+
+                      {accountLookup && (
+                        <div className="flex items-center gap-3 rounded-xl border border-[var(--accent-25)] bg-[var(--surface-strong)] px-3 py-3">
+                          {accountLookup.thumbnail ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={accountLookup.thumbnail}
+                              alt={accountLookup.name}
+                              className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          ) : (
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-soft)] text-lg">
+                              {accountLookup.type === 'user' ? '👤' : '👥'}
+                            </div>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 truncate text-sm font-medium text-[var(--text-90)]">
+                              {accountLookup.displayName || accountLookup.name}
+                              {accountLookup.hasVerifiedBadge && (
+                                <span className="shrink-0 text-[10px] text-[var(--accent-strong)]">✓</span>
+                              )}
+                            </div>
+                            <div className="truncate text-[11px] text-[var(--text-40)]">
+                              {accountLookup.type === 'user' ? `@${accountLookup.name}` : accountLookup.name}
+                              {' · '}
+                              {accountLookup.type === 'user' ? 'User' : 'Group'}
+                              {accountLookup.id}
+                            </div>
+                          </div>
+                          <button
+                            onClick={addSavedAccount}
+                            className="shrink-0 rounded-lg bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] transition-transform active:scale-95"
+                          >
+                            + Tambah
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* API Keys */}
                   <div>
@@ -1045,7 +1239,7 @@ export default function Home() {
                 </button>
                 <p className="mt-2 text-center text-xs text-[var(--text-35)]">
                   {files.length > 0
-                    ? `${files.length} file → ${targetType} ${targetType === 'user' ? userId : groupId}`
+                    ? `${files.length} file → ${selectedAccount ? (selectedAccount.displayName || selectedAccount.name) : 'pilih akun dulu'}`
                     : 'Belum ada file'}
                 </p>
               </section>

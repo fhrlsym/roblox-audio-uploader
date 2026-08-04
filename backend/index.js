@@ -481,6 +481,104 @@ app.get('/api/asset-status/:assetId', async (req, res) => {
   }
 });
 
+app.get('/api/roblox/lookup', async (req, res) => {
+  const input = String(req.query.url || req.query.id || '').trim();
+  const forcedType = req.query.type === 'group' ? 'group' : req.query.type === 'user' ? 'user' : null;
+
+  if (!input) {
+    return res.status(400).json({ error: 'Masukkan URL profile atau group Roblox' });
+  }
+
+  const userMatch = input.match(/users\/(\d+)/);
+  const groupMatch = input.match(/(?:communities|groups)\/(\d+)/);
+  const plainId = /^\d+$/.test(input) ? input : null;
+
+  const id = userMatch ? userMatch[1] : groupMatch ? groupMatch[1] : plainId;
+  if (!id) {
+    return res.status(400).json({ error: 'Tidak bisa menemukan ID dari URL tersebut' });
+  }
+
+  let type = forcedType;
+  if (!type) {
+    type = userMatch ? 'user' : groupMatch ? 'group' : 'user';
+  }
+
+  const fetchWithRetry = async (url, tries = 3) => {
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url);
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          if (data.errors && data.errors[0] && data.errors[0].message) {
+            throw new Error(data.errors[0].message);
+          }
+          throw new Error(`Roblox API error (${r.status})`);
+        }
+        return data;
+      } catch (e) {
+        if (i === tries - 1) throw e;
+        await sleep(500 * (i + 1));
+      }
+    }
+    return {};
+  };
+
+  try {
+    if (type === 'group') {
+      const info = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${id}`);
+      if (!info.id) {
+        return res.status(404).json({ error: 'Group tidak ditemukan' });
+      }
+      let thumbnail = null;
+      try {
+        const icons = await fetchWithRetry(
+          `https://thumbnails.roblox.com/v1/groups/icons?groupIds=${id}&size=420x420&format=Png`
+        );
+        if (icons.data && icons.data[0]) thumbnail = icons.data[0].imageUrl || null;
+      } catch {
+        thumbnail = null;
+      }
+      return res.json({
+        result: {
+          id: String(info.id),
+          type: 'group',
+          name: info.name,
+          memberCount: info.memberCount,
+          hasVerifiedBadge: !!info.hasVerifiedBadge,
+          thumbnail,
+        },
+      });
+    }
+
+    const info = await fetchWithRetry(`https://users.roblox.com/v1/users/${id}`);
+    if (!info.id) {
+      return res.status(404).json({ error: 'User tidak ditemukan' });
+    }
+    let thumbnail = null;
+    try {
+      const avatars = await fetchWithRetry(
+        `https://thumbnails.roblox.com/v1/users/avatar?userIds=${id}&size=150x150&format=Png&isCircular=false`
+      );
+      if (avatars.data && avatars.data[0]) thumbnail = avatars.data[0].imageUrl || null;
+    } catch {
+      thumbnail = null;
+    }
+    res.json({
+      result: {
+        id: String(info.id),
+        type: 'user',
+        name: info.name,
+        displayName: info.displayName,
+        hasVerifiedBadge: !!info.hasVerifiedBadge,
+        thumbnail,
+      },
+    });
+  } catch (error) {
+    console.error('Roblox lookup error:', error);
+    res.status(500).json({ error: error.message || 'Lookup failed' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
