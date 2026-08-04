@@ -1366,7 +1366,7 @@ export default function Home() {
                   className={`${BTN_PRIMARY} mt-4 flex w-full items-center justify-center gap-2`}
                 >
                   <IconFile />
-                  {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload' : 'Convert ke OGG')}
+                  {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload' : 'Convert ke MP3')}
                 </button>
 
                 {downloadProgress.length > 0 && (

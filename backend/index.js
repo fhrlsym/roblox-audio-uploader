@@ -101,8 +101,8 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
 
     command
       .audioBitrate(128)
-      .audioCodec('libvorbis')
-      .toFormat('ogg')
+      .audioCodec('libmp3lame')
+      .toFormat('mp3')
       .outputOptions('-map_metadata', '-1')
       .on('end', resolve)
       .on('error', reject)
@@ -114,7 +114,7 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
   const runId = `${videoId}_${Date.now()}`;
   const tempBase = join(__dirname, `temp_${runId}`);
-  const outputPath = join(__dirname, `output_${runId}.ogg`);
+  const outputPath = join(__dirname, `output_${runId}.mp3`);
 
   let cookiesFile = null;
   if (cookies && typeof cookies === 'string' && cookies.trim()) {
@@ -181,8 +181,8 @@ async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Un
     creationContext: { creator },
   }));
   form.append('fileContent', createReadStream(filePath), {
-    filename: `${displayName}.ogg`,
-    contentType: 'audio/ogg',
+    filename: `${displayName}.mp3`,
+    contentType: 'audio/mpeg',
   });
 
   const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
@@ -222,7 +222,7 @@ app.post('/api/youtube-download', async (req, res) => {
     const { title, fileId } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
     res.json({
       success: true,
-      filename: `${title}.ogg`,
+      filename: `${title}.mp3`,
       fileId,
     });
   } catch (error) {
@@ -292,7 +292,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
   }
 
   try {
-    const processedPath = `${req.file.path}_clean.ogg`;
+    const processedPath = `${req.file.path}_clean.mp3`;
     await runFFmpeg(req.file.path, processedPath, 1.0, 0);
     const operationId = await uploadToRoblox(processedPath, {
       assetType,
@@ -310,7 +310,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
       details: error.details,
     });
   } finally {
-    for (const f of [req.file && req.file.path, req.file && `${req.file.path}_clean.ogg`]) {
+    for (const f of [req.file && req.file.path, req.file && `${req.file.path}_clean.mp3`]) {
       if (f && existsSync(f)) {
         try {
           unlinkSync(f);
@@ -342,7 +342,7 @@ app.post('/api/upload-converted', async (req, res) => {
     return res.status(400).json({ error: 'Missing API key' });
   }
 
-  const filePath = join(__dirname, `${fileId}.ogg`);
+  const filePath = join(__dirname, `${fileId}.mp3`);
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
   }
@@ -418,7 +418,7 @@ app.post('/api/youtube-upload', async (req, res) => {
 
   try {
     const { title, outputPath, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
-    const name = `${displayName || title}.ogg`;
+    const name = `${displayName || title}.mp3`;
     try {
       const operationId = await uploadToRoblox(outputPath, {
         assetType: 'Audio',
