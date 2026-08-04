@@ -42,9 +42,25 @@ interface RobloxAccount {
   memberCount?: number;
   hasVerifiedBadge?: boolean;
   thumbnail?: string | null;
+  apiKey: string;
 }
 
-const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
+interface UploadResult {
+  filename: string;
+  success: boolean;
+  assetId?: string;
+  status?: string;
+  error?: string;
+}
+
+interface DownloadProgressItem {
+  url: string;
+  video?: VideoInfo;
+  status: 'downloading' | 'completed' | 'failed';
+  progress: number;
+  error?: string;
+}
+
 const CARD = 'rounded-2xl border border-[var(--accent-15)] bg-gradient-to-br from-[var(--card-from)] via-[var(--card-via)] to-[var(--card-to)]';
 const INPUT = 'w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-25)] outline-none transition-colors focus:border-[var(--accent-50)] focus:bg-[var(--surface-focus)]';
 const LABEL = 'mb-2 block text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-40)]';
@@ -76,6 +92,106 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const ICON = 'h-4 w-4';
+
+function IconYoutube() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M23.5 6.19a3.02 3.02 0 0 0-2.12-2.14C19.5 3.55 12 3.55 12 3.55s-7.5 0-9.38.5A3.02 3.02 0 0 0 .5 6.19C0 8.07 0 12 0 12s0 3.93.5 5.81a3.02 3.02 0 0 0 2.12 2.14c1.88.5 9.38.5 9.38.5s7.5 0 9.38-.5a3.02 3.02 0 0 0 2.12-2.14C24 15.93 24 12 24 12s0-3.93-.5-5.81zM9.55 15.57V8.43L15.82 12l-6.27 3.57z"/>
+    </svg>
+  );
+}
+
+function IconUpload() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="17 8 12 3 7 8"/>
+      <line x1="12" y1="3" x2="12" y2="15"/>
+    </svg>
+  );
+}
+
+function IconFile() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+      <polyline points="13 2 13 9 20 9"/>
+    </svg>
+  );
+}
+
+function IconUser() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  );
+}
+
+function IconUsers() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+  );
+}
+
+function IconKey() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+    </svg>
+  );
+}
+
+function IconCheck() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+  );
+}
+
+function IconTrash() {
+  return (
+    <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polyline points="3 6 5 6 21 6"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+    </svg>
+  );
+}
+
+function IconPlus() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/>
+      <line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+  );
+}
+
+function IconLink() {
+  return (
+    <svg className={ICON} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+    </svg>
+  );
+}
+
+function maskApiKey(key?: string | null) {
+  if (!key) return null;
+  const trimmed = key.trim();
+  if (trimmed.length === 0) return null;
+  if (trimmed.length <= 4) return '••••';
+  return `••••••${trimmed.slice(-4)}`;
+}
+
 export default function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [pinInput, setPinInput] = useState('');
@@ -83,11 +199,10 @@ export default function Home() {
 
   const [files, setFiles] = useState<UploadFileEntry[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [results, setResults] = useState<any[]>([]);
+  const [results, setResults] = useState<UploadResult[]>([]);
   const [targetType, setTargetType] = useState<'user' | 'group'>('user');
   const [userId, setUserId] = useState('');
   const [groupId, setGroupId] = useState('');
-  const [apiKeys, setApiKeys] = useState<string[]>(['']);
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
 
@@ -95,6 +210,8 @@ export default function Home() {
   const [selectedAccountId, setSelectedAccountId] = useState<string>('');
   const [showAccountSearch, setShowAccountSearch] = useState(false);
   const [accountUrl, setAccountUrl] = useState('');
+  const [accountApiKey, setAccountApiKey] = useState('');
+  const [accountLookupType, setAccountLookupType] = useState<'auto' | 'user' | 'group'>('auto');
   const [accountLookup, setAccountLookup] = useState<RobloxAccount | null>(null);
   const [accountLookupError, setAccountLookupError] = useState('');
   const [accountSearching, setAccountSearching] = useState(false);
@@ -105,7 +222,7 @@ export default function Home() {
   const [speed, setSpeed] = useState(2.30);
   const [amplify, setAmplify] = useState(-4);
   const [downloading, setDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState<any[]>([]);
+  const [downloadProgress, setDownloadProgress] = useState<DownloadProgressItem[]>([]);
   const [autoUpload, setAutoUpload] = useState(false);
   const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
 
@@ -118,6 +235,7 @@ export default function Home() {
 
   const [toasts, setToasts] = useState<ToastMsg[]>([]);
   const downloadLockRef = useRef(false);
+  const statusRefreshLockRef = useRef(false);
   const addToast = (message: string, type: ToastType = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
@@ -138,7 +256,6 @@ export default function Home() {
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const s = JSON.parse(raw);
-        if (Array.isArray(s.apiKeys) && s.apiKeys.length > 0) setApiKeys(s.apiKeys);
         if (typeof s.userId === 'string') setUserId(s.userId);
         if (typeof s.groupId === 'string') setGroupId(s.groupId);
         if (s.targetType === 'user' || s.targetType === 'group') setTargetType(s.targetType);
@@ -147,7 +264,7 @@ export default function Home() {
         if (typeof s.youtubeCookies === 'string') setYoutubeCookies(s.youtubeCookies);
         if (typeof s.autoUpload === 'boolean') setAutoUpload(s.autoUpload);
         if (typeof s.theme === 'string') setTheme(s.theme);
-        if (Array.isArray(s.savedAccounts) && s.savedAccounts.length > 0) setSavedAccounts(s.savedAccounts);
+        if (Array.isArray(s.savedAccounts) && s.savedAccounts.length > 0) setSavedAccounts(s.savedAccounts.map((a: RobloxAccount) => ({ ...a, apiKey: a.apiKey || '' })));
         if (typeof s.selectedAccountId === 'string') setSelectedAccountId(s.selectedAccountId);
 
         const legacyId = s.targetType === 'group' ? (s.groupId || '') : (s.userId || '');
@@ -158,6 +275,7 @@ export default function Home() {
             type: s.targetType === 'group' ? 'group' : 'user',
             name: s.targetType === 'group' ? `Group ${legacyId.trim()}` : `User ${legacyId.trim()}`,
             thumbnail: null,
+            apiKey: s.apiKeys && Array.isArray(s.apiKeys) ? (s.apiKeys[0] || '') : '',
           }]);
           setSelectedAccountId(legacyId.trim());
         }
@@ -171,7 +289,6 @@ export default function Home() {
   useEffect(() => {
     if (!settingsLoaded) return;
     localStorage.setItem(SETTINGS_KEY, JSON.stringify({
-      apiKeys,
       userId,
       groupId,
       targetType,
@@ -183,19 +300,7 @@ export default function Home() {
       savedAccounts,
       selectedAccountId,
     }));
-  }, [settingsLoaded, apiKeys, userId, groupId, targetType, speed, amplify, youtubeCookies, autoUpload, theme, savedAccounts, selectedAccountId]);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadUploadHistory();
-      loadSavedAccountsFromDb();
-      const interval = setInterval(() => {
-        loadUploadHistory();
-        refreshPendingStatuses();
-      }, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated]);
+  }, [settingsLoaded, userId, groupId, targetType, speed, amplify, youtubeCookies, autoUpload, theme, savedAccounts, selectedAccountId]);
 
   const loadUploadHistory = async () => {
     const { data, error } = await supabase
@@ -214,7 +319,7 @@ export default function Home() {
     }
   };
 
-  const saveToDatabase = async (assetId: string, name: string, status: string, youtubeUrl?: string) => {
+  const saveToDatabase = async (assetId: string, name: string, status: string, youtubeUrl?: string, accountId?: string) => {
     await supabase.from('audio_uploads').insert({
       asset_id: assetId,
       name: name,
@@ -223,6 +328,7 @@ export default function Home() {
       amplify: amplify,
       roblox_playback_speed: parseFloat(calculateRobloxPlaybackSpeed()),
       youtube_url: youtubeUrl || null,
+      account_id: accountId || null,
       uploaded_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     });
@@ -273,20 +379,6 @@ export default function Home() {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const addApiKeyField = () => {
-    setApiKeys(prev => [...prev, '']);
-  };
-
-  const updateApiKey = (index: number, value: string) => {
-    setApiKeys(prev => prev.map((key, i) => i === index ? value : key));
-  };
-
-  const removeApiKeyField = (index: number) => {
-    if (apiKeys.length > 1) {
-      setApiKeys(prev => prev.filter((_, i) => i !== index));
-    }
-  };
-
   const selectedAccount = savedAccounts.find(a => a.id === selectedAccountId) || null;
 
   const selectAccount = (account: RobloxAccount) => {
@@ -309,6 +401,7 @@ export default function Home() {
     member_count: a.memberCount ?? null,
     has_verified_badge: a.hasVerifiedBadge ?? false,
     thumbnail: a.thumbnail ?? null,
+    api_key: a.apiKey,
   });
 
   const rowToAccount = (r: SavedAccountRow): RobloxAccount => ({
@@ -319,6 +412,7 @@ export default function Home() {
     memberCount: r.member_count ?? undefined,
     hasVerifiedBadge: !!r.has_verified_badge,
     thumbnail: r.thumbnail ?? null,
+    apiKey: r.api_key || '',
   });
 
   const loadSavedAccountsFromDb = async () => {
@@ -363,24 +457,29 @@ export default function Home() {
   const searchRobloxAccounts = async () => {
     const url = accountUrl.trim();
     if (!url) {
-      addToast('Tempel URL profile atau group Roblox dulu', 'error');
+      addToast('Masukkan User ID / Group ID atau tempel link-nya dulu', 'error');
       return;
     }
     if (!/roblox\.com\/users\/\d+/.test(url) && !/roblox\.com\/(?:communities|groups)\/\d+/.test(url) && !/^\d+$/.test(url)) {
-      addToast('Format URL tidak valid. Gunakan link profile (/users/{id}) atau group (/communities/{id} atau /groups/{id})', 'error');
+      addToast('Format tidak valid. Gunakan ID (contoh: 475162646) atau link profile/group Roblox', 'error');
+      return;
+    }
+    if (!accountApiKey.trim()) {
+      addToast('API Key untuk akun ini belum diisi', 'error');
       return;
     }
     setAccountSearching(true);
     setAccountLookup(null);
     setAccountLookupError('');
     try {
+      const typeParam = accountLookupType !== 'auto' ? `&type=${accountLookupType}` : '';
       const response = await fetch(
-        `${BACKEND_URL}/api/roblox/lookup?url=${encodeURIComponent(url)}`
+        `${BACKEND_URL}/api/roblox/lookup?url=${encodeURIComponent(url)}${typeParam}`
       );
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Gagal mencari akun');
       if (!data.result) throw new Error('Akun tidak ditemukan');
-      setAccountLookup(data.result);
+      setAccountLookup({ ...data.result, apiKey: accountApiKey.trim() });
     } catch (error) {
       setAccountLookupError(error instanceof Error ? error.message : 'Gagal mencari akun');
       addToast(error instanceof Error ? error.message : 'Gagal mencari akun', 'error');
@@ -392,7 +491,9 @@ export default function Home() {
     if (!accountLookup) return;
     const account = accountLookup;
     setSavedAccounts(prev => {
-      if (prev.some(a => a.id === account.id && a.type === account.type)) return prev;
+      if (prev.some(a => a.id === account.id && a.type === account.type)) {
+        return prev.map(a => a.id === account.id && a.type === account.type ? { ...a, apiKey: account.apiKey, name: account.name, displayName: account.displayName, thumbnail: account.thumbnail } : a);
+      }
       return [...prev, account];
     });
     try {
@@ -405,6 +506,7 @@ export default function Home() {
     selectAccount(account);
     setShowAccountSearch(false);
     setAccountUrl('');
+    setAccountApiKey('');
     setAccountLookup(null);
     addToast(`${account.type === 'user' ? 'User' : 'Group'} "${account.displayName || account.name}" ditambahkan`, 'success');
   };
@@ -462,28 +564,27 @@ export default function Home() {
       return;
     }
 
-    downloadLockRef.current = true;
-
     if (autoUpload) {
-      const validApiKeys = apiKeys.filter(key => key.trim());
-      if (validApiKeys.length === 0) {
-        addToast('Auto-upload aktif tapi API Key belum diisi', 'error');
-        return;
-      }
       if (!selectedAccount) {
         addToast('Auto-upload aktif tapi akun Roblox belum dipilih', 'error');
         return;
       }
+      if (!selectedAccount.apiKey.trim()) {
+        addToast('Akun Roblox belum punya API Key', 'error');
+        return;
+      }
     }
+
+    downloadLockRef.current = true;
 
     setDownloading(true);
     setDownloadProgress(urls.map(({ url, video }) => ({ url, video, status: 'downloading', progress: 0 })));
     if (autoUpload) setResults([]);
 
-    const processUrl = async (url: string, entry: YoutubeLinkEntry, index: number) => {
+    const processUrl = async (url: string, entry: YoutubeLinkEntry) => {
       try {
         if (autoUpload) {
-          const apiKey = (apiKeys.filter(k => k.trim()))[index % apiKeys.filter(k => k.trim()).length];
+          const apiKey = selectedAccount!.apiKey;
           const response = await fetch(`${BACKEND_URL}/api/youtube-upload`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -526,7 +627,7 @@ export default function Home() {
             if (assetId) {
               const name = data.filename || url;
               setResults(prev => [...prev, { filename: name, assetId, status, success: true }]);
-              await saveToDatabase(assetId, name, status, url.trim());
+              await saveToDatabase(assetId, name, status, url.trim(), selectedAccount?.id);
             } else {
               setResults(prev => [...prev, { filename: url, error: opError || 'Upload is still processing after 6 minutes', success: false }]);
             }
@@ -579,7 +680,7 @@ export default function Home() {
     const worker = async () => {
       while (nextIndex < urls.length) {
         const index = nextIndex++;
-        await processUrl(urls[index].url, urls[index], index);
+        await processUrl(urls[index].url, urls[index]);
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, urls.length) }, worker));
@@ -595,25 +696,24 @@ export default function Home() {
       return;
     }
 
-    const validApiKeys = apiKeys.filter(key => key.trim());
-    if (validApiKeys.length === 0) {
-      addToast('Masukkan minimal satu API Key', 'error');
+    if (!selectedAccount) {
+      addToast('Pilih akun Roblox terlebih dahulu', 'error');
       return;
     }
 
-    if (!selectedAccount) {
-      addToast('Pilih akun Roblox terlebih dahulu', 'error');
+    if (!selectedAccount.apiKey.trim()) {
+      addToast('Akun Roblox belum punya API Key', 'error');
       return;
     }
 
     setUploading(true);
     setResults([]);
 
-    const uploadResults: any[] = [];
+    const uploadResults: UploadResult[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i].file;
-      const apiKey = validApiKeys[i % validApiKeys.length];
+      const apiKey = selectedAccount.apiKey;
 
       try {
         const formData = new FormData();
@@ -664,7 +764,7 @@ export default function Home() {
             });
 
             const youtubeUrl = youtubeLinks[i]?.url?.trim() || undefined;
-            await saveToDatabase(assetId, file.name, status, youtubeUrl);
+            await saveToDatabase(assetId, file.name, status, youtubeUrl, selectedAccount?.id);
           } else {
             uploadResults.push({
               filename: file.name,
@@ -679,10 +779,10 @@ export default function Home() {
             success: false,
           });
         }
-      } catch (error: any) {
+      } catch (error) {
         uploadResults.push({
           filename: file.name,
-          error: error.message,
+          error: error instanceof Error ? error.message : 'Upload failed',
           success: false,
         });
       }
@@ -718,31 +818,62 @@ export default function Home() {
   };
 
   const refreshStatus = async (assetId: string) => {
-    const validApiKey = apiKeys.find(key => key.trim());
-    if (!validApiKey) return;
+    const { data } = await supabase
+      .from('audio_uploads')
+      .select('account_id')
+      .eq('asset_id', assetId)
+      .maybeSingle();
+    const account = savedAccounts.find(a => a.id === data?.account_id) || selectedAccount;
+    if (!account?.apiKey.trim()) return;
 
-    const status = await checkAssetStatus(assetId, validApiKey);
+    const status = await checkAssetStatus(assetId, account.apiKey);
     await updateAssetStatus(assetId, status);
   };
 
   const refreshPendingStatuses = async () => {
-    const validApiKey = apiKeys.find(key => key.trim());
-    if (!validApiKey) return;
+    if (statusRefreshLockRef.current) return;
+    statusRefreshLockRef.current = true;
+    try {
+      const { data } = await supabase
+        .from('audio_uploads')
+        .select('asset_id, status, account_id')
+        .eq('status', 'Pending');
 
-    const { data } = await supabase
-      .from('audio_uploads')
-      .select('asset_id, status')
-      .eq('status', 'Pending');
+      if (!data || data.length === 0) return;
 
-    if (!data || data.length === 0) return;
+      const tasks = data.map(async (row) => {
+        const account = savedAccounts.find(a => a.id === row.account_id) || selectedAccount;
+        if (!account?.apiKey.trim()) return;
+        const status = await checkAssetStatus(row.asset_id, account.apiKey);
+        if (status !== 'Pending' && status !== row.status) {
+          await updateAssetStatus(row.asset_id, status);
+        }
+      });
 
-    for (const row of data) {
-      const status = await checkAssetStatus(row.asset_id, validApiKey);
-      if (status !== 'Pending' && status !== row.status) {
-        await updateAssetStatus(row.asset_id, status);
-      }
+      const CONCURRENCY = 3;
+      let nextIndex = 0;
+      const worker = async () => {
+        while (nextIndex < tasks.length) {
+          await tasks[nextIndex++];
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, worker));
+    } finally {
+      statusRefreshLockRef.current = false;
     }
   };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadUploadHistory();
+      loadSavedAccountsFromDb();
+      const interval = setInterval(() => {
+        loadUploadHistory();
+        refreshPendingStatuses();
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isAuthenticated]);
 
   const copyResults = () => {
     const text = results
@@ -918,7 +1049,17 @@ export default function Home() {
                           : 'text-[var(--text-50)] hover:text-[var(--text)]'
                       }`}
                     >
-                      {type === 'youtube' ? 'Dari YouTube' : 'Upload File'}
+                      {type === 'youtube' ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <IconYoutube />
+                          Dari YouTube
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-2">
+                          <IconUpload />
+                          Upload File
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -1007,8 +1148,9 @@ export default function Home() {
                 <button
                   onClick={handleYoutubeDownload}
                   disabled={downloading || youtubeLinks.length === 0}
-                  className={`${BTN_PRIMARY} mt-4 w-full`}
+                  className={`${BTN_PRIMARY} mt-4 flex w-full items-center justify-center gap-2`}
                 >
+                  <IconFile />
                   {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload' : 'Convert ke OGG')}
                 </button>
 
@@ -1127,16 +1269,17 @@ export default function Home() {
                     <div className="mb-2 flex items-center justify-between">
                       <label className="text-xs text-[var(--text-40)]">Akun Roblox</label>
                       <button
-                        onClick={() => setShowAccountSearch(v => !v)}
-                        className="text-xs text-[var(--accent-soft)] transition-colors hover:text-[var(--accent-strong)]"
+                        onClick={() => { setShowAccountSearch(true); setAccountLookup(null); setAccountLookupError(''); }}
+                        className="flex items-center gap-1 text-xs text-[var(--accent-soft)] transition-colors hover:text-[var(--accent-strong)]"
                       >
-                        {showAccountSearch ? '− Tutup' : '+ Tambah Akun'}
+                        <IconPlus />
+                        Tambah Akun
                       </button>
                     </div>
 
                     {savedAccounts.length === 0 ? (
                       <div className="rounded-xl border border-dashed border-[var(--line)] px-4 py-6 text-center text-xs text-[var(--text-40)]">
-                        Belum ada akun tersimpan. Klik <span className="text-[var(--accent-soft)]">+ Tambah Akun</span> untuk mencari username / nama group.
+                        Belum ada akun tersimpan. Klik <span className="text-[var(--accent-soft)]">+ Tambah Akun</span> untuk memasukkan ID / link profile atau group Roblox.
                       </div>
                     ) : (
                       <div className="grid max-h-56 grid-cols-1 gap-2 overflow-y-auto pr-1">
@@ -1159,8 +1302,8 @@ export default function Home() {
                                 referrerPolicy="no-referrer"
                               />
                             ) : (
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)] text-sm font-bold text-[var(--accent-soft)]">
-                                {account.type === 'user' ? '👤' : '👥'}
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)] text-[var(--accent-soft)]">
+                                {account.type === 'user' ? <IconUser /> : <IconUsers />}
                               </div>
                             )}
                             <div className="min-w-0 flex-1">
@@ -1171,149 +1314,55 @@ export default function Home() {
                                 {account.type === 'user' ? `@${account.name}` : account.name}
                                 {account.memberCount != null && ` · ${account.memberCount.toLocaleString('id-ID')} member`}
                               </div>
+                              <div className="truncate font-mono text-[10px] text-[var(--text-25)]">
+                                {maskApiKey(account.apiKey) || 'belum ada API Key'}
+                              </div>
                             </div>
                             {selectedAccountId === account.id && (
-                              <span className="text-[var(--accent-strong)]">✓</span>
+                              <span className="shrink-0 rounded-full border border-[var(--accent-strong)] bg-[var(--accent-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-strong)]">
+                                Aktif
+                              </span>
                             )}
                             <button
                               onClick={(e) => { e.stopPropagation(); removeAccount(account.id); }}
-                              className="shrink-0 rounded-lg px-1.5 py-0.5 text-xs text-[var(--text-35)] transition-colors hover:bg-rose-400/10 hover:text-rose-300"
+                              className="shrink-0 rounded-lg border border-[var(--line)] p-1.5 text-[var(--text-35)] transition-colors hover:border-rose-400/30 hover:bg-rose-400/10 hover:text-rose-300"
                               title="Hapus akun"
                             >
-                              ✕
+                              <IconTrash />
                             </button>
                           </button>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  {/* Account Search Panel */}
-                  {showAccountSearch && (
-                    <div className="space-y-3 rounded-xl border border-[var(--accent-20)] bg-[var(--surface)] p-3">
-                      <p className="text-[11px] leading-relaxed text-[var(--text-40)]">
-                        Buka profile atau group di Roblox, salin link-nya, lalu tempel di sini. ID akan diekstrak otomatis.
-                      </p>
-
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={accountUrl}
-                          onChange={(e) => { setAccountUrl(e.target.value); setAccountLookup(null); setAccountLookupError(''); }}
-                          onKeyDown={(e) => e.key === 'Enter' && searchRobloxAccounts()}
-                          placeholder="https://www.roblox.com/users/{id}/profile"
-                          className={INPUT}
-                        />
-                        <button
-                          onClick={searchRobloxAccounts}
-                          disabled={accountSearching}
-                          className="shrink-0 rounded-xl bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] px-4 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-transform active:scale-95 disabled:from-[var(--surface-soft)] disabled:to-[var(--surface-soft)] disabled:text-[var(--text-40)]"
-                        >
-                          {accountSearching ? '…' : 'Cek'}
-                        </button>
-                      </div>
-
-                      {accountLookupError && (
-                        <p className="text-xs text-rose-300/80">{accountLookupError}</p>
-                      )}
-
-                      {accountLookup && (
-                        <div className="flex items-center gap-3 rounded-xl border border-[var(--accent-25)] bg-[var(--surface-strong)] px-3 py-3">
-                          {accountLookup.thumbnail ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={accountLookup.thumbnail}
-                              alt={accountLookup.name}
-                              className="h-12 w-12 shrink-0 rounded-xl object-cover"
-                              referrerPolicy="no-referrer"
-                            />
-                          ) : (
-                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-soft)] text-lg">
-                              {accountLookup.type === 'user' ? '👤' : '👥'}
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 truncate text-sm font-medium text-[var(--text-90)]">
-                              {accountLookup.displayName || accountLookup.name}
-                              {accountLookup.hasVerifiedBadge && (
-                                <span className="shrink-0 text-[10px] text-[var(--accent-strong)]">✓</span>
-                              )}
-                            </div>
-                            <div className="truncate text-[11px] text-[var(--text-40)]">
-                              {accountLookup.type === 'user' ? `@${accountLookup.name}` : accountLookup.name}
-                              {' · '}
-                              {accountLookup.type === 'user' ? 'User' : 'Group'}
-                              {accountLookup.id}
-                            </div>
-                          </div>
-                          <button
-                            onClick={addSavedAccount}
-                            className="shrink-0 rounded-lg bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-2 text-xs font-semibold text-[var(--on-accent)] transition-transform active:scale-95"
-                          >
-                            + Tambah
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* API Keys */}
-                  <div>
-                    <div className="mb-2 flex items-center justify-between">
-                      <label className="text-xs text-[var(--text-40)]">API Keys</label>
-                      <button onClick={addApiKeyField} className="text-xs text-[var(--accent-soft)] transition-colors hover:text-[var(--accent-strong)]">
-                        + Add key
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {apiKeys.map((key, index) => (
-                        <div key={index} className="flex gap-2">
-                          <input
-                            type="password"
-                            value={key}
-                            onChange={(e) => updateApiKey(index, e.target.value)}
-                            placeholder={`API Key ${index + 1}`}
-                            className={INPUT}
-                          />
-                          {apiKeys.length > 1 && (
-                            <button
-                              onClick={() => removeApiKeyField(index)}
-                              className="shrink-0 rounded-lg border border-[var(--line)] px-3 text-xs text-[var(--text-50)] transition-colors hover:border-rose-400/30 hover:text-rose-300"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
-
-                {/* Upload Button */}
-                <button
-                  onClick={uploadToRoblox}
-                  disabled={uploading || files.length === 0}
-                  className="mt-6 w-full rounded-xl bg-gradient-to-r from-[var(--accent-strong)] via-[var(--accent-soft)] to-[var(--accent-deep)] py-4 text-base font-bold text-[var(--on-accent)] shadow-[0_0_30px_var(--upload-glow)] transition-transform duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-[var(--surface-soft)] disabled:via-[var(--surface-soft)] disabled:to-[var(--surface-soft)] disabled:text-[var(--text-40)] disabled:shadow-none disabled:active:scale-100"
-                >
-                  {uploading ? 'Mengupload…' : `Upload ke Roblox (${files.length})`}
-                </button>
-                <p className="mt-2 text-center text-xs text-[var(--text-35)]">
-                  {files.length > 0
-                    ? `${files.length} file → ${selectedAccount ? (selectedAccount.displayName || selectedAccount.name) : 'pilih akun dulu'}`
-                    : 'Belum ada file'}
-                </p>
               </section>
+          </div>
 
-              {/* Hasil */}
-              <section className={`${CARD} p-6`}>
-                <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Hasil</h3>
-                  {results.length > 0 && (
-                    <button onClick={copyResults} className="text-xs text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]">
-                      Salin
-                    </button>
-                  )}
-                </div>
+          {/* Hasil */}
+          <section className={`${CARD} p-6 lg:col-span-2`}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Hasil</h3>
+              {results.length > 0 && (
+                <button onClick={copyResults} className="text-xs text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]">
+                  Salin
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={uploadToRoblox}
+              disabled={uploading || files.length === 0}
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[var(--accent-strong)] via-[var(--accent-soft)] to-[var(--accent-deep)] py-3.5 text-sm font-bold text-[var(--on-accent)] shadow-[0_0_30px_var(--upload-glow)] transition-transform duration-150 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:from-[var(--surface-soft)] disabled:via-[var(--surface-soft)] disabled:to-[var(--surface-soft)] disabled:text-[var(--text-40)] disabled:shadow-none disabled:active:scale-100"
+            >
+              <IconUpload />
+              {uploading ? 'Mengupload…' : `Upload ke Roblox (${files.length})`}
+            </button>
+            <p className="-mt-2 mb-4 text-center text-xs text-[var(--text-35)]">
+              {files.length > 0
+                ? `${files.length} file → ${selectedAccount ? (selectedAccount.displayName || selectedAccount.name) : 'pilih akun dulu'}`
+                : 'Tambahkan file dari kolom Input Audio'}
+            </p>
 
                 {(downloadProgress.length === 0 && results.length === 0) ? (
                   <p className="py-8 text-center text-sm text-[var(--text-40)]">Belum ada hasil. Convert link atau upload file dulu.</p>
@@ -1345,13 +1394,13 @@ export default function Home() {
                           <>
                             <div className="flex items-start justify-between gap-2">
                               <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{result.filename}</div>
-                              <StatusBadge status={result.status} />
+                              <StatusBadge status={result.status || 'Failed'} />
                             </div>
                             <div className="mt-2 flex items-center gap-2 text-xs">
                               <span className="text-[var(--text-40)]">ID:</span>
                               <span className="font-mono text-[var(--text-70)]">{result.assetId}</span>
                               <button
-                                onClick={() => copyAssetId(result.assetId)}
+                                onClick={() => result.assetId && copyAssetId(result.assetId)}
                                 className="ml-auto text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]"
                               >
                                 Copy
@@ -1369,7 +1418,6 @@ export default function Home() {
                   </div>
                 )}
               </section>
-          </div>
 
           <section className={`${CARD} p-6 lg:col-span-2`}>
               <div className="mb-4 flex items-center justify-between">
@@ -1420,6 +1468,137 @@ export default function Home() {
               )}
           </section>
         </main>
+
+        {/* Add Account Modal */}
+        {showAccountSearch && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)] p-4" onClick={() => setShowAccountSearch(false)}>
+            <div className="modal-enter w-full max-w-md rounded-2xl border border-[var(--accent-25)] bg-[var(--panel)] p-6" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="flex items-center gap-2 text-lg font-semibold text-[var(--accent-strong)]">
+                  <IconUser />
+                  Tambah Akun Roblox
+                </h3>
+                <button onClick={() => setShowAccountSearch(false)} className="text-[var(--text-40)] transition-colors hover:text-[var(--text)] active:scale-95">✕</button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <IconLink />
+                    <label className="text-xs text-[var(--text-40)]">User ID / Group ID / Link Profile</label>
+                  </div>
+                  <input
+                    type="text"
+                    value={accountUrl}
+                    onChange={(e) => { setAccountUrl(e.target.value); setAccountLookup(null); setAccountLookupError(''); }}
+                    onKeyDown={(e) => e.key === 'Enter' && searchRobloxAccounts()}
+                    placeholder="475162646 atau https://www.roblox.com/users/475162646/profile"
+                    className={INPUT}
+                  />
+                  <p className="mt-1 text-[11px] text-[var(--text-25)]">
+                    Tempel ID polos atau link profile/group. ID diekstrak otomatis.
+                  </p>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {([['auto', 'Otomatis'], ['user', 'User'], ['group', 'Group']] as const).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => { setAccountLookupType(value); setAccountLookup(null); setAccountLookupError(''); }}
+                        className={`rounded-lg border px-3 py-2 text-xs transition-colors active:scale-95 ${
+                          accountLookupType === value
+                            ? 'border-[var(--accent-strong)] bg-[var(--accent-10)] text-[var(--accent-strong)]'
+                            : 'border-[var(--line)] bg-[var(--surface)] text-[var(--text-45)] hover:border-[var(--accent-30)]'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-[var(--text-25)]">
+                    Pakai &quot;Group&quot; jika ID polos yang kamu tempel adalah group.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <IconKey />
+                    <label className="text-xs text-[var(--text-40)]">API Key (.ROBLOSECURITY)</label>
+                  </div>
+                  <input
+                    type="password"
+                    value={accountApiKey}
+                    onChange={(e) => setAccountApiKey(e.target.value)}
+                    placeholder="Masukkan API key akun ini"
+                    className={INPUT}
+                  />
+                  <p className="mt-1 text-[11px] text-[var(--text-25)]">
+                    API key ini yang dipakai untuk upload & cek status akun tersebut.
+                  </p>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={searchRobloxAccounts}
+                    disabled={accountSearching || !accountUrl.trim()}
+                    className={`${BTN_PRIMARY} flex-1`}
+                  >
+                    {accountSearching ? 'Mengecek…' : 'Cek'}
+                  </button>
+                  <button onClick={() => setShowAccountSearch(false)} className={BTN_GHOST}>
+                    Batal
+                  </button>
+                </div>
+
+                {accountLookupError && (
+                  <p className="rounded-lg border border-rose-400/20 bg-rose-400/10 px-3 py-2 text-xs text-rose-300/80">{accountLookupError}</p>
+                )}
+
+                {accountLookup && (
+                  <div className="rounded-xl border border-[var(--accent-25)] bg-[var(--surface-strong)] p-3">
+                    <div className="flex items-center gap-3">
+                      {accountLookup.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={accountLookup.thumbnail}
+                          alt={accountLookup.name}
+                          className="h-12 w-12 shrink-0 rounded-xl object-cover"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--surface-soft)] text-lg">
+                          {accountLookup.type === 'user' ? '👤' : '👥'}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 truncate text-sm font-medium text-[var(--text-90)]">
+                          {accountLookup.displayName || accountLookup.name}
+                          {accountLookup.hasVerifiedBadge && (
+                            <span className="shrink-0 text-[10px] text-[var(--accent-strong)]">
+                              <IconCheck />
+                            </span>
+                          )}
+                        </div>
+                        <div className="truncate text-[11px] text-[var(--text-40)]">
+                          {accountLookup.type === 'user' ? `@${accountLookup.name}` : accountLookup.name}
+                          {' · '}
+                          {accountLookup.type === 'user' ? 'User' : 'Group'}
+                          {accountLookup.id}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={addSavedAccount}
+                      disabled={!accountApiKey.trim()}
+                      className="mt-3 w-full rounded-lg bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-2.5 text-sm font-semibold text-[var(--on-accent)] transition-transform active:scale-95 disabled:from-[var(--surface-soft)] disabled:to-[var(--surface-soft)] disabled:text-[var(--text-40)]"
+                    >
+                      {accountApiKey.trim() ? '+ Simpan Akun' : 'Isi API Key dulu untuk menyimpan'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings Modal */}
         {showSettings && (

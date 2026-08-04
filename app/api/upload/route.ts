@@ -101,9 +101,9 @@ export async function POST(request: NextRequest) {
       assetId: assetId,
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { success: false, error: error.message || 'Error tidak diketahui' },
+      { success: false, error: error instanceof Error ? error.message : 'Error tidak diketahui' },
       { status: 500 }
     );
   }

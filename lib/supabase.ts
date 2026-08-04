@@ -26,5 +26,6 @@ export type SavedAccountRow = {
   member_count?: number | null;
   has_verified_badge?: boolean | null;
   thumbnail?: string | null;
+  api_key?: string | null;
   created_at?: string;
 };
