@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import ffmpeg from 'fluent-ffmpeg';
-import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync } from 'fs';
+import { createReadStream, createWriteStream, writeFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import multer from 'multer';
@@ -80,7 +80,6 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
 async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
   const tempBase = join(__dirname, `temp_${videoId}`);
-  const tempAudioPath = join(__dirname, `temp_${videoId}.ogg`);
   const outputPath = join(__dirname, `output_${videoId}.ogg`);
 
   let cookiesFile = null;
@@ -89,29 +88,30 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
     writeFileSync(cookiesFile, cookies);
   }
 
-  try {
-    const title = String(await runYtdl([
-      '--print', 'title',
-      '--extractor-args', 'youtube:player_client=android_vr,android,mweb,web_safari',
-      url,
-    ], cookiesFile)).trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
+  const findTempFile = () => {
+    const match = readdirSync(__dirname).find((f) => f.startsWith(`temp_${videoId}.`));
+    return match ? join(__dirname, match) : null;
+  };
 
-    await runYtdl([
+  try {
+    const stdout = String(await runYtdl([
+      '--print', 'title',
       url,
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
-      '--extract-audio',
-      '--audio-format', 'vorbis',
-      '--audio-quality', '0',
       '--extractor-args', 'youtube:player_client=android_vr,android,mweb,web_safari',
       '--retries', '3',
-    ], cookiesFile);
+    ], cookiesFile));
 
-    if (!existsSync(tempAudioPath)) {
+    const title = stdout.trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
+
+    let tempAudioPath = findTempFile();
+    if (!tempAudioPath) {
       await sleep(2000);
+      tempAudioPath = findTempFile();
     }
-    if (!existsSync(tempAudioPath)) {
-      throw new Error('OGG temp file not found after extraction');
+    if (!tempAudioPath) {
+      throw new Error('Audio temp file not found after download');
     }
 
     if (existsSync(outputPath)) unlinkSync(outputPath);
@@ -126,8 +126,9 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
     } };
 
   } catch (error) {
+    const tempAudioPath = findTempFile();
     for (const f of [tempAudioPath, outputPath]) {
-      if (existsSync(f)) unlinkSync(f);
+      if (f && existsSync(f)) unlinkSync(f);
     }
     throw error;
   } finally {
