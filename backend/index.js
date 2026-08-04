@@ -44,6 +44,13 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds) || seconds <= 0) return '0:00';
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   return new Promise((resolve, reject) => {
     const filters = [];
@@ -61,8 +68,9 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
 
     command
       .audioBitrate(128)
-      .audioCodec('libmp3lame')
-      .toFormat('mp3')
+      .audioCodec('libvorbis')
+      .toFormat('ogg')
+      .outputOptions('-map_metadata', '-1')
       .on('end', resolve)
       .on('error', reject)
       .save(outputPath);
@@ -72,8 +80,8 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
 async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   const videoId = getVideoId(url) || `video_${Date.now()}`;
   const tempBase = join(__dirname, `temp_${videoId}`);
-  const tempAudioPath = join(__dirname, `temp_${videoId}.mp3`);
-  const outputPath = join(__dirname, `output_${videoId}.mp3`);
+  const tempAudioPath = join(__dirname, `temp_${videoId}.ogg`);
+  const outputPath = join(__dirname, `output_${videoId}.ogg`);
 
   let cookiesFile = null;
   if (cookies && typeof cookies === 'string' && cookies.trim()) {
@@ -93,30 +101,21 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
       '--extract-audio',
-      '--audio-format', 'mp3',
+      '--audio-format', 'vorbis',
       '--audio-quality', '0',
       '--extractor-args', 'youtube:player_client=android',
       '--retries', '3',
     ], cookiesFile);
 
-    const needsProcessing = parseFloat(speed) !== 1.0 || parseFloat(amplify) !== 0;
-
-    if (needsProcessing) {
-      if (!existsSync(tempAudioPath)) {
-        await sleep(2000);
-      }
-      if (!existsSync(tempAudioPath)) {
-        throw new Error('MP3 temp file not found after extraction');
-      }
-      if (existsSync(outputPath)) unlinkSync(outputPath);
-      await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
-    } else {
-      if (existsSync(outputPath)) unlinkSync(outputPath);
-      if (!existsSync(tempAudioPath)) {
-        throw new Error('MP3 temp file not found after extraction');
-      }
-      createReadStream(tempAudioPath).pipe(createWriteStream(outputPath));
+    if (!existsSync(tempAudioPath)) {
+      await sleep(2000);
     }
+    if (!existsSync(tempAudioPath)) {
+      throw new Error('OGG temp file not found after extraction');
+    }
+
+    if (existsSync(outputPath)) unlinkSync(outputPath);
+    await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
 
     if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
 
@@ -147,8 +146,8 @@ async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Un
     creationContext: { creator },
   }));
   form.append('fileContent', createReadStream(filePath), {
-    filename: `${displayName}.mp3`,
-    contentType: 'audio/mpeg',
+    filename: `${displayName}.ogg`,
+    contentType: 'audio/ogg',
   });
 
   const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
@@ -188,7 +187,7 @@ app.post('/api/youtube-download', async (req, res) => {
     const { title, outputPath, fileId, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
     res.json({
       success: true,
-      filename: `${title}.mp3`,
+      filename: `${title}.ogg`,
       path: outputPath,
       fileId,
     });
@@ -198,8 +197,43 @@ app.post('/api/youtube-download', async (req, res) => {
   }
 });
 
+app.post('/api/youtube-info', async (req, res) => {
+  const { url } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+
+  try {
+    const stdout = await runYtdl([
+      '--print',
+      '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
+      '--extractor-args', 'youtube:player_client=android',
+      url,
+    ]);
+
+    const [title = '', durationString = '', duration = '0', thumbnail = '', channel = '', id = ''] =
+      stdout.split('\n').map((s) => s.trim());
+
+    res.json({
+      success: true,
+      video: {
+        id,
+        title,
+        durationString: durationString || formatDuration(parseInt(duration) || 0),
+        duration: parseInt(duration) || 0,
+        thumbnail,
+        channel,
+      },
+    });
+  } catch (error) {
+    console.error('YouTube info error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch video info' });
+  }
+});
+
 app.get('/api/download-file/:fileId', (req, res) => {
-  const filePath = join(__dirname, `${req.params.fileId}.mp3`);
+  const filePath = join(__dirname, `${req.params.fileId}.ogg`);
   
   if (!existsSync(filePath)) {
     return res.status(404).json({ error: 'File not found' });
@@ -222,7 +256,7 @@ app.get('/api/download-file/:fileId', (req, res) => {
 app.post('/api/process-audio', upload.single('file'), async (req, res) => {
   const { speed = 1.0, amplify = 0 } = req.body;
   const inputPath = req.file.path;
-  const outputPath = `${inputPath}_processed.mp3`;
+  const outputPath = `${inputPath}_processed.ogg`;
 
   try {
     await new Promise((resolve, reject) => {
@@ -241,17 +275,18 @@ app.post('/api/process-audio', upload.single('file'), async (req, res) => {
       }
 
       command
-      .audioBitrate(128)
-        .audioCodec('libmp3lame')
-        .toFormat('mp3')
+        .audioBitrate(128)
+        .audioCodec('libvorbis')
+        .toFormat('ogg')
+        .outputOptions('-map_metadata', '-1')
         .on('end', resolve)
         .on('error', reject)
         .save(outputPath);
     });
 
     const processedFile = createReadStream(outputPath);
-    res.setHeader('Content-Type', 'audio/mpeg');
-    res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname}"`);
+    res.setHeader('Content-Type', 'audio/ogg');
+    res.setHeader('Content-Disposition', `attachment; filename="${req.file.originalname.replace(/\.\w+$/, '')}.ogg"`);
     
     processedFile.pipe(res);
 
@@ -287,7 +322,9 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
   }
 
   try {
-    const operationId = await uploadToRoblox(req.file.path, {
+    const processedPath = `${req.file.path}_clean.ogg`;
+    await runFFmpeg(req.file.path, processedPath, 1.0, 0);
+    const operationId = await uploadToRoblox(processedPath, {
       assetType,
       displayName,
       description,
@@ -303,11 +340,13 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
       details: error.details,
     });
   } finally {
-    if (req.file && existsSync(req.file.path)) {
-      try {
-        unlinkSync(req.file.path);
-      } catch(e) {
-        console.error('Cleanup error:', e);
+    for (const f of [req.file && req.file.path, req.file && `${req.file.path}_clean.ogg`]) {
+      if (f && existsSync(f)) {
+        try {
+          unlinkSync(f);
+        } catch(e) {
+          console.error('Cleanup error:', e);
+        }
       }
     }
   }
@@ -338,7 +377,7 @@ app.post('/api/youtube-upload', async (req, res) => {
 
   try {
     const { title, outputPath, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
-    const name = `${displayName || title}.mp3`;
+    const name = `${displayName || title}.ogg`;
     try {
       const operationId = await uploadToRoblox(outputPath, {
         assetType: 'Audio',
