@@ -579,6 +579,143 @@ app.get('/api/roblox/lookup', async (req, res) => {
   }
 });
 
+app.get('/api/roblox/key-info', async (req, res) => {
+  const apiKey = String(req.query.apiKey || '').trim();
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Masukkan API key terlebih dahulu' });
+  }
+
+  const fetchWithRetry = async (url, tries = 3, options = {}) => {
+    for (let i = 0; i < tries; i++) {
+      try {
+        const r = await fetch(url, options);
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) {
+          if (data.error && data.error.message) throw new Error(data.error.message);
+          if (data.errors && data.errors[0] && data.errors[0].message) throw new Error(data.errors[0].message);
+          if (data.message) throw new Error(data.message);
+          throw new Error(`Roblox API error (${r.status})`);
+        }
+        return data;
+      } catch (e) {
+        if (i === tries - 1) throw e;
+        await sleep(500 * (i + 1));
+      }
+    }
+    return {};
+  };
+
+  try {
+    let introspect;
+    try {
+      const r = await fetch('https://apis.roblox.com/api-keys/v1/introspect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error('introspect failed');
+      introspect = data;
+    } catch (e) {
+      return res.status(401).json({ error: 'API key tidak valid. Periksa kembali API key-nya.' });
+    }
+
+    if (!introspect || !introspect.authorizedUserId) {
+      return res.status(401).json({ error: 'API key tidak valid. Periksa kembali API key-nya.' });
+    }
+    if (!introspect.enabled || introspect.expired) {
+      return res.status(400).json({ error: 'API key ini tidak aktif atau sudah kedaluwarsa.' });
+    }
+
+    const ownerId = String(introspect.authorizedUserId);
+    const scopes = Array.isArray(introspect.scopes) ? introspect.scopes : [];
+    const scopeGroupIds = [...new Set(
+      scopes.flatMap((s) => (Array.isArray(s.groupIds) ? s.groupIds : []))
+    )].filter((g) => g !== '*');
+    const scopeUserIds = [...new Set(
+      scopes.flatMap((s) => (Array.isArray(s.userIds) ? s.userIds : []))
+    )];
+
+    const owner = await fetchWithRetry(`https://users.roblox.com/v1/users/${ownerId}`);
+    let ownerThumbnail = null;
+    try {
+      const avatars = await fetchWithRetry(
+        `https://thumbnails.roblox.com/v1/users/avatar?userIds=${ownerId}&size=150x150&format=Png&isCircular=false`
+      );
+      if (avatars.data && avatars.data[0]) ownerThumbnail = avatars.data[0].imageUrl || null;
+    } catch {
+      ownerThumbnail = null;
+    }
+
+    let audioQuota = null;
+    try {
+      const quota = await fetchWithRetry(
+        `https://apis.roblox.com/cloud/v2/users/${ownerId}/asset-quotas`,
+        2,
+        { headers: { 'x-api-key': apiKey } }
+      );
+      const audioEntry = (Array.isArray(quota.assetQuotas) ? quota.assetQuotas : []).find(
+        (q) => String(q.assetType || q.resourceType || '').toUpperCase() === 'AUDIO'
+      );
+      if (audioEntry) {
+        audioQuota = {
+          usage: audioEntry.usage != null ? Number(audioEntry.usage) : null,
+          capacity: audioEntry.capacity != null ? Number(audioEntry.capacity) : null,
+          period: audioEntry.period || 'MONTH',
+          usageResetTime: audioEntry.usageResetTime || null,
+        };
+      }
+    } catch {
+      audioQuota = null;
+    }
+
+    const groups = [];
+    for (const gid of scopeGroupIds) {
+      try {
+        const info = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${gid}`);
+        if (!info.id) continue;
+        let thumb = null;
+        try {
+          const icons = await fetchWithRetry(
+            `https://thumbnails.roblox.com/v1/groups/icons?groupIds=${gid}&size=420x420&format=Png`
+          );
+          if (icons.data && icons.data[0]) thumb = icons.data[0].imageUrl || null;
+        } catch {
+          thumb = null;
+        }
+        groups.push({
+          id: String(info.id),
+          name: info.name,
+          memberCount: info.memberCount,
+          hasVerifiedBadge: !!info.hasVerifiedBadge,
+          thumbnail: thumb,
+        });
+      } catch {
+        // lewati group yang gagal di-fetch
+      }
+    }
+
+    res.json({
+      success: true,
+      keyName: introspect.name || null,
+      owner: {
+        id: ownerId,
+        name: owner.name,
+        displayName: owner.displayName || null,
+        hasVerifiedBadge: !!owner.hasVerifiedBadge,
+        thumbnail: ownerThumbnail,
+      },
+      audioQuota,
+      groups,
+      scopeGroupIds,
+      scopeUserIds,
+    });
+  } catch (error) {
+    console.error('Key info error:', error);
+    res.status(500).json({ error: error.message || 'Gagal memeriksa API key' });
+  }
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {

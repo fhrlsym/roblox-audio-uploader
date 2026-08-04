@@ -27,5 +27,9 @@ export type SavedAccountRow = {
   has_verified_badge?: boolean | null;
   thumbnail?: string | null;
   api_key?: string | null;
+  owner_id?: string | null;
+  owner_name?: string | null;
+  audio_usage?: number | null;
+  audio_capacity?: number | null;
   created_at?: string;
 };

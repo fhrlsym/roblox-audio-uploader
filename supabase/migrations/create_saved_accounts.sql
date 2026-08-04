@@ -11,6 +11,10 @@ create table if not exists public.saved_accounts (
   has_verified_badge boolean default false,
   thumbnail text,
   api_key text,
+  owner_id text,
+  owner_name text,
+  audio_usage bigint,
+  audio_capacity bigint,
   created_at timestamptz default now(),
   primary key (id, type)
 );
@@ -29,6 +33,12 @@ create policy "saved_accounts_delete" on public.saved_accounts
 
 -- 2) Jika tabel saved_accounts SUDAH dibuat tanpa kolom api_key, jalankan baris ini saja:
 -- alter table public.saved_accounts add column if not exists api_key text;
+
+-- 2b) Kolom pemilik & kuota audio (cache; kuota di-refresh otomatis dari Roblox tiap load/interval)
+alter table public.saved_accounts add column if not exists owner_id text;
+alter table public.saved_accounts add column if not exists owner_name text;
+alter table public.saved_accounts add column if not exists audio_usage bigint;
+alter table public.saved_accounts add column if not exists audio_capacity bigint;
 
 -- 3) Riwayat upload: simpan akun mana yang dipakai saat upload (untuk cek status pakai API key yang benar)
 -- alter table public.audio_uploads add column if not exists account_id text;
