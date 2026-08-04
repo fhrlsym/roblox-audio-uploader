@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-react';
 import { TunedAudioFile, UploadResult } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
+import { useToast } from './Toast';
 import { CARD, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 
 interface AccountLike {
@@ -34,6 +35,7 @@ interface OutputSectionProps {
 }
 
 export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, selectedAccount, onUploadSuccess }: OutputSectionProps) {
+  const { toast } = useToast();
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
 
@@ -49,12 +51,18 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   };
 
   const copyAssetId = (assetId: string) => {
-    navigator.clipboard.writeText(`rbxassetid://${assetId}`);
+    navigator.clipboard.writeText(assetId);
+    toast('Asset ID disalin', 'success');
+  };
+
+  const copySongInfo = (name: string, assetId: string, playbackSpeed: string) => {
+    navigator.clipboard.writeText(`${name}\n${assetId}\n${playbackSpeed}`);
+    toast('Nama lagu, asset ID & playback speed disalin', 'success');
   };
 
   const handleUploadToRoblox = async (file: TunedAudioFile) => {
     if (!selectedAccount || !selectedAccount.apiKey) {
-      alert('Pilih akun Roblox terlebih dahulu');
+      toast('Pilih akun Roblox terlebih dahulu di bagian Roblox Account', 'error');
       return;
     }
 
@@ -183,18 +191,39 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                 {result && (
                   <div className="mt-3">
                     {result.success ? (
-                      <div className="flex flex-wrap items-center gap-2">
-                        <StatusBadge status={result.status || 'Pending'} />
-                        <span className="inline-flex items-center gap-1 font-mono text-xs text-[var(--text-60)]">
-                          rbxassetid://{result.assetId}
-                        </span>
-                        <button
-                          onClick={() => copyAssetId(result.assetId!)}
-                          className="ml-auto inline-flex items-center gap-1 rounded-md border border-[var(--line)] px-2 py-1 text-[11px] text-[var(--text-50)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-soft)]"
-                        >
-                          <Copy className="w-3 h-3" />
-                          Salin
-                        </button>
+                      <div className="rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-4">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={result.status || 'Pending'} />
+                          <button
+                            onClick={() => copySongInfo(file.tunedName, result.assetId!, (1 / file.speed).toFixed(4))}
+                            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Salin 3 info
+                          </button>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0 w-24 pt-0.5">Nama</span>
+                            <span className="text-sm font-medium text-[var(--text-90)] text-right">{file.tunedName}</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0 w-24 pt-0.5">Asset ID</span>
+                            <button
+                              onClick={() => copyAssetId(result.assetId!)}
+                              className="group inline-flex items-center gap-1.5 font-mono text-sm text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)]"
+                            >
+                              rbxassetid://{result.assetId}
+                              <Copy className="w-3 h-3 opacity-50 transition group-hover:opacity-100" />
+                            </button>
+                          </div>
+                          <div className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-strong)] px-3 py-2">
+                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0">Playback Speed</span>
+                            <span className="font-mono text-lg font-semibold text-[var(--accent-strong)]">
+                              {(1 / file.speed).toFixed(4)}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     ) : (
                       <p className="text-xs text-rose-300">{result.error}</p>

@@ -9,6 +9,7 @@ export interface UploadRecord {
   fileName: string;
   displayName: string;
   assetId: string;
+  accountId?: string;
   accountName: string;
   uploadedAt: number;
   fileSize?: number;
@@ -48,7 +49,7 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
   };
 
   const copyAssetId = (assetId: string) => {
-    navigator.clipboard.writeText(`rbxassetid://${assetId}`);
+    navigator.clipboard.writeText(assetId);
   };
 
   return (

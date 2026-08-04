@@ -9,6 +9,7 @@ import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory, { UploadRecord } from '../components/UploadHistory';
+import { ToastProvider } from '../components/Toast';
 import { CARD, PANEL, LABEL } from '../lib/ui';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
@@ -89,7 +90,7 @@ export default function Home() {
           id: row.id,
           name: row.display_name || row.name,
           type: row.type,
-          apiKey: apiKeys[row.id] || '',
+          apiKey: row.api_key || apiKeys[row.id] || '',
           userId: row.owner_id,
           groupId: row.type === 'group' ? row.id : undefined,
           quota: row.audio_usage != null && row.audio_capacity != null ? {
@@ -99,8 +100,10 @@ export default function Home() {
           } : null,
         }));
         setSavedAccounts(accounts);
-        if (accounts.length > 0 && !selectedAccountRef.current) {
-          setSelectedAccount(accounts[0]);
+        if (accounts.length > 0) {
+          setSelectedAccount((prev) => prev && accounts.some((a) => a.id === prev.id) ? prev : accounts[0]);
+        } else {
+          setSelectedAccount(null);
         }
       }
     } catch {
@@ -122,6 +125,7 @@ export default function Home() {
           fileName: row.name,
           displayName: row.name,
           assetId: row.asset_id,
+          accountId: row.account_id || '',
           accountName: 'Roblox',
           uploadedAt: new Date(row.uploaded_at).getTime(),
           status: row.status || 'Pending',
@@ -173,19 +177,23 @@ export default function Home() {
     try {
       const { error } = await supabase
         .from('saved_accounts')
-        .insert({
-          id: account.id,
-          type: account.type,
-          name: account.name,
-          display_name: account.name,
-          member_count: 0,
-          has_verified_badge: false,
-          thumbnail: null,
-          owner_id: account.userId,
-          owner_name: null,
-          audio_usage: account.quota?.usage || null,
-          audio_capacity: account.quota?.capacity || null,
-        })
+        .upsert(
+          {
+            id: account.id,
+            type: account.type,
+            name: account.name,
+            display_name: account.name,
+            member_count: 0,
+            has_verified_badge: false,
+            thumbnail: null,
+            owner_id: account.userId,
+            owner_name: null,
+            audio_usage: account.quota?.usage || null,
+            audio_capacity: account.quota?.capacity || null,
+            api_key: account.apiKey,
+          },
+          { onConflict: 'id,type' }
+        )
         .select()
         .single();
 
@@ -237,7 +245,7 @@ export default function Home() {
 
   const handleRefreshStatus = async (assetId: string) => {
     const row = uploadHistory.find((h) => h.assetId === assetId);
-    const account = savedAccounts.find((a) => a.id === row?.id) || selectedAccountRef.current;
+    const account = savedAccounts.find((a) => a.id === row?.accountId) || selectedAccountRef.current;
     if (!account?.apiKey.trim()) return;
     setRefreshingIds((prev) => [...prev, assetId]);
     try {
@@ -416,15 +424,16 @@ export default function Home() {
   }
 
   return (
-    <div data-theme={theme} className="relative min-h-screen bg-[var(--bg)] text-[var(--text)]">
+    <ToastProvider>
+      <div data-theme={theme} className="relative min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 h-96 w-[60rem] rounded-full bg-[var(--glow-1)] blur-[130px]" />
       <div className="pointer-events-none fixed bottom-0 -left-20 h-72 w-72 rounded-full bg-[var(--glow-2)] blur-[110px]" />
       <div className="pointer-events-none fixed bottom-10 right-0 h-56 w-56 rounded-full bg-[var(--glow-3)] blur-[100px]" />
 
       <div className="relative mx-auto max-w-5xl px-4 pt-8 pb-16">
         {/* Header */}
-        <header className={`${CARD} relative mb-6 overflow-hidden p-6 sm:p-8`}>
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,var(--accent-15),transparent_60%)]" />
+        <header className={`${CARD} relative mb-6 p-6 sm:p-8`}>
+          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top_right,var(--accent-15),transparent_60%)]" />
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-soft)]">
@@ -449,7 +458,7 @@ export default function Home() {
                   <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
                 </button>
                 {themeOpen && (
-                  <div className="modal-enter absolute right-0 z-20 mt-2 w-44 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl">
+                  <div className="modal-enter absolute right-0 z-30 mt-2 w-44 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl">
                     {THEMES.map((t) => (
                       <button
                         key={t.id}
@@ -468,13 +477,6 @@ export default function Home() {
                   </div>
                 )}
               </div>
-              <button
-                onClick={() => setShowAccountModal(true)}
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-4 py-2 text-sm font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
-              >
-                <Plus className="w-4 h-4" />
-                Akun
-              </button>
             </div>
           </div>
         </header>
@@ -493,17 +495,17 @@ export default function Home() {
         <div className={`${CARD} mb-6 p-5`}>
           <div className="mb-3 flex items-center justify-between">
             <label className={LABEL}>Roblox Account</label>
+            <button
+              onClick={() => setShowAccountModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-25)] px-3 py-1.5 text-xs text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Tambah akun
+            </button>
           </div>
           {savedAccounts.length === 0 ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--line)] p-4">
-              <p className="text-sm text-[var(--text-45)]">Belum ada akun tersimpan.</p>
-              <button
-                onClick={() => setShowAccountModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-25)] px-3 py-2 text-xs text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Tambah akun
-              </button>
+              <p className="text-sm text-[var(--text-45)]">Belum ada akun tersimpan. Tambahkan API key Roblox untuk mulai upload.</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -642,6 +644,7 @@ export default function Home() {
         onAccountAdded={handleAccountAdded}
         backendUrl={BACKEND_URL}
       />
-    </div>
+      </div>
+    </ToastProvider>
   );
 }
