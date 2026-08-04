@@ -723,34 +723,15 @@ export default function Home() {
         const entry = filesToConvert[i];
         const file = entry.file!;
 
-        setConvertProgress(prev => 
-          prev.map((p, idx) => idx === i ? { ...p, progress: 50 } : p)
-        );
-
-        // Upload ke backend untuk convert dengan ffmpeg (atempo preserve pitch)
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('speed', speed.toString());
-        formData.append('amplify', amplify.toString());
-
-        const response = await fetch(`${BACKEND_URL}/api/convert-file`, {
-          method: 'POST',
-          body: formData,
+        const blob = await processAudio(file, speed, amplify, (progress) => {
+          setConvertProgress(prev => 
+            prev.map((p, idx) => idx === i ? { ...p, progress } : p)
+          );
         });
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || 'Convert failed');
-        }
-
-        setConvertProgress(prev => 
-          prev.map((p, idx) => idx === i ? { ...p, progress: 100 } : p)
-        );
-
-        const newName = data.filename || file.name.replace(/\.[^/.]+$/, '') + `_${speed}x.mp3`;
+        const newName = file.name.replace(/\.[^/.]+$/, '') + `_${speed}x.mp3`;
         setFiles(prev => prev.map(f => 
-          f.file === file ? { ...f, fileId: data.fileId, name: newName } : f
+          f.file === file ? { ...f, blob, name: newName } : f
         ));
       }
 
