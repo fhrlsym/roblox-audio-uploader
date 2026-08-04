@@ -122,33 +122,18 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   });
 }
 
-function probeAudioCodec(inputPath) {
-  return new Promise((resolve) => {
-    ffmpeg.ffprobe(inputPath, (err, data) => {
-      if (err) return resolve(null);
-      const stream = data.streams && data.streams.find((s) => s.codec_type === 'audio');
-      resolve(stream ? stream.codec_name : null);
-    });
-  });
-}
-
-function runFFmpegSmart(inputPath, outputPath) {
-  return probeAudioCodec(inputPath).then((codec) => {
-    const copyable = codec === 'vorbis' || codec === 'opus';
-    return new Promise((resolve, reject) => {
-      let command = ffmpeg(inputPath);
-      if (copyable) {
-        command = command.audioCodec('copy');
-      } else {
-        command = command.audioCodec('libvorbis').audioBitrate(128);
-      }
-      command
-        .toFormat('ogg')
-        .outputOptions('-map_metadata', '-1')
-        .on('end', resolve)
-        .on('error', reject)
-        .save(outputPath);
-    });
+function runFFmpegNormalize(inputPath, outputPath) {
+  return new Promise((resolve, reject) => {
+    ffmpeg(inputPath)
+      .audioCodec('libvorbis')
+      .audioBitrate(128)
+      .audioChannels(2)
+      .audioFrequency(44100)
+      .toFormat('ogg')
+      .outputOptions('-map_metadata', '-1')
+      .on('end', resolve)
+      .on('error', reject)
+      .save(outputPath);
   });
 }
 
@@ -404,8 +389,9 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
 
   try {
     const processedPath = `${req.file.path}_clean.ogg`;
-    await runFFmpegSmart(req.file.path, processedPath);
+    await runFFmpegNormalize(req.file.path, processedPath);
     const durationSec = await probeDuration(processedPath);
+    console.log(`Upload-to-roblox ${req.file.originalname}: duration=${durationSec}s`);
     if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
       return res.status(400).json({
         error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu coba lagi.`,
@@ -419,7 +405,7 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
       creatorId,
       apiKey,
     });
-    res.json({ operationId });
+    res.json({ operationId, durationSec });
   } catch (error) {
     console.error('Roblox upload error:', error);
     res.status(error.status || 500).json({
@@ -464,15 +450,19 @@ app.post('/api/upload-converted', async (req, res) => {
     return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
   }
 
-  const durationSec = await probeDuration(filePath);
-  if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
-    return res.status(400).json({
-      error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu convert ulang.`,
-    });
-  }
+  const normPath = `${filePath}_norm.ogg`;
 
   try {
-    const operationId = await uploadToRoblox(filePath, {
+    await runFFmpegNormalize(filePath, normPath);
+    const durationSec = await probeDuration(normPath);
+    console.log(`Upload-converted ${fileId}: duration=${durationSec}s`);
+    if (durationSec != null && durationSec >= MAX_AUDIO_SECONDS) {
+      return res.status(400).json({
+        error: `Audio terlalu panjang (${formatDuration(durationSec)}, batas 7 menit). Naikkan Speed atau potong audio lalu convert ulang.`,
+      });
+    }
+
+    const operationId = await uploadToRoblox(normPath, {
       assetType: 'Audio',
       displayName: displayName || fileId,
       description,
@@ -480,7 +470,7 @@ app.post('/api/upload-converted', async (req, res) => {
       creatorId,
       apiKey,
     });
-    res.json({ operationId });
+    res.json({ operationId, durationSec });
   } catch (error) {
     console.error('Roblox upload (converted) error:', error);
     res.status(error.status || 500).json({
@@ -488,8 +478,10 @@ app.post('/api/upload-converted', async (req, res) => {
       details: error.details,
     });
   } finally {
-    if (existsSync(filePath)) {
-      try { unlinkSync(filePath); } catch (e) { console.error('Cleanup error:', e); }
+    for (const p of [filePath, normPath]) {
+      if (existsSync(p)) {
+        try { unlinkSync(p); } catch (e) { console.error('Cleanup error:', e); }
+      }
     }
   }
 });

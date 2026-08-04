@@ -91,6 +91,7 @@ interface UploadResult {
   assetId?: string;
   status?: string;
   error?: string;
+  durationSec?: number;
   pending?: boolean;
   step?: 'uploading' | 'moderating';
 }
@@ -901,9 +902,10 @@ export default function Home() {
           }
 
           const result = await response.json();
+          const durationSec = typeof result.durationSec === 'number' ? result.durationSec : undefined;
 
           if (response.ok && result.operationId) {
-            updateResult(i, { step: 'moderating' });
+            updateResult(i, { step: 'moderating', durationSec });
 
             let assetId: string | null = null;
             let status = 'Pending';
@@ -935,6 +937,7 @@ export default function Home() {
                 success: true,
                 pending: false,
                 step: undefined,
+                durationSec,
               });
 
               const youtubeUrl = youtubeLinks[i]?.url?.trim() || undefined;
@@ -946,6 +949,7 @@ export default function Home() {
                 success: false,
                 pending: false,
                 step: undefined,
+                durationSec,
               });
             }
           } else {
@@ -955,6 +959,7 @@ export default function Home() {
               success: false,
               pending: false,
               step: undefined,
+              durationSec,
             });
           }
         } catch (error) {
@@ -1663,6 +1668,12 @@ export default function Home() {
                                   </div>
                                 </div>
                                 <div className="mt-2 flex items-center gap-2 text-xs">
+                                  {result.durationSec != null && (
+                                    <>
+                                      <span className="text-[var(--text-40)]">Durasi:</span>
+                                      <span className="font-mono text-[var(--text-70)]">{fmtSec(result.durationSec)}</span>
+                                    </>
+                                  )}
                                   <span className="text-[var(--text-40)]">ID:</span>
                                   <span className="font-mono text-[var(--text-70)]">{result.assetId}</span>
                                   <button
@@ -1681,6 +1692,9 @@ export default function Home() {
                                     Gagal
                                   </span>
                                 </div>
+                                {result.durationSec != null && (
+                                  <div className="mt-1 text-xs text-[var(--text-50)]">Durasi terdeteksi: {fmtSec(result.durationSec)}</div>
+                                )}
                                 <div className="mt-1 text-xs text-rose-300/80">{result.error}</div>
                               </>
                             )}
