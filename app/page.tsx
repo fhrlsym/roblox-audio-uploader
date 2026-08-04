@@ -1,8 +1,8 @@
 ﻿'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Building2, Check, ChevronDown, Plus, Trash2, User } from 'lucide-react';
+import { Building2, Check, ChevronDown, ChevronLeft, CloudUpload, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
@@ -10,7 +10,7 @@ import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory, { UploadRecord } from '../components/UploadHistory';
 import { ToastProvider } from '../components/Toast';
-import { CARD, PANEL, LABEL } from '../lib/ui';
+import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -66,6 +66,12 @@ export default function Home() {
   const [theme, setTheme] = useState('gold-dark');
   const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
+  const [activeStep, setActiveStep] = useState(1);
+
+  const goToStep = (step: number) => {
+    setActiveStep(step);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const [rawFiles, setRawFiles] = useState<RawAudioFile[]>([]);
   const [tunedFiles, setTunedFiles] = useState<TunedAudioFile[]>([]);
@@ -392,6 +398,12 @@ export default function Home() {
     { label: 'Copyright', value: uploadStats.copyright },
   ];
 
+  const steps = [
+    { id: 1, label: 'Input Audio', icon: Music, count: rawFiles.length, sub: 'Convert MP3' },
+    { id: 2, label: 'Audio Tuning', icon: Wand2, count: tunedFiles.length, sub: 'Speed & Amplify' },
+    { id: 3, label: 'Output & Upload', icon: CloudUpload, count: 0, sub: 'Upload ke Roblox' },
+  ];
+
   if (!unlocked) {
     return (
       <div className="relative min-h-screen overflow-hidden bg-[var(--bg)] flex items-center justify-center p-4">
@@ -630,27 +642,105 @@ export default function Home() {
           </div>
         </details>
 
-        {/* Sections */}
-        <div className="space-y-4">
+        {/* Stepper Nav */}
+        <div className={`${CARD} mb-4 p-3 sm:p-4`}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            {steps.map((step, i) => (
+              <Fragment key={step.id}>
+                {i > 0 && (
+                  <div
+                    className={`h-px flex-1 ${
+                      activeStep >= step.id ? 'bg-[var(--accent-30)]' : 'bg-[var(--line)]'
+                    }`}
+                  />
+                )}
+                <button
+                  onClick={() => goToStep(step.id)}
+                  className="group flex min-w-0 flex-1 flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2.5 rounded-xl px-2 py-2 transition sm:px-3"
+                >
+                  <span
+                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm transition ${
+                      activeStep === step.id
+                        ? 'border-transparent bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] shadow-[0_0_18px_var(--accent-30)]'
+                        : activeStep > step.id
+                          ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--text-40)] group-hover:border-[var(--accent-30)]'
+                    }`}
+                  >
+                    <step.icon className="w-4 h-4" />
+                    {step.count > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--accent-strong)] px-1 text-[10px] font-bold text-[var(--on-accent)]">
+                        {step.count}
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex min-w-0 flex-col text-center sm:text-left">
+                    <span
+                      className={`truncate text-xs font-semibold ${
+                        activeStep === step.id ? 'text-[var(--accent-strong)]' : 'text-[var(--text-80)]'
+                      }`}
+                    >
+                      {step.id}. {step.label}
+                    </span>
+                    <span className="hidden text-[10px] text-[var(--text-40)] sm:block">{step.sub}</span>
+                  </span>
+                </button>
+              </Fragment>
+            ))}
+          </div>
+        </div>
+
+        {/* Active Section */}
+        {activeStep === 1 && (
           <InputSection
             onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
             backendUrl={BACKEND_URL}
             youtubeCookies={youtubeCookies}
             onYoutubeCookiesChange={setYoutubeCookies}
+            onNext={() => goToStep(2)}
           />
-          <TuningSection
-            rawFiles={rawFiles}
-            onTuningComplete={(tuned) => setTunedFiles((prev) => [...prev, ...tuned])}
-            onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
-          />
-          <OutputSection
-            tunedFiles={tunedFiles}
-            onRemoveTuned={(id) => setTunedFiles((prev) => prev.filter((f) => f.id !== id))}
-            backendUrl={BACKEND_URL}
-            selectedAccount={selectedAccount}
-            onUploadSuccess={handleUploadSuccess}
-          />
-        </div>
+        )}
+
+        {activeStep === 2 &&
+          (rawFiles.length === 0 ? (
+            <div className={`${CARD} p-8 text-center`}>
+              <Wand2 className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
+              <p className="text-sm text-[var(--text-50)]">Belum ada file audio untuk di-tune.</p>
+              <p className="mt-1 text-xs text-[var(--text-40)]">Unduh dari YouTube atau tambah file di langkah 1 dulu.</p>
+              <button onClick={() => goToStep(1)} className={BTN_PRIMARY + ' mt-5'}>
+                <ChevronLeft className="w-4 h-4" />
+                Kembali ke Input Audio
+              </button>
+            </div>
+          ) : (
+            <TuningSection
+              rawFiles={rawFiles}
+              onTuningComplete={(tuned) => setTunedFiles((prev) => [...prev, ...tuned])}
+              onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
+              onNext={() => goToStep(3)}
+            />
+          ))}
+
+        {activeStep === 3 &&
+          (tunedFiles.length === 0 ? (
+            <div className={`${CARD} p-8 text-center`}>
+              <CloudUpload className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
+              <p className="text-sm text-[var(--text-50)]">Belum ada file hasil tuning untuk di-upload.</p>
+              <p className="mt-1 text-xs text-[var(--text-40)]">Tune file di langkah 2 dulu.</p>
+              <button onClick={() => goToStep(2)} className={BTN_PRIMARY + ' mt-5'}>
+                <ChevronLeft className="w-4 h-4" />
+                Kembali ke Audio Tuning
+              </button>
+            </div>
+          ) : (
+            <OutputSection
+              tunedFiles={tunedFiles}
+              onRemoveTuned={(id) => setTunedFiles((prev) => prev.filter((f) => f.id !== id))}
+              backendUrl={BACKEND_URL}
+              selectedAccount={selectedAccount}
+              onUploadSuccess={handleUploadSuccess}
+            />
+          ))}
 
         {/* History */}
         <div className="mt-5">

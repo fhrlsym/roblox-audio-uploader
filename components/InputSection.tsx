@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ChevronRight, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
 import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 
@@ -17,11 +17,12 @@ interface InputSectionProps {
   backendUrl: string;
   youtubeCookies: string;
   onYoutubeCookiesChange: (cookies: string) => void;
+  onNext?: () => void;
 }
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
 
-export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies, onYoutubeCookiesChange }: InputSectionProps) {
+export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies, onYoutubeCookiesChange, onNext }: InputSectionProps) {
   const [activeTab, setActiveTab] = useState<'file' | 'youtube'>('youtube');
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
@@ -111,6 +112,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
 
     onFilesAdded(rawFiles);
     if (fileInputRef.current) fileInputRef.current.value = '';
+    onNext?.();
   };
 
   const handleYoutubeConvert = async () => {
@@ -161,6 +163,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
       // Refresh antrian: remove links that already succeeded so queue stays clean.
       const done = new Set(succeeded);
       setYoutubeLinks((prev) => prev.filter((l) => !done.has(l.url)));
+      onNext?.();
     }
 
     setConverting(false);
@@ -341,9 +344,17 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
           </button>
 
           {doneCount > 0 && (
-            <p className="text-xs text-emerald-400/90">
-              {doneCount} audio siap di-tune di bagian berikutnya.
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-emerald-400/90">
+                {doneCount} audio siap di-tune.
+              </p>
+              {onNext && (
+                <button onClick={onNext} className={BTN_PRIMARY + ' w-full py-3'}>
+                  Lanjut ke 2. Audio Tuning
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}

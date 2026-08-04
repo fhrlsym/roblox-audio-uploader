@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
-import { CARD, LABEL, BTN_PRIMARY } from '../lib/ui';
+import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
   onTuningComplete: (tunedFiles: TunedAudioFile[]) => void;
   onRemoveRaw: (id: string) => void;
+  onNext?: () => void;
 }
 
-export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw }: TuningSectionProps) {
+export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw, onNext }: TuningSectionProps) {
   const [speed, setSpeed] = useState(2.3);
   const [amplify, setAmplify] = useState(-4);
   const [tuning, setTuning] = useState(false);
@@ -86,6 +87,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
     });
     setTuning(false);
     setProgress(0);
+    if (results.length > 0) onNext?.();
   };
 
   return (
@@ -229,6 +231,13 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw 
             style={{ width: `${progress}%` }}
           />
         </div>
+      )}
+
+      {onNext && rawFiles.length === 0 && !tuning && (
+        <button onClick={onNext} className={BTN_GHOST + ' mt-3 w-full'}>
+          Lanjut ke 3. Output & Upload
+          <ChevronRight className="w-4 h-4" />
+        </button>
       )}
     </div>
   );
