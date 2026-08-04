@@ -83,6 +83,7 @@ export default function Home() {
 
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [youtubeLinkInput, setYoutubeLinkInput] = useState('');
+  const [sourceTab, setSourceTab] = useState<'youtube' | 'file'>('youtube');
   const [speed, setSpeed] = useState(2.30);
   const [amplify, setAmplify] = useState(-4);
   const [downloading, setDownloading] = useState(false);
@@ -320,7 +321,7 @@ export default function Home() {
     }
 
     setDownloading(true);
-    setDownloadProgress(urls.map(({ url }) => ({ url, status: 'downloading', progress: 0 })));
+    setDownloadProgress(urls.map(({ url, video }) => ({ url, video, status: 'downloading', progress: 0 })));
     if (autoUpload) setResults([]);
 
     const processUrl = async (url: string, entry: YoutubeLinkEntry, index: number) => {
@@ -736,10 +737,10 @@ export default function Home() {
 
         <main className="mt-6 grid items-start gap-6 lg:grid-cols-2">
           <div className="space-y-6">
-              {/* YouTube Converter */}
+              {/* Input Audio */}
               <section className={`${CARD} p-6`}>
                 <div className="mb-4 flex items-center justify-between">
-                  <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">YouTube Converter</h3>
+                  <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Input Audio</h3>
                   <button
                     onClick={() => setAutoUpload(v => !v)}
                     disabled={downloading}
@@ -754,6 +755,25 @@ export default function Home() {
                   </button>
                 </div>
 
+                {/* Source Toggle */}
+                <div className="grid grid-cols-2 gap-2 rounded-lg border border-[var(--accent-20)] bg-[var(--surface)] p-1">
+                  {(['youtube', 'file'] as const).map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => setSourceTab(type)}
+                      className={`rounded py-2 text-sm font-medium transition-all active:scale-95 ${
+                        sourceTab === type
+                          ? 'bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)]'
+                          : 'text-[var(--text-50)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      {type === 'youtube' ? 'Dari YouTube' : 'Upload File'}
+                    </button>
+                  ))}
+                </div>
+
+                {sourceTab === 'youtube' ? (
+                  <>
                 <div className="flex gap-2">
                   <input
                     value={youtubeLinkInput}
@@ -838,7 +858,7 @@ export default function Home() {
                   disabled={downloading || youtubeLinks.length === 0}
                   className={`${BTN_PRIMARY} mt-4 w-full`}
                 >
-                  {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload' : 'Convert ke MP3')}
+                  {downloading ? 'Memproses…' : (autoUpload ? 'Convert & Upload' : 'Convert ke OGG')}
                 </button>
 
                 {downloadProgress.length > 0 && (
@@ -875,65 +895,14 @@ export default function Home() {
                     </p>
                   </div>
                 </details>
-              </section>
-
-              {/* Results ketika auto-upload */}
-              {autoUpload && results.length > 0 && (
-                <section className={`${CARD} p-6`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Hasil Upload</h3>
-                    <button onClick={copyResults} className="text-xs text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]">
-                      Salin
-                    </button>
-                  </div>
-                  <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
-                    {results.map((result, index) => (
-                      <div
-                        key={index}
-                        className={`stagger-enter rounded-lg border px-4 py-3 ${
-                          result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
-                        }`}
-                        style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}
-                      >
-                        {result.success ? (
-                          <>
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{result.filename}</div>
-                              <StatusBadge status={result.status} />
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs">
-                              <span className="text-[var(--text-40)]">ID:</span>
-                              <span className="font-mono text-[var(--text-70)]">{result.assetId}</span>
-                              <button
-                                onClick={() => copyAssetId(result.assetId)}
-                                className="ml-auto text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]"
-                              >
-                                Copy
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-sm font-medium text-[var(--text-90)]">{result.filename}</div>
-                            <div className="mt-1 text-xs text-rose-300/80">{result.error}</div>
-                          </>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-              )}
-          </div>
-
-          <div className="space-y-6">
-              {/* Upload Files */}
-              <section className={`${CARD} p-6`}>
-                <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Upload Files</h3>
+                  </>
+                ) : (
+                  <>
                 <div
                   onDrop={handleDrop}
                   onDragOver={(e) => e.preventDefault()}
                   onClick={() => document.getElementById('fileInput')?.click()}
-                  className="cursor-pointer rounded-xl border border-dashed border-[var(--accent-25)] px-6 py-8 text-center transition-colors hover:border-[var(--accent-50)] hover:bg-[var(--accent-03)]"
+                  className="mt-4 cursor-pointer rounded-xl border border-dashed border-[var(--accent-25)] px-6 py-8 text-center transition-colors hover:border-[var(--accent-50)] hover:bg-[var(--accent-03)]"
                 >
                   <p className="text-sm text-[var(--text-60)]">Seret file ke sini, atau klik untuk pilih</p>
                   <p className="mt-1 text-xs text-[var(--text-30)]">MP3 · OGG · FLAC · WAV</p>
@@ -991,8 +960,12 @@ export default function Home() {
                     </div>
                   </>
                 )}
+                  </>
+                )}
               </section>
+          </div>
 
+          <div className="space-y-6">
               {/* Roblox Config + Upload Button */}
               <section className={`${CARD} p-6`}>
                 <h3 className="mb-4 text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Roblox Account</h3>
@@ -1074,16 +1047,35 @@ export default function Home() {
                 </p>
               </section>
 
-              {/* Upload Results */}
-              {!autoUpload && results.length > 0 && (
-                <section className={`${CARD} p-6`}>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Hasil Upload</h3>
+              {/* Hasil */}
+              <section className={`${CARD} p-6`}>
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-sm font-medium uppercase tracking-wider text-[var(--text-60)]">Hasil</h3>
+                  {results.length > 0 && (
                     <button onClick={copyResults} className="text-xs text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]">
                       Salin
                     </button>
-                  </div>
+                  )}
+                </div>
+
+                {(downloadProgress.length === 0 && results.length === 0) ? (
+                  <p className="py-8 text-center text-sm text-[var(--text-40)]">Belum ada hasil. Convert link atau upload file dulu.</p>
+                ) : (
                   <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+                    {downloadProgress.map((item, index) => (
+                      <div key={index} className="stagger-enter flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs" style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}>
+                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                          item.status === 'completed' ? 'bg-emerald-400' :
+                          item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[var(--accent-strong)]'
+                        }`} />
+                        <span className="min-w-0 flex-1 truncate text-[var(--text-70)]">
+                          {item.video?.title || item.url}
+                        </span>
+                        <span className={item.status === 'failed' ? 'text-rose-300/80' : 'text-[var(--text-40)]'}>
+                          {item.status === 'completed' ? 'Selesai' : item.status === 'failed' ? 'Gagal' : 'Memproses…'}
+                        </span>
+                      </div>
+                    ))}
                     {results.map((result, index) => (
                       <div
                         key={index}
@@ -1118,8 +1110,8 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                </section>
-              )}
+                )}
+              </section>
           </div>
 
           <section className={`${CARD} p-6 lg:col-span-2`}>
