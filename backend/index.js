@@ -323,6 +323,33 @@ app.post('/api/upload-to-roblox', upload.single('file'), async (req, res) => {
   }
 });
 
+app.post('/api/convert-file', upload.single('file'), async (req, res) => {
+  const { speed = 1.0, amplify = 0 } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Missing file' });
+  }
+
+  const fileId = `converted_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const outputPath = join(__dirname, `${fileId}.mp3`);
+
+  try {
+    await runFFmpeg(req.file.path, outputPath, parseFloat(speed), parseFloat(amplify));
+    res.json({ 
+      success: true, 
+      fileId, 
+      filename: req.file.originalname.replace(/\.[^/.]+$/, '') + `_${speed}x.mp3` 
+    });
+  } catch (error) {
+    console.error('Convert file error:', error);
+    res.status(500).json({ error: error.message || 'Convert failed' });
+  } finally {
+    if (req.file && existsSync(req.file.path)) {
+      try { unlinkSync(req.file.path); } catch (e) { console.error('Cleanup error:', e); }
+    }
+  }
+});
+
 app.post('/api/upload-converted', async (req, res) => {
   const {
     fileId,
