@@ -86,26 +86,13 @@ function clampSpeed(speed) {
 async function runFFmpeg(inputPath, outputPath, speed, amplify) {
   return new Promise((resolve, reject) => {
     const filters = [];
-    const safeSpeed = clampSpeed(speed);
     
-    // Multiple atempo for pitch-preserving (atempo max 2.0, chain for higher speeds)
-    if (safeSpeed !== 1.0) {
-      let remaining = safeSpeed;
-      while (remaining > 1.0) {
-        const chunk = Math.min(remaining, 2.0);
-        filters.push(`atempo=${chunk.toFixed(4)}`);
-        remaining /= chunk;
-      }
-      if (remaining < 1.0 && remaining > 0.5) {
-        filters.push(`atempo=${remaining.toFixed(4)}`);
-      }
-    }
-    
+    // NO SPEED PROCESSING - hanya amplify (speed diproses di client-side playbackRate)
     if (parseFloat(amplify) !== 0) {
       filters.push(`volume=${amplify}dB`);
     }
 
-    console.log('[FFmpeg] Filters:', filters.join(','));
+    console.log('[FFmpeg] Filters:', filters.join(',') || 'none (format conversion only)');
 
     let command = ffmpeg(inputPath);
     if (filters.length > 0) {
