@@ -287,6 +287,7 @@ app.post('/api/youtube-info', async (req, res) => {
     const stdout = await runYtCommand([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
+      '--ignore-no-formats-error',
       cleanYoutubeUrl(url),
     ], cookiesFile);
 
