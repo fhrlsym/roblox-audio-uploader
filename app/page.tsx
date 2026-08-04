@@ -1501,54 +1501,90 @@ export default function Home() {
                 {(downloadProgress.length === 0 && results.length === 0) ? (
                   <p className="py-8 text-center text-sm text-[var(--text-40)]">Belum ada hasil. Convert link atau upload file dulu.</p>
                 ) : (
-                  <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
-                    {downloadProgress.map((item, index) => (
-                      <div key={index} className="stagger-enter flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs" style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}>
-                        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                          item.status === 'completed' ? 'bg-emerald-400' :
-                          item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[var(--accent-strong)]'
-                        }`} />
-                        <span className="min-w-0 flex-1 truncate text-[var(--text-70)]">
-                          {item.video?.title || item.url}
-                        </span>
-                        <span className={item.status === 'failed' ? 'text-rose-300/80' : 'text-[var(--text-40)]'}>
-                          {item.status === 'completed' ? 'Selesai' : item.status === 'failed' ? 'Gagal' : 'Memproses…'}
-                        </span>
+                  <div className="max-h-96 space-y-4 overflow-y-auto pr-1">
+                    {downloadProgress.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-35)]">
+                          <span className="h-1 w-1 rounded-full bg-emerald-400" />
+                          Converted
+                        </div>
+                        {downloadProgress.map((item, index) => (
+                          <div key={index} className="stagger-enter flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs" style={{ animationDelay: `${Math.min(index * 40, 320)}ms` }}>
+                            <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                              item.status === 'completed' ? 'bg-emerald-400' :
+                              item.status === 'failed' ? 'bg-rose-400' : 'animate-pulse bg-[var(--accent-strong)]'
+                            }`} />
+                            <span className="min-w-0 flex-1 truncate text-[var(--text-70)]">
+                              {item.video?.title || item.url}
+                            </span>
+                            {item.status === 'completed' && (
+                              <span className="shrink-0 rounded-full border border-emerald-400/25 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-300">
+                                Converted
+                              </span>
+                            )}
+                            {item.status === 'failed' && (
+                              <span className="shrink-0 rounded-full border border-rose-400/25 bg-rose-400/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                                Gagal
+                              </span>
+                            )}
+                            {item.status !== 'completed' && item.status !== 'failed' && (
+                              <span className="shrink-0 animate-pulse text-[10px] font-medium text-[var(--text-40)]">Memproses…</span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                    {results.map((result, index) => (
-                      <div
-                        key={index}
-                        className={`stagger-enter rounded-lg border px-4 py-3 ${
-                          result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
-                        }`}
-                        style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}
-                      >
-                        {result.success ? (
-                          <>
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{result.filename}</div>
-                              <StatusBadge status={result.status || 'Failed'} />
-                            </div>
-                            <div className="mt-2 flex items-center gap-2 text-xs">
-                              <span className="text-[var(--text-40)]">ID:</span>
-                              <span className="font-mono text-[var(--text-70)]">{result.assetId}</span>
-                              <button
-                                onClick={() => result.assetId && copyAssetId(result.assetId)}
-                                className="ml-auto text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]"
-                              >
-                                Copy
-                              </button>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-sm font-medium text-[var(--text-90)]">{result.filename}</div>
-                            <div className="mt-1 text-xs text-rose-300/80">{result.error}</div>
-                          </>
-                        )}
+                    )}
+                    {results.length > 0 && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-35)]">
+                          <span className="h-1 w-1 rounded-full bg-[var(--accent-strong)]" />
+                          Upload
+                        </div>
+                        {results.map((result, index) => (
+                          <div
+                            key={index}
+                            className={`stagger-enter rounded-lg border px-4 py-3 ${
+                              result.success ? 'border-emerald-400/15 bg-emerald-400/[0.04]' : 'border-rose-400/15 bg-rose-400/[0.04]'
+                            }`}
+                            style={{ animationDelay: `${Math.min(index * 45, 360)}ms` }}
+                          >
+                            {result.success ? (
+                              <>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text)]">{result.filename}</div>
+                                  <div className="flex shrink-0 items-center gap-2">
+                                    <span className="rounded-full border border-[var(--accent-25)] bg-[var(--accent-10)] px-2 py-0.5 text-[10px] font-semibold text-[var(--accent-strong)]">
+                                      Uploaded
+                                    </span>
+                                    <StatusBadge status={result.status || 'Failed'} />
+                                  </div>
+                                </div>
+                                <div className="mt-2 flex items-center gap-2 text-xs">
+                                  <span className="text-[var(--text-40)]">ID:</span>
+                                  <span className="font-mono text-[var(--text-70)]">{result.assetId}</span>
+                                  <button
+                                    onClick={() => result.assetId && copyAssetId(result.assetId)}
+                                    className="ml-auto text-[var(--accent-soft)]/80 transition-colors hover:text-[var(--accent-strong)]"
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--text-90)]">{result.filename}</div>
+                                  <span className="shrink-0 rounded-full border border-rose-400/25 bg-rose-400/10 px-2 py-0.5 text-[10px] font-semibold text-rose-300">
+                                    Gagal
+                                  </span>
+                                </div>
+                                <div className="mt-1 text-xs text-rose-300/80">{result.error}</div>
+                              </>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    )}
                   </div>
                 )}
               </section>

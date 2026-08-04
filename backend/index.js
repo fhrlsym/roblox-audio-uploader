@@ -427,16 +427,18 @@ app.get('/api/operation-status/:operationId', async (req, res) => {
       return res.json({ done: false });
     }
 
-    const assetPath = (data.response && data.response.path) || data.path || '';
-    const assetMatch = assetPath.match(/assets\/(\d+)/);
-    const assetId = assetMatch ? assetMatch[1] : null;
+    const resp = data.response || {};
+    const pathText = resp.path || data.path || '';
+    const assetId = resp.assetId
+      || (pathText.match(/assets\/(\d+)/) || [])[1]
+      || null;
 
     if (!assetId) {
       return res.status(400).json({ done: true, error: 'Asset upload failed without an asset ID', details: data });
     }
 
     let status = 'Pending';
-    const moderation = data.response && data.response.moderationResult;
+    const moderation = resp.moderationResult;
     if (moderation) {
       const m = moderation.moderationState;
       if (m === 'MODERATION_STATE_APPROVED') status = 'Active';
