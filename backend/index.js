@@ -399,6 +399,26 @@ app.post('/api/upload-converted', async (req, res) => {
   }
 });
 
+app.get('/api/download-file/:fileId', (req, res) => {
+  const { fileId } = req.params;
+  
+  if (!fileId) {
+    return res.status(400).json({ error: 'Missing fileId' });
+  }
+
+  const filePath = join(__dirname, `${fileId}.mp3`);
+  
+  if (!existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found or expired' });
+  }
+
+  res.download(filePath, `${fileId}.mp3`, (err) => {
+    if (err) {
+      console.error('Download error:', err);
+    }
+  });
+});
+
 function sweepOldFiles() {
   const cutoff = Date.now() - 45 * 60 * 1000;
   const check = (dir, prefix) => {
