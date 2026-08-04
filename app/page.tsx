@@ -70,7 +70,6 @@ export default function Home() {
 
   const goToStep = (step: number) => {
     setActiveStep(step);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const [rawFiles, setRawFiles] = useState<RawAudioFile[]>([]);
@@ -690,8 +689,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Active Section */}
-        {activeStep === 1 && (
+        {/* Sections (all kept mounted so progress isn't lost) */}
+        <div className={activeStep === 1 ? '' : 'hidden'}>
           <InputSection
             onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
             backendUrl={BACKEND_URL}
@@ -699,10 +698,10 @@ export default function Home() {
             onYoutubeCookiesChange={setYoutubeCookies}
             onNext={() => goToStep(2)}
           />
-        )}
+        </div>
 
-        {activeStep === 2 &&
-          (rawFiles.length === 0 ? (
+        <div className={activeStep === 2 ? '' : 'hidden'}>
+          {rawFiles.length === 0 ? (
             <div className={`${CARD} p-8 text-center`}>
               <Wand2 className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
               <p className="text-sm text-[var(--text-50)]">Belum ada file audio untuk di-tune.</p>
@@ -719,10 +718,11 @@ export default function Home() {
               onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
               onNext={() => goToStep(3)}
             />
-          ))}
+          )}
+        </div>
 
-        {activeStep === 3 &&
-          (tunedFiles.length === 0 ? (
+        <div className={activeStep === 3 ? '' : 'hidden'}>
+          {tunedFiles.length === 0 ? (
             <div className={`${CARD} p-8 text-center`}>
               <CloudUpload className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
               <p className="text-sm text-[var(--text-50)]">Belum ada file hasil tuning untuk di-upload.</p>
@@ -740,7 +740,8 @@ export default function Home() {
               selectedAccount={selectedAccount}
               onUploadSuccess={handleUploadSuccess}
             />
-          ))}
+          )}
+        </div>
 
         {/* History */}
         <div className="mt-5">
