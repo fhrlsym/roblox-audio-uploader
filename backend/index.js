@@ -96,10 +96,11 @@ async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
   try {
     const stdout = String(await runYtdl([
       '--print', 'title',
+      '--no-simulate',
       url,
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
-      '--extractor-args', 'youtube:player_client=android_vr,android,mweb,web_safari',
+      '--extractor-args', 'youtube:player_client=android',
       '--retries', '3',
     ], cookiesFile));
 
@@ -209,7 +210,7 @@ app.post('/api/youtube-info', async (req, res) => {
     const stdout = await runYtdl([
       '--print',
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
-      '--extractor-args', 'youtube:player_client=android_vr,android,mweb,web_safari',
+      '--extractor-args', 'youtube:player_client=android',
       url,
     ]);
 
