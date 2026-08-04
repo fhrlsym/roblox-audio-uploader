@@ -102,6 +102,7 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
     command
       .audioBitrate(128)
       .audioCodec('libmp3lame')
+      .audioFrequency(48000)
       .toFormat('mp3')
       .outputOptions('-map_metadata', '-1')
       .on('end', resolve)
