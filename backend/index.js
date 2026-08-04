@@ -88,9 +88,17 @@ async function runFFmpeg(inputPath, outputPath, speed, amplify) {
     const filters = [];
     const safeSpeed = clampSpeed(speed);
     
-    // Rubberband for pitch-preserving time stretch (better than atempo)
+    // Multiple atempo for pitch-preserving (atempo max 2.0, chain for higher speeds)
     if (safeSpeed !== 1.0) {
-      filters.push(`rubberband=tempo=${safeSpeed}`);
+      let remaining = safeSpeed;
+      while (remaining > 1.0) {
+        const chunk = Math.min(remaining, 2.0);
+        filters.push(`atempo=${chunk.toFixed(4)}`);
+        remaining /= chunk;
+      }
+      if (remaining < 1.0 && remaining > 0.5) {
+        filters.push(`atempo=${remaining.toFixed(4)}`);
+      }
     }
     
     if (parseFloat(amplify) !== 0) {
