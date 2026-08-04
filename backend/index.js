@@ -43,8 +43,15 @@ function isFormatError(message) {
 
 async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
   let lastError;
-  for (const client of clients) {
+  const candidates = [...clients];
+  if (!candidates.includes('default')) {
+    candidates.push('default');
+  }
+  for (const client of candidates) {
     try {
+      if (client === 'default') {
+        return await runYtdl(args, cookiesFile);
+      }
       return await runYtdl([...args, '--extractor-args', `youtube:player_client=${client}`], cookiesFile);
     } catch (err) {
       lastError = err;
