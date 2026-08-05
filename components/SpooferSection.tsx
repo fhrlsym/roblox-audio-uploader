@@ -64,9 +64,18 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
         }),
       });
 
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Gagal me-spoof asset Roblox');
+      const raw = await response.text();
+      let data: any = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch {
+        throw new Error(
+          `Backend mengembalikan HTML, bukan JSON (status ${response.status}). ` +
+          `Cek apakah backend berjalan di ${backendUrl} dan NEXT_PUBLIC_BACKEND_URL sudah benar.`
+        );
+      }
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Gagal me-spoof asset Roblox');
       }
 
       // Poll operation status
@@ -77,7 +86,9 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           const opRes = await fetch(
             `${backendUrl}/api/operation-status/${data.operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
           );
-          const opData = await opRes.json();
+          const opText = await opRes.text();
+          if (!opText.trim().startsWith('{')) break;
+          const opData = JSON.parse(opText);
           if (opData.done) {
             if (opData.assetId) {
               newAssetId = opData.assetId;
@@ -330,7 +341,9 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
                       const opRes = await fetch(
                         `${backendUrl}/api/operation-status/${upData.operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
                       );
-                      const opData = await opRes.json();
+                      const opText = await opRes.text();
+                      if (!opText.trim().startsWith('{')) break;
+                      const opData = JSON.parse(opText);
                       if (opData.done) {
                         newAssetId = opData.assetId || opData.response?.assetId || null;
                         break;
