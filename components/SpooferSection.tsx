@@ -26,7 +26,6 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
   const { toast } = useToast();
   const [assetIdInput, setAssetIdInput] = useState('');
   const [displayNameInput, setDisplayNameInput] = useState('');
-  const [robloxCookieInput, setRobloxCookieInput] = useState('');
   const [assetType, setAssetType] = useState<'Animation' | 'Audio'>('Animation');
   const [loading, setLoading] = useState(false);
   const [detectedPrivateAudioTitle, setDetectedPrivateAudioTitle] = useState<string | null>(null);
@@ -62,7 +61,7 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
           creatorType: selectedAccount.type,
           creatorId: selectedAccount.id,
           apiKey: selectedAccount.apiKey,
-          robloxCookie: robloxCookieInput.trim() || selectedAccount.cookie || undefined,
+          robloxCookie: selectedAccount.cookie || undefined,
         }),
       });
 
@@ -200,20 +199,6 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
               value={displayNameInput}
               onChange={(e) => setDisplayNameInput(e.target.value)}
               placeholder={`Judul ${assetType} baru...`}
-              className={INPUT}
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-[var(--text-60)] mb-1.5 flex items-center justify-between">
-              <span>Roblox Cookie (Opsional)</span>
-              <span className="text-[10px] text-[var(--accent)] font-semibold">Untuk Private Asset</span>
-            </label>
-            <input
-              type="password"
-              value={robloxCookieInput}
-              onChange={(e) => setRobloxCookieInput(e.target.value)}
-              placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."
               className={INPUT}
             />
           </div>

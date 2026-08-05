@@ -54,12 +54,14 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
 
       if (!error && data) {
         const apiKeys = JSON.parse(localStorage.getItem('audioUploader_apiKeys') || '{}');
+        const cookies = JSON.parse(localStorage.getItem('audioUploader_cookies') || '{}');
 
         const accounts: SavedAccount[] = data.map((row) => ({
           id: row.id,
           name: row.display_name || row.name,
           type: row.type,
           apiKey: row.api_key || apiKeys[row.id] || '',
+          cookie: row.cookie || cookies[row.id] || '',
           userId: row.owner_id,
           groupId: row.type === 'group' ? row.id : undefined,
           displayName: row.display_name || undefined,
@@ -105,6 +107,11 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
   };
 
   const handleAccountAdded = (account: SavedAccount) => {
+    if (account.cookie) {
+      const cookies = JSON.parse(localStorage.getItem('audioUploader_cookies') || '{}');
+      cookies[account.id] = account.cookie;
+      localStorage.setItem('audioUploader_cookies', JSON.stringify(cookies));
+    }
     setSavedAccounts((prev) => [account, ...prev.filter((a) => a.id !== account.id)]);
     setSelectedAccount(account);
     localStorage.setItem('audioUploader_selectedAccountId', account.id);
