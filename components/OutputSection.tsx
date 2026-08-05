@@ -59,12 +59,12 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       formData.append('creatorId', selectedAccount.id);
       formData.append('apiKey', selectedAccount.apiKey);
 
-      const response = await fetch(`${backendUrl}/api/upload-to-roblox`, {
+      let response = await fetch(`${backendUrl}/api/upload-to-roblox`, {
         method: 'POST',
         body: formData,
       });
 
-      const data = await response.json();
+      let data = await response.json();
 
       if (response.ok && data.operationId) {
         let assetId: string | null = null;
@@ -72,7 +72,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         let opError: string | null = null;
 
         for (let attempt = 0; attempt < 120; attempt++) {
-          await new Promise((r) => setTimeout(r, 3000));
+          await new Promise((r) => setTimeout(r, 1500));
 
           const opResponse = await fetch(
             `${backendUrl}/api/operation-status/${data.operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`

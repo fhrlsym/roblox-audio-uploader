@@ -609,6 +609,7 @@ export default function Home() {
                         <button
                           onClick={() => {
                             setAccountMenuOpen(false);
+                           
                             setShowAccountModal(true);
                           }}
                           className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"

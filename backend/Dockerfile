@@ -8,6 +8,7 @@ ARG YTDLP_VERSION=2026.07.04
 # a system python3. ffmpeg is required for audio processing.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
+    aria2 \
     curl \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/* \

@@ -87,6 +87,8 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       cleanYoutubeUrl(url),
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
+      '--downloader', 'aria2c',
+      '--downloader-args', 'aria2c:-j 8 -x 8 -k 1M',
       '--retries', '3',
     ], cookiesFile));
 

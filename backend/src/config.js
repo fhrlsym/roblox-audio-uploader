@@ -9,7 +9,7 @@ export const BACKEND_ROOT = join(__dirname, '..');
 export const YTDLP = process.env.YTDLP_PATH ||
   join(BACKEND_ROOT, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 
-export const YOUTUBE_CLIENTS = ['android_vr', 'web_safari', 'ios', 'web', 'android', 'mweb', 'tv'];
+export const YOUTUBE_CLIENTS = ['tvhtml5', 'android_vr', 'web_safari', 'ios', 'web', 'android', 'mweb', 'tv'];
 
 export function isBotError(message) {
   return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human/i.test(message || '');
