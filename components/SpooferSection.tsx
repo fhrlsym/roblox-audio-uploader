@@ -19,15 +19,17 @@ interface SpoofedRecord {
 interface SpooferSectionProps {
   selectedAccount: SavedAccount | null;
   backendUrl: string;
+  onConvertToAudioMaster?: (songTitle: string) => void;
 }
 
-export default function SpooferSection({ selectedAccount, backendUrl }: SpooferSectionProps) {
+export default function SpooferSection({ selectedAccount, backendUrl, onConvertToAudioMaster }: SpooferSectionProps) {
   const { toast } = useToast();
   const [assetIdInput, setAssetIdInput] = useState('');
   const [displayNameInput, setDisplayNameInput] = useState('');
   const [robloxCookieInput, setRobloxCookieInput] = useState('');
   const [assetType, setAssetType] = useState<'Animation' | 'Audio'>('Animation');
   const [loading, setLoading] = useState(false);
+  const [detectedPrivateAudioTitle, setDetectedPrivateAudioTitle] = useState<string | null>(null);
   const [spoofedRecords, setSpoofedRecords] = useState<SpoofedRecord[]>([]);
 
   const handleSpoof = async () => {
@@ -103,12 +105,24 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
         toast(`✨ Berhasil me-spoof ${assetType}! ID Baru: ${newAssetId}`, 'success');
         setAssetIdInput('');
         setDisplayNameInput('');
+        setDetectedPrivateAudioTitle(null);
       } else {
         toast('Spoofing dikirim, namun status moderasi masih berlangsung', 'info');
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Gagal me-spoof asset';
       toast(msg, 'error');
+
+      // Fetch metadata from Roblox Toolbox API if audio is private
+      try {
+        const tbRes = await fetch(`https://apis.roblox.com/toolbox-service/v1/items/details?assetIds=${cleanId}`);
+        const tbData = await tbRes.json();
+        if (tbData?.data?.[0]?.asset?.name) {
+          setDetectedPrivateAudioTitle(tbData.data[0].asset.name);
+        }
+      } catch {
+        // Ignore metadata fetch error
+      }
     } finally {
       setLoading(false);
     }
@@ -229,6 +243,43 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           </button>
         </div>
       </div>
+
+      {/* Private Audio 1-Click Converter Banner */}
+      {detectedPrivateAudioTitle && (
+        <motion.div
+          initial={{ opacity: 0, y: 5 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-5 rounded-2xl border border-[var(--accent-15)] bg-gradient-to-r from-[var(--surface-50)] via-[var(--surface-pop)] to-[var(--surface-50)] shadow-lg space-y-3"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
+                <Music className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Judul Lagu Terdeteksi</h4>
+                  <span className="px-2 py-0.5 rounded-md bg-[var(--danger)] text-[#ffffff] text-[10px] font-bold">Private Audio</span>
+                </div>
+                <p className="text-sm font-bold text-[var(--accent-strong)] mt-0.5">"{detectedPrivateAudioTitle}"</p>
+              </div>
+            </div>
+
+            {onConvertToAudioMaster && (
+              <button
+                onClick={() => onConvertToAudioMaster(detectedPrivateAudioTitle)}
+                className={`${BTN_PRIMARY} px-5 py-2.5 text-xs font-bold flex items-center gap-2 shadow-lg`}
+              >
+                <Sparkles className="w-4 h-4" />
+                Convert & Tune via Audio Master 🎵
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-[var(--text-60)] pt-1 border-t border-[var(--line)]">
+            💡 Audio ini privat di Roblox. Klik tombol di atas untuk mencari lagu ini langsung di YouTube, men-tune kecepatannya (<code className="text-[var(--accent)] font-bold">2.3x</code>), dan mengunggahnya ke Roblox secara otomatis!
+          </p>
+        </motion.div>
+      )}
 
       {/* History of Spoofed Assets */}
       {spoofedRecords.length > 0 && (
