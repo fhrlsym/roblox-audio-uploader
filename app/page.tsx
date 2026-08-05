@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, CloudUpload, Lock, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
+import { Building2, Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -29,7 +29,12 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
   { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b5a3ff, #4c1d95)' },
   { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #67e8f9, #0e7490)' },
   { id: 'sunset', label: 'Sunset', swatch: 'linear-gradient(135deg, #fda4af, #c2410c)' },
+  { id: 'violet', label: 'Violet', swatch: 'linear-gradient(135deg, #c4b5fd, #53389e)' },
+  { id: 'rose', label: 'Rose', swatch: 'linear-gradient(135deg, #f9a8d4, #932e64)' },
+  { id: 'graphite', label: 'Graphite', swatch: 'linear-gradient(135deg, #cbd5e1, #465368)' },
+  { id: 'cyber', label: 'Cyber', swatch: 'linear-gradient(135deg, #67e8f9, #0e7490)' },
   { id: 'light-ocean', label: 'Light Ocean', swatch: 'linear-gradient(135deg, #dbeafe, #0284c7)' },
+  { id: 'light-rose', label: 'Light Rose', swatch: 'linear-gradient(135deg, #fbcfe8, #db2777)' },
 ];
 
 export default function Home() {
@@ -41,6 +46,7 @@ export default function Home() {
   const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
   const [webVersion, setWebVersion] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -74,12 +80,16 @@ export default function Home() {
   const {
     uploadHistory,
     uploadStats,
+    setKnownAccounts,
     refreshingIds,
     handleRefreshStatus,
     refreshPendingStatuses,
     handleUploadSuccess,
-    handleClearHistory,
   } = useUploadHistory(unlocked, BACKEND_URL, selectedAccountRef);
+
+  useEffect(() => {
+    setKnownAccounts(savedAccounts);
+  }, [savedAccounts, setKnownAccounts]);
 
   const {
     rawFiles,
@@ -171,14 +181,18 @@ export default function Home() {
             className="relative w-full max-w-sm"
           >
             <div className={`${CARD} p-7 space-y-6 text-center`}>
-              {/* Logo */}
+              {/* Logo — pakai thumbnail tab/chrome (icon.svg) */}
               <motion.div
                 initial={{ scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 16 }}
-                className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-strong)] to-[var(--accent-deep)] shadow-lg"
+                className="relative mx-auto"
               >
-                <Music className="w-8 h-8 text-[var(--on-accent)]" />
+                <img
+                  src="/icon.svg"
+                  alt="S2 Studio"
+                  className="h-16 w-16 rounded-2xl shadow-lg border border-[var(--line)]"
+                />
                 <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--bg)] bg-[var(--emerald)]">
                   <Check className="w-3.5 h-3.5 text-[#000000]" />
                 </span>
@@ -200,10 +214,14 @@ export default function Home() {
                   </p>
                   <input
                     type="password"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
                     maxLength={6}
+                    pattern="[0-9]*"
                     value={pin}
                     onChange={(e) => {
-                      setPin(e.target.value);
+                      const onlyDigits = e.target.value.replace(/\D/g, '');
+                      setPin(onlyDigits.slice(0, 6));
                       setPinError(false);
                     }}
                     placeholder="••••••"
@@ -251,24 +269,24 @@ export default function Home() {
               </div>
 
               {/* Tool Switcher */}
-              <div className="flex items-center gap-1.5 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4">
+              <div className="flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4 shrink-0">
                 <button
                   onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
+                  className={`flex items-center justify-center gap-1.5 w-[92px] px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
                     activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
-                  <Music className="w-3.5 h-3.5 sm:hidden" />
-                  <span>Audio Master</span>
+                  <Music className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Audio Master</span>
                 </button>
                 <button
                   onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
+                  className={`flex items-center justify-center gap-1.5 w-[92px] px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
                     activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Spoofer</span>
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Spoofer</span>
                 </button>
               </div>
             </div>
@@ -314,9 +332,9 @@ export default function Home() {
                       return (
                         <div
                           key={acc.id}
-                          className={`rounded-xl px-2.5 py-2.5 text-xs transition cursor-pointer ${
+                          className={`relative rounded-xl px-2.5 py-2.5 text-xs transition cursor-pointer ${
                             selectedAccount?.id === acc.id
-                              ? 'bg-[var(--accent-15)] text-[var(--accent-strong)] font-semibold'
+                              ? 'bg-[var(--accent-15)]'
                               : 'text-[var(--text-70)] hover:bg-[var(--surface-50)]'
                           }`}
                           onClick={() => selectAccount(acc)}
@@ -345,20 +363,22 @@ export default function Home() {
                                   <User className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
                                 )}
                               </div>
-                              <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
-                                {acc.type === 'group'
-                                  ? `Komunitas · ${acc.memberCount != null ? acc.memberCount.toLocaleString() + ' member' : ''}`
-                                  : acc.ownerName
-                                    ? `@${acc.ownerName}`
-                                    : 'Akun User'}
-                              </p>
+                              {acc.type === 'group' ? (
+                                <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
+                                  Komunitas · {acc.memberCount != null ? acc.memberCount.toLocaleString() + ' member' : 'Group Roblox'}
+                                </p>
+                              ) : (
+                                <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
+                                  Akun User
+                                </p>
+                              )}
                               {acc.type === 'group' && (
-                                <p className="text-[10px] text-[var(--accent-soft)]">Upload akan masuk ke komunitas ini</p>
+                                <p className="text-[10px] text-[var(--accent-soft)]">Upload masuk ke komunitas ini</p>
                               )}
                               {hasQuota && (
                                 <div className="mt-2">
                                   <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
-                                    <span>Kuota audio dipakai</span>
+                                    <span>Kuota key owner</span>
                                     <span className="font-medium text-[var(--text-60)]">
                                       {acc.quota!.usage.toLocaleString()} / {acc.quota!.capacity.toLocaleString()}
                                     </span>
@@ -368,19 +388,38 @@ export default function Home() {
                                   </div>
                                 </div>
                               )}
+                              {acc.ownerName && (
+                                <p className="mt-1.5 text-[10px] text-[var(--text-35)] break-words">
+                                  Ditambahkan melalui akun @{acc.ownerName}
+                                </p>
+                              )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 mt-2 justify-end">
-                            {selectedAccount?.id === acc.id && <Check className="w-3.5 h-3.5 shrink-0" />}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteAccount(acc.id);
-                              }}
-                              className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
+                          <div className="flex items-center justify-between mt-2">
+                            <div>
+                              {acc.createdAt != null && (
+                                <span className="text-[10px] text-[var(--text-35)]">
+                                  {new Date(acc.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {selectedAccount?.id === acc.id && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--emerald)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#000000]">
+                                  <span className="w-1 h-1 rounded-full bg-[#000000]" />
+                                  Active
+                                </span>
+                              )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteAccount(acc.id);
+                                }}
+                                className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
                         </div>
                       );
@@ -415,7 +454,7 @@ export default function Home() {
                 </button>
 
                 {themeOpen && (
-                  <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5">
+                  <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5 max-h-[70vh] overflow-y-auto">
                     {THEMES.map((t) => (
                       <button
                         key={t.id}
@@ -442,23 +481,41 @@ export default function Home() {
           <div className={activeTool === 'spoofer' ? 'hidden' : 'space-y-6'}>
             {/* Top Overview & Stats Bar */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <div className={`${CARD} p-4 text-center`}>
-                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Upload</p>
+              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
+                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+                  <CloudUpload className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
+                  Total Upload
+                </p>
                 <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
               </div>
-              <div className={`${CARD} p-4 text-center`}>
-                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Success</p>
+              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+                  <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
+                  Success
+                </p>
                 <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
               </div>
-              <div className={`${CARD} p-4 text-center`}>
-                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Copyright</p>
+              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
+                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
+                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
+                  Copyright
+                </p>
                 <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
               </div>
             </div>
 
               {/* Stepper Navigation */}
               <div className="max-w-2xl mx-auto">
-                <div className="grid grid-cols-3 gap-2">
+                <div className="relative flex items-center justify-between">
+                  {/* Connector line */}
+                  <div className="absolute left-[18%] right-[18%] top-[17px] h-0.5 rounded-full bg-[var(--surface-strong)] -translate-y-1/2" />
+                  <div
+                    className="absolute top-[17px] h-0.5 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] -translate-y-1/2 transition-all duration-500"
+                    style={{ left: '18%', width: `${Math.min(64, (activeStep - 1) * 32)}%` }}
+                  />
                   {[
                     { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
                     { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
@@ -471,40 +528,27 @@ export default function Home() {
                       <button
                         key={step.id}
                         onClick={() => goToStep(step.id)}
-                        className={`relative flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border text-xs font-semibold transition ${
-                          isActive
-                            ? 'bg-[var(--accent)] text-[#000000] border-transparent shadow-md'
-                            : isDone
-                              ? 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-70)] hover:border-[var(--accent-30)]'
-                              : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-50)] hover:border-[var(--accent-25)] hover:text-[var(--text)]'
-                        }`}
+                        className="relative flex-1 flex flex-col items-center gap-2 py-1 select-none"
                       >
                         <span
-                          className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition ${
+                          className={`relative flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
                             isActive
-                              ? 'bg-[#000000] text-[var(--accent)]'
+                              ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
                               : isDone
-                                ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                                : 'bg-[var(--surface-strong)] text-[var(--text-40)]'
+                                ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                                : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]'
                           }`}
                         >
-                          {isDone ? <Check className="w-3.5 h-3.5" /> : step.id}
+                          {isDone ? <Check className="w-3.5 h-3.5" /> : isActive ? <Icon className="w-4 h-4" /> : step.id}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <Icon className="w-3.5 h-3.5" />
-                          <span>{step.label}</span>
-                        </span>
+                        <span className={`flex items-center gap-1 text-[11px] font-semibold transition ${isActive ? 'text-[var(--accent-strong)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'}`}>
+                        <span>{step.label}</span>
                         {step.badge > 0 && (
-                          <span
-                            className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${
-                              isActive
-                                ? 'bg-[#000000] text-[var(--accent)]'
-                                : 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                            }`}
-                          >
+                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${isActive || isDone ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'bg-[var(--surface-strong)] text-[var(--text-40)]'}`}>
                             {step.badge}
                           </span>
                         )}
+                      </span>
                       </button>
                     );
                   })}
@@ -571,13 +615,21 @@ export default function Home() {
                 )}
               </AnimatePresence>
 
-              {/* Global Upload History Table */}
-              <UploadHistory
-                history={uploadHistory}
-                onClear={handleClearHistory}
-                onRefresh={handleRefreshStatus}
-                refreshingIds={refreshingIds}
-              />
+              {/* Global Upload History Trigger */}
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => setHistoryOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2 text-xs font-semibold text-[var(--text-70)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)]"
+                >
+                  <HistoryIcon className="w-4 h-4" />
+                  Riwayat Upload
+                  {uploadHistory.length > 0 && (
+                    <span className="rounded-full bg-[var(--accent-15)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+                      {uploadHistory.length}
+                    </span>
+                  )}
+                </button>
+              </div>
           </div>
 
           {/* Spoofer Tool (selalu ter-mount agar state tidak reset) */}
@@ -601,6 +653,16 @@ export default function Home() {
             )}
           </div>
         </footer>
+
+        {/* Upload History Modal */}
+        {historyOpen && (
+          <UploadHistory
+            history={uploadHistory}
+            onClose={() => setHistoryOpen(false)}
+            onRefresh={handleRefreshStatus}
+            refreshingIds={refreshingIds}
+          />
+        )}
 
         {/* Account Modal Component */}
         <AccountModal

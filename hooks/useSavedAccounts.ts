@@ -58,7 +58,7 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
 
         const accounts: SavedAccount[] = data.map((row) => ({
           id: row.id,
-          name: row.display_name || row.name,
+          name: row.name || row.display_name || 'Akun Roblox',
           type: row.type,
           apiKey: row.api_key || apiKeys[row.id] || '',
           cookie: row.cookie || cookies[row.id] || '',
@@ -69,6 +69,7 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
           hasVerifiedBadge: row.has_verified_badge ?? false,
           thumbnail: row.thumbnail || null,
           ownerName: row.owner_name || null,
+          createdAt: row.created_at ? new Date(row.created_at).getTime() : undefined,
         }));
 
         setSavedAccounts(accounts);

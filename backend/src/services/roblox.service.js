@@ -1,9 +1,10 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import { createReadStream } from 'fs';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { sleep, BACKEND_ROOT } from '../config.js';
+import { generateSilentMp3 } from './ffmpeg.service.js';
 
 export function cleanSongTitle(rawTitle) {
   if (!rawTitle) return '';
@@ -195,45 +196,29 @@ export async function detectAsset(assetId) {
 
 export async function performSpoof({ assetId, assetType, displayName, creatorType = 'user', creatorId, apiKey }) {
   const cleanAssetId = String(assetId).replace(/\D/g, '');
-  const detected = await detectAsset(cleanAssetId);
-  const assetName = displayName || detected.name || `Spoofed_${cleanAssetId}`;
-  const finalType = assetType || detected.assetType || 'Animation';
+  let detected = null;
+  try {
+    detected = await detectAsset(cleanAssetId);
+  } catch {
+    // detectAsset tidak boleh menggagalkan proses; lanjut dengan nilai default
+  }
+  const assetName = displayName || detected?.name || `Spoofed_${cleanAssetId}`;
+  const finalType = assetType || detected?.assetType || 'Audio';
 
-  const headers = {
-    'x-api-key': apiKey,
-    'Content-Type': 'application/json',
-  };
-
-  const createRes = await fetch('https://apis.roblox.com/assets/v1/assets', {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      assetType: finalType,
-      displayName: assetName,
-      description: `Spoofed from ${cleanAssetId}`,
-      creatorType,
-      creatorId,
-    }),
-  });
-
-  if (createRes.ok) {
-    const data = await createRes.json();
+  // Roblox Assets API hanya menerima multipart/form-data (request + fileContent).
+  // File kosong ditolak moderasi ("Failed to parse file"), jadi kita buat file VALID:
+  //   - Audio  -> mp3 senyap pendek (ffmpeg)
+  //   - lainnya-> belum didukung file blank yang valid
+  if (finalType !== 'Audio') {
     return {
-      success: true,
-      newAssetId: String(data.assetId || data.id),
-      originalAssetId: cleanAssetId,
-      name: assetName,
-      assetType: finalType,
+      success: false,
+      asset: null,
+      error: `Tipe ${finalType} belum didukung pembuatan file valid untuk spoof.`,
     };
   }
 
-  // Fallback: upload file kosong
-  const emptyBuffer = finalType === 'Audio'
-    ? Buffer.alloc(200)
-    : Buffer.from('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"></roblox>');
-
-  const tempFile = join(BACKEND_ROOT, `blank_${Date.now()}_${cleanAssetId}`);
-  writeFileSync(tempFile, emptyBuffer);
+  const tempFile = join(BACKEND_ROOT, `spoof_${Date.now()}_${cleanAssetId}.mp3`);
+  await generateSilentMp3(tempFile, 1);
 
   try {
     const operationId = await uploadToRoblox(tempFile, {

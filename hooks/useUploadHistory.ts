@@ -14,6 +14,19 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
   const [uploadStats, setUploadStats] = useState<UploadStats>({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
   const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
   const statusRefreshLockRef = useRef(false);
+  const accountsRef = useRef<SavedAccount[]>([]);
+
+  const setKnownAccounts = (accounts: SavedAccount[]) => {
+    accountsRef.current = accounts;
+  };
+
+  const resolveAccountName = (accountId?: string): string => {
+    if (!accountId) {
+      return selectedAccountRef.current?.name || 'Roblox';
+    }
+    const found = accountsRef.current.find((a) => a.id === accountId);
+    return found?.name || 'Roblox';
+  };
 
   const loadUploadHistory = async () => {
     try {
@@ -46,7 +59,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
             displayName: cleanSongTitle(row.name),
             assetId: row.asset_id,
             accountId: row.account_id || '',
-            accountName: 'Roblox',
+            accountName: resolveAccountName(row.account_id || '') || 'Roblox',
             uploadedAt: new Date(row.uploaded_at).getTime(),
             robloxPlaybackSpeed: robloxSpeed,
             originalSpeed: originalSpeed,
@@ -176,6 +189,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     uploadHistory,
     uploadStats,
     refreshingIds,
+    setKnownAccounts,
     loadUploadHistory,
     handleRefreshStatus,
     refreshPendingStatuses,

@@ -18,7 +18,7 @@ export default function VersionChecker() {
         if (currentVersionRef.current === null) {
           currentVersionRef.current = serverVersion;
         } else if (currentVersionRef.current !== serverVersion) {
-          toast('🚀 Pembaruan sistem baru tersedia! Memperbarui halaman dalam 3 detik...', 'info');
+          toast('Pembaruan sistem baru tersedia! Memperbarui halaman dalam 3 detik...', 'info');
           currentVersionRef.current = serverVersion;
           setTimeout(() => {
             window.location.reload();

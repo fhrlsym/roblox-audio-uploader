@@ -59,6 +59,7 @@ export interface SavedAccount {
   thumbnail?: string | null;
   ownerName?: string | null;
   quota?: RobloxQuota | null;
+  createdAt?: number;
 }
 
 export interface UploadRecord {

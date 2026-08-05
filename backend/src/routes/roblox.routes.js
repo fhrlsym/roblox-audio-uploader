@@ -62,14 +62,8 @@ router.post('/spoof', async (req, res) => {
   try {
     const result = await performSpoof({ assetId: cleanAssetId, assetType, displayName, creatorType, creatorId, apiKey });
 
-    if (result.newAssetId) {
-      return res.json({
-        success: true,
-        originalAssetId: result.originalAssetId,
-        newAssetId: result.newAssetId,
-        name: result.name,
-        assetType: result.assetType,
-      });
+    if (!result.success) {
+      return res.status(400).json({ success: false, error: result.error || 'Gagal membuat asset spoof' });
     }
     return res.json({
       success: true,
@@ -136,6 +130,7 @@ router.post('/spoof-batch', async (req, res) => {
         results.push({
           key,
           oldId: cleanId,
+          newAssetId: String(newId),
           newId: String(newId),
           name: spoofResult.name,
           assetType: spoofResult.assetType,
@@ -149,7 +144,7 @@ router.post('/spoof-batch', async (req, res) => {
           name: spoofResult.name,
           assetType: spoofResult.assetType,
           success: false,
-          error: 'Gagal generate ID',
+          error: spoofResult.error || 'Gagal generate ID',
         });
       }
     } catch (e) {

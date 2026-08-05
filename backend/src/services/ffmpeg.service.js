@@ -1,4 +1,29 @@
 import ffmpeg from 'fluent-ffmpeg';
+import { execFile } from 'child_process';
+
+export async function generateSilentMp3(outputPath, durationSeconds = 1) {
+  const ffmpegBin = process.env.FFMPEG_PATH || 'ffmpeg';
+  const args = [
+    '-y',
+    '-f', 'lavfi',
+    '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+    '-t', String(durationSeconds),
+    '-b:a', '96k',
+    '-codec:a', 'libmp3lame',
+    '-ar', '44100',
+    '-map_metadata', '-1',
+    outputPath,
+  ];
+  return new Promise((resolve, reject) => {
+    execFile(ffmpegBin, args, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(`FFmpeg silent mp3 gagal: ${(stderr || err.message).trim()}`));
+      } else {
+        resolve();
+      }
+    });
+  });
+}
 
 export async function runFFmpeg(inputPath, outputPath, speed = 1.0, amplify = 0) {
   return new Promise((resolve, reject) => {

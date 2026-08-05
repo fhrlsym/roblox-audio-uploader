@@ -220,7 +220,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
       });
 
       const data = await parseJsonResponse(response);
-      if (!response.ok || !data?.success) {
+      if (!response.ok) {
         throw new Error(str(data?.error) || 'Gagal memproses batch');
       }
 
@@ -590,7 +590,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
                       ID Asli: <code className="text-[var(--text-60)]">{rec.originalAssetId}</code>
                       {rec.newAssetId && (
                         <>
-                          {' ➔ '}ID Baru: <code className="font-bold text-[var(--emerald)]">{rec.newAssetId}</code>
+                          {' → '}ID Baru: <code className="font-bold text-[var(--emerald)]">{rec.newAssetId}</code>
                         </>
                       )}
                     </div>
