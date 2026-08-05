@@ -117,17 +117,27 @@ export default function Home() {
         .limit(50);
 
       if (!error && data) {
-        const history: UploadRecord[] = data.map((row) => ({
-          id: row.id,
-          fileName: cleanSongTitle(row.name),
-          displayName: cleanSongTitle(row.name),
-          assetId: row.asset_id,
-          accountId: row.account_id || '',
-          accountName: 'Roblox',
-          uploadedAt: new Date(row.uploaded_at).getTime(),
-          robloxPlaybackSpeed: row.roblox_playback_speed ? Number(row.roblox_playback_speed).toFixed(4) : undefined,
-          status: row.status || 'Pending',
-        }));
+        const history: UploadRecord[] = data.map((row) => {
+          let robloxSpeed: string | undefined = undefined;
+          if (row.roblox_playback_speed && Number(row.roblox_playback_speed) > 0) {
+            robloxSpeed = Number(row.roblox_playback_speed).toFixed(4);
+          } else if (row.original_speed && Number(row.original_speed) > 0) {
+            robloxSpeed = (1 / Number(row.original_speed)).toFixed(4);
+          }
+          return {
+            id: row.id,
+            fileName: cleanSongTitle(row.name),
+            displayName: cleanSongTitle(row.name),
+            assetId: row.asset_id,
+            accountId: row.account_id || '',
+            accountName: 'Roblox',
+            uploadedAt: new Date(row.uploaded_at).getTime(),
+            robloxPlaybackSpeed: robloxSpeed,
+            originalSpeed: row.original_speed,
+            amplify: row.amplify,
+            status: row.status || 'Pending',
+          };
+        });
         setUploadHistory(history);
         setUploadStats({
           total: data.length,
@@ -289,13 +299,14 @@ export default function Home() {
 
   const handleUploadSuccess = async (record: UploadRecord) => {
     try {
+      const robloxSpeed = record.robloxPlaybackSpeed ? Number(record.robloxPlaybackSpeed) : 1;
       await supabase.from('audio_uploads').insert({
         asset_id: record.assetId,
         name: record.fileName,
         status: record.status || 'Pending',
-        original_speed: 1,
-        amplify: 0,
-        roblox_playback_speed: 1,
+        original_speed: record.originalSpeed || 1,
+        amplify: record.amplify || 0,
+        roblox_playback_speed: robloxSpeed,
         account_id: selectedAccountRef.current?.id || null,
         uploaded_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
