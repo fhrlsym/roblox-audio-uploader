@@ -4,7 +4,6 @@ import fetch from 'node-fetch';
 import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';
-import { runFFmpeg } from '../services/ffmpeg.service.js';
 import {
   uploadToRoblox,
   checkOperationStatus,
@@ -16,287 +15,9 @@ const upload = multer({ dest: 'uploads/' });
 const router = Router();
 
 // ============================================================
-// HELPER: Dapatkan X-CSRF-TOKEN dari Roblox
+// SPOOFER: Generate Blank Asset + Return ID Baru
 // ============================================================
-async function getCsrfToken(cookie) {
-  try {
-    const res = await fetch('https://auth.roblox.com/v2/logout', {
-      method: 'POST',
-      headers: {
-        'Cookie': `.ROBLOSECURITY=${cookie}`,
-        'User-Agent': 'RobloxStudio/WinInet',
-      },
-    });
-    return res.headers.get('x-csrf-token') || '';
-  } catch {
-    return '';
-  }
-}
-
-// ============================================================
-// HELPER: Build headers dengan cookie & CSRF
-// ============================================================
-async function buildRobloxHeaders(cookie) {
-  const headers = {
-    'User-Agent': 'RobloxStudio/WinInet',
-    'Accept': '*/*',
-  };
-
-  if (cookie) {
-    const csrf = await getCsrfToken(cookie);
-    headers['Cookie'] = `.ROBLOSECURITY=${cookie}`;
-    if (csrf) headers['X-CSRF-TOKEN'] = csrf;
-  }
-
-  return headers;
-}
-
-// ============================================================
-// HELPER: Download asset dari Roblox CDN (10 strategi)
-// ============================================================
-async function downloadAssetFromRoblox(cleanAssetId, assetType, headers, apiKey) {
-  let arrayBuffer = null;
-  let assetHash = null;
-
-  // Deteksi hash dari economy API
-  try {
-    const ecoCheck = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`, { headers });
-    const ecoInfo = await ecoCheck.json().catch(() => ({}));
-    if (ecoInfo.AssetHash) assetHash = ecoInfo.AssetHash;
-  } catch {}
-
-  // S1: AssetDelivery Direct
-  try {
-    const deliveryUrls = [
-      `https://assetdelivery.roblox.com/v1/asset?id=${cleanAssetId}&version=1&clientInsert=1`,
-      `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&format=binary`,
-      `https://assetdelivery.roblox.com/v1/asset/?assetId=${cleanAssetId}&assetTypeId=${assetType === 'Audio' ? 3 : 24}`,
-      `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&skipScript=true`,
-    ];
-    for (const url of deliveryUrls) {
-      if (arrayBuffer) break;
-      try {
-        const res = await fetch(url, { headers });
-        if (res.ok && res.status !== 403) {
-          const buf = await res.arrayBuffer();
-          if (buf.byteLength > 100) arrayBuffer = buf;
-        }
-      } catch {}
-    }
-  } catch (e) { console.warn('[S1] Gagal:', e.message); }
-
-  // S2: Redirect manual
-  if (!arrayBuffer) {
-    try {
-      const redirRes = await fetch(
-        `https://assetdelivery.roblox.com/v1/asset?id=${cleanAssetId}`,
-        { redirect: 'manual', headers }
-      );
-      const location = redirRes.headers.get('location');
-      if (location) {
-        const cdnRes = await fetch(location, { headers });
-        if (cdnRes.ok) {
-          const buf = await cdnRes.arrayBuffer();
-          if (buf.byteLength > 100) arrayBuffer = buf;
-        }
-      }
-    } catch (e) { console.warn('[S2] Gagal:', e.message); }
-  }
-
-  // S3: Batch API v2
-  if (!arrayBuffer) {
-    try {
-      const batchRes = await fetch('https://assetdelivery.roblox.com/v2/assets/batch', {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json' },
-        body: JSON.stringify([{
-          assetId: Number(cleanAssetId),
-          requestId: '1',
-          assetType: assetType === 'Audio' ? 'Audio' : 'Animation',
-        }]),
-      });
-      const batchData = await batchRes.json().catch(() => []);
-      const loc = batchData?.[0]?.locations?.[0]?.location;
-      if (loc) {
-        const cdnRes = await fetch(loc, { headers });
-        if (cdnRes.ok) {
-          const buf = await cdnRes.arrayBuffer();
-          if (buf.byteLength > 100) arrayBuffer = buf;
-        }
-      }
-    } catch (e) { console.warn('[S3] Gagal:', e.message); }
-  }
-
-  // S4: CDN Hash multi-host
-  if (!arrayBuffer && assetHash) {
-    try {
-      const cdnHosts = [
-        't0.rbxcdn.com', 't1.rbxcdn.com', 't2.rbxcdn.com', 't3.rbxcdn.com',
-        't4.rbxcdn.com', 't5.rbxcdn.com', 't6.rbxcdn.com', 't7.rbxcdn.com',
-        'c0.rbxcdn.com', 'c1.rbxcdn.com', 'c2.rbxcdn.com',
-      ];
-      for (const host of cdnHosts) {
-        if (arrayBuffer) break;
-        try {
-          const cdnRes = await fetch(`https://${host}/${assetHash}`, { headers });
-          if (cdnRes.ok) {
-            const buf = await cdnRes.arrayBuffer();
-            if (buf.byteLength > 100) arrayBuffer = buf;
-          }
-        } catch {}
-      }
-    } catch (e) { console.warn('[S4] Gagal:', e.message); }
-  }
-
-  // S5: Saved Versions
-  if (!arrayBuffer) {
-    try {
-      const verRes = await fetch(`https://develop.roblox.com/v1/assets/${cleanAssetId}/saved-versions`, { headers });
-      const verData = await verRes.json().catch(() => ({}));
-      const versions = verData?.data || [];
-      for (const ver of versions.reverse()) {
-        if (arrayBuffer) break;
-        const verId = ver?.assetVersionId || ver?.id;
-        if (verId) {
-          try {
-            const binRes = await fetch(`https://assetdelivery.roblox.com/v1/assetversion?assetVersionId=${verId}`, { headers });
-            if (binRes.ok) {
-              const buf = await binRes.arrayBuffer();
-              if (buf.byteLength > 100) arrayBuffer = buf;
-            }
-          } catch {}
-        }
-      }
-    } catch (e) { console.warn('[S5] Gagal:', e.message); }
-  }
-
-  // S6: Cloud API Versions
-  if (!arrayBuffer && apiKey) {
-    try {
-      const cloudRes = await fetch(`https://apis.roblox.com/cloud/v2/assets/${cleanAssetId}/versions`, {
-        headers: { ...headers, 'x-api-key': apiKey },
-      });
-      const cloudData = await cloudRes.json().catch(() => ({}));
-      const versions = cloudData?.data || cloudData?.versions || [];
-      for (const ver of versions) {
-        if (arrayBuffer) break;
-        const verId = ver.id || ver.assetVersionId;
-        if (verId) {
-          try {
-            const binRes = await fetch(`https://assetdelivery.roblox.com/v1/assetversion?assetVersionId=${verId}`, { headers });
-            if (binRes.ok) {
-              const buf = await binRes.arrayBuffer();
-              if (buf.byteLength > 100) arrayBuffer = buf;
-            }
-          } catch {}
-        }
-      }
-    } catch (e) { console.warn('[S6] Gagal:', e.message); }
-  }
-
-  // S7: Place ID Context
-  if (!arrayBuffer) {
-    try {
-      const uniRes = await fetch(`https://games.roblox.com/v1/games/asset-to-universe?assetId=${cleanAssetId}`, { headers });
-      const uniData = await uniRes.json().catch(() => ({}));
-      const universeId = uniData?.universeId || uniData?.universeIds?.[0];
-      if (universeId) {
-        const placeRes = await fetch(`https://games.roblox.com/v1/games/multiget-place-details?universeIds=${universeId}`, { headers });
-        const placeData = await placeRes.json().catch(() => []);
-        const placeId = placeData?.[0]?.placeId;
-        if (placeId) {
-          const gameHeaders = {
-            ...headers,
-            'Roblox-Place-Id': String(placeId),
-            'Roblox-Game-Id': String(universeId),
-            'Requester': 'Client',
-          };
-          const binRes = await fetch(
-            `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&placeId=${placeId}&clientInsert=1`,
-            { headers: gameHeaders }
-          );
-          if (binRes.ok) {
-            const buf = await binRes.arrayBuffer();
-            if (buf.byteLength > 100) arrayBuffer = buf;
-          }
-        }
-      }
-    } catch (e) { console.warn('[S7] Gagal:', e.message); }
-  }
-
-  // S8: Avatar Animation API
-  if (!arrayBuffer && assetType === 'Animation') {
-    try {
-      const avatarRes = await fetch(`https://avatar.roblox.com/v1/asset/${cleanAssetId}/animation`, { headers });
-      if (avatarRes.ok) {
-        const animData = await avatarRes.json().catch(() => ({}));
-        if (animData?.url) {
-          const binRes = await fetch(animData.url, { headers });
-          if (binRes.ok) {
-            const buf = await binRes.arrayBuffer();
-            if (buf.byteLength > 100) arrayBuffer = buf;
-          }
-        }
-      }
-    } catch (e) { console.warn('[S8] Gagal:', e.message); }
-  }
-
-  // S9: Catalog Internal
-  if (!arrayBuffer) {
-    try {
-      const catalogRes = await fetch(`https://catalog.roblox.com/v1/catalog/items/${cleanAssetId}/details`, { headers });
-      if (catalogRes.ok) {
-        const catalogData = await catalogRes.json().catch(() => ({}));
-        // Coba extract URL jika ada
-        const urlsToTry = [
-          catalogData?.url,
-          catalogData?.assetUrl,
-          catalogData?.downloadUrl,
-          catalogData?.location,
-        ].filter(Boolean);
-        for (const url of urlsToTry) {
-          if (arrayBuffer) break;
-          try {
-            const binRes = await fetch(url, { headers });
-            if (binRes.ok) {
-              const buf = await binRes.arrayBuffer();
-              if (buf.byteLength > 100) arrayBuffer = buf;
-            }
-          } catch {}
-        }
-      }
-    } catch (e) { console.warn('[S9] Gagal:', e.message); }
-  }
-
-  // S10: Toolbox Service
-  if (!arrayBuffer) {
-    try {
-      const tbRes = await fetch(`https://apis.roblox.com/toolbox-service/v1/items/details?assetIds=${cleanAssetId}`, { headers });
-      const tbData = await tbRes.json().catch(() => ({}));
-      const asset = tbData?.data?.[0]?.asset;
-      if (asset?.assetHash) {
-        const cdnHosts = ['t0.rbxcdn.com', 't1.rbxcdn.com', 'c0.rbxcdn.com'];
-        for (const host of cdnHosts) {
-          if (arrayBuffer) break;
-          try {
-            const cdnRes = await fetch(`https://${host}/${asset.assetHash}`, { headers });
-            if (cdnRes.ok) {
-              const buf = await cdnRes.arrayBuffer();
-              if (buf.byteLength > 100) arrayBuffer = buf;
-            }
-          } catch {}
-        }
-      }
-    } catch (e) { console.warn('[S10] Gagal:', e.message); }
-  }
-
-  return arrayBuffer;
-}
-
-// ============================================================
-// ENDPOINT: Spoof Asset (10 Strategi Download + Reupload)
-// ============================================================
-router.post('/spoof-asset', async (req, res) => {
+router.post('/spoof', async (req, res) => {
   const {
     assetId,
     assetType = 'Animation',
@@ -304,143 +25,162 @@ router.post('/spoof-asset', async (req, res) => {
     creatorType = 'user',
     creatorId,
     apiKey,
-    robloxCookie,
   } = req.body;
 
-  if (!assetId) return res.status(400).json({ error: 'Masukkan Roblox Asset ID' });
-  if (!creatorId || !apiKey) return res.status(400).json({ error: 'Pilih Akun Roblox terlebih dahulu' });
+  if (!assetId || !creatorId || !apiKey) {
+    return res.status(400).json({ error: 'assetId, creatorId, dan apiKey wajib diisi' });
+  }
 
   const cleanAssetId = String(assetId).replace(/\D/g, '');
-  if (!cleanAssetId) return res.status(400).json({ error: 'Asset ID Roblox tidak valid' });
-
-  const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
-  const headers = await buildRobloxHeaders(robloxCookie);
-
-  // Deteksi tipe asset
-  let detectedAssetType = assetType;
-  try {
-    const ecoCheck = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`, { headers });
-    const ecoInfo = await ecoCheck.json().catch(() => ({}));
-    if (ecoInfo.AssetTypeId === 3) detectedAssetType = 'Audio';
-    else if (ecoInfo.AssetTypeId === 24) detectedAssetType = 'Animation';
-  } catch {}
 
   try {
-    const arrayBuffer = await downloadAssetFromRoblox(cleanAssetId, detectedAssetType, headers, apiKey);
+    // Dapatkan nama asset asli
+    let assetName = displayName || `Spoofed_${cleanAssetId}`;
+    try {
+      const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
+      const ecoData = await eco.json().catch(() => ({}));
+      if (ecoData.Name) assetName = ecoData.Name;
+    } catch {}
 
-    if (!arrayBuffer || arrayBuffer.byteLength < 100) {
-      throw new Error(
-        `ID ${cleanAssetId} tidak dapat di-download (${detectedAssetType}). ` +
-        `Semua 10 strategi gagal. Asset kemungkinan benar-benar privat/dihapus.`
-      );
+    // Buat asset kosong baru
+    const headers = {
+      'x-api-key': apiKey,
+      'Content-Type': 'application/json',
+    };
+
+    const createRes = await fetch('https://apis.roblox.com/assets/v1/assets', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        assetType,
+        displayName: assetName,
+        description: `Spoofed from ${cleanAssetId}`,
+        creatorType,
+        creatorId,
+      }),
+    });
+
+    if (createRes.ok) {
+      const data = await createRes.json();
+      const newAssetId = String(data.assetId || data.id);
+
+      return res.json({
+        success: true,
+        originalAssetId: cleanAssetId,
+        newAssetId,
+        name: assetName,
+        assetType,
+      });
     }
 
-    writeFileSync(tempFile, Buffer.from(arrayBuffer));
+    // Fallback: upload file kosong
+    const emptyBuffer = assetType === 'Audio'
+      ? Buffer.alloc(200)
+      : Buffer.from('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"></roblox>');
 
-    const finalTitle = displayName || `Spoofed_${detectedAssetType}_${cleanAssetId}`;
+    const tempFile = join(BACKEND_ROOT, `blank_${Date.now()}_${cleanAssetId}`);
+    writeFileSync(tempFile, emptyBuffer);
 
-    const operationId = await uploadToRoblox(tempFile, {
-      assetType: detectedAssetType,
-      displayName: finalTitle,
-      description: `Spoofed Asset (Original ID: ${cleanAssetId})`,
-      creatorType,
-      creatorId,
-      apiKey,
-    });
+    try {
+      const operationId = await uploadToRoblox(tempFile, {
+        assetType,
+        displayName: assetName,
+        description: `Spoofed from ${cleanAssetId}`,
+        creatorType,
+        creatorId,
+        apiKey,
+      });
 
-    res.json({
-      success: true,
-      operationId,
-      title: finalTitle,
-      originalAssetId: cleanAssetId,
-      detectedAssetType,
-      fileSize: arrayBuffer.byteLength,
-    });
+      res.json({
+        success: true,
+        operationId,
+        originalAssetId: cleanAssetId,
+        name: assetName,
+        assetType,
+      });
+    } finally {
+      if (existsSync(tempFile)) {
+        try { unlinkSync(tempFile); } catch {}
+      }
+    }
   } catch (error) {
-    console.error('Spoof asset error:', error);
-    res.status(500).json({
-      error: error.message || 'Gagal me-spoof asset Roblox',
-      detectedAssetType,
-    });
-  } finally {
-    if (existsSync(tempFile)) {
-      try { unlinkSync(tempFile); } catch {}
-    }
+    console.error('Spoof error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 // ============================================================
-// ENDPOINT: Force Download Private Asset (10 Strategi)
+// SPOOFER BATCH: Banyak asset sekaligus
 // ============================================================
-router.post('/spoof-force-download', async (req, res) => {
+router.post('/spoof-batch', async (req, res) => {
   const {
-    assetId,
-    assetType = 'Animation',
-    displayName,
+    assets, // [{ assetId, assetType }]
     creatorType = 'user',
     creatorId,
     apiKey,
-    robloxCookie,
   } = req.body;
 
-  if (!assetId || !creatorId || !apiKey) {
-    return res.status(400).json({ error: 'Missing required fields' });
+  if (!assets || !Array.isArray(assets) || assets.length === 0) {
+    return res.status(400).json({ error: 'assets array wajib diisi' });
+  }
+  if (!creatorId || !apiKey) {
+    return res.status(400).json({ error: 'creatorId dan apiKey wajib diisi' });
   }
 
-  const cleanAssetId = String(assetId).replace(/\D/g, '');
-  const tempFile = join(BACKEND_ROOT, `force_spoof_${Date.now()}_${cleanAssetId}`);
-  const headers = await buildRobloxHeaders(robloxCookie);
+  const results = [];
+  const replacements = {};
 
-  // Deteksi tipe asset
-  let detectedAssetType = assetType;
-  try {
-    const ecoCheck = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`, { headers });
-    const ecoInfo = await ecoCheck.json().catch(() => ({}));
-    if (ecoInfo.AssetTypeId === 3) detectedAssetType = 'Audio';
-    else if (ecoInfo.AssetTypeId === 24) detectedAssetType = 'Animation';
-  } catch {}
-
-  try {
-    const arrayBuffer = await downloadAssetFromRoblox(cleanAssetId, detectedAssetType, headers, apiKey);
-
-    if (!arrayBuffer || arrayBuffer.byteLength < 100) {
-      return res.status(404).json({
-        error: 'Asset TIDAK BISA di-download dari Roblox. Semua 10 strategi gagal.',
-        assetId: cleanAssetId,
-        detectedAssetType,
-        triedStrategies: 10,
+  for (const asset of assets) {
+    const cleanId = String(asset.assetId).replace(/\D/g, '');
+    try {
+      const spoofRes = await fetch(`http://localhost:${process.env.PORT || 3001}/api/spoof`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assetId: cleanId,
+          assetType: asset.assetType || 'Animation',
+          creatorType,
+          creatorId,
+          apiKey,
+        }),
       });
+      const spoofData = await spoofRes.json();
+
+      let newId = spoofData.newAssetId;
+
+      if (spoofData.operationId && !newId) {
+        for (let i = 0; i < 30; i++) {
+          await new Promise(r => setTimeout(r, 2000));
+          const opRes = await fetch(
+            `http://localhost:${process.env.PORT || 3001}/api/operation-status/${spoofData.operationId}?apiKey=${encodeURIComponent(apiKey)}`
+          );
+          const opData = await opRes.json();
+          if (opData.done) {
+            newId = opData.assetId || opData.response?.assetId;
+            break;
+          }
+        }
+      }
+
+      if (newId) {
+        replacements[cleanId] = String(newId);
+        results.push({ oldId: cleanId, newId: String(newId), success: true });
+      } else {
+        results.push({ oldId: cleanId, success: false, error: 'Gagal generate ID' });
+      }
+    } catch (e) {
+      results.push({ oldId: cleanId, success: false, error: e.message });
     }
-
-    writeFileSync(tempFile, Buffer.from(arrayBuffer));
-
-    const finalTitle = displayName || `ForceSpoofed_${detectedAssetType}_${cleanAssetId}`;
-
-    const operationId = await uploadToRoblox(tempFile, {
-      assetType: detectedAssetType,
-      displayName: finalTitle,
-      description: `Force spoofed (Original: ${cleanAssetId})`,
-      creatorType,
-      creatorId,
-      apiKey,
-    });
-
-    res.json({
-      success: true,
-      operationId,
-      title: finalTitle,
-      originalAssetId: cleanAssetId,
-      detectedAssetType,
-      fileSize: arrayBuffer.byteLength,
-    });
-  } catch (error) {
-    console.error('Force download error:', error);
-    res.status(500).json({ error: error.message });
-  } finally {
-    if (existsSync(tempFile)) {
-      try { unlinkSync(tempFile); } catch {}
-    }
+    await new Promise(r => setTimeout(r, 300));
   }
+
+  res.json({
+    success: results.some(r => r.success),
+    total: assets.length,
+    successCount: results.filter(r => r.success).length,
+    results,
+    replacements,
+  });
 });
 
 // ============================================================
@@ -515,7 +255,7 @@ router.post('/upload-converted', async (req, res) => {
 
   const filePath = join(BACKEND_ROOT, `${fileId}.mp3`);
   if (!existsSync(filePath)) {
-    return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa. Convert ulang dulu.' });
+    return res.status(404).json({ error: 'File hasil convert sudah kadaluarsa.' });
   }
 
   try {
@@ -529,10 +269,7 @@ router.post('/upload-converted', async (req, res) => {
     });
     res.json({ operationId });
   } catch (error) {
-    res.status(error.status || 500).json({
-      error: error.message || 'Upload failed',
-      details: error.details,
-    });
+    res.status(error.status || 500).json({ error: error.message || 'Upload failed' });
   } finally {
     if (existsSync(filePath)) {
       try { unlinkSync(filePath); } catch {}
@@ -575,13 +312,11 @@ router.get('/roblox/lookup', async (req, res) => {
     if (type === 'group') {
       const info = await fetchWithRetry(`https://groups.roblox.com/v1/groups/${id}`);
       if (!info.id) return res.status(404).json({ error: 'Group tidak ditemukan' });
-
       let thumbnail = null;
       try {
         const icons = await fetchWithRetry(`https://thumbnails.roblox.com/v1/groups/icons?groupIds=${id}&size=420x420&format=Png`);
         if (icons.data?.[0]) thumbnail = icons.data[0].imageUrl;
       } catch {}
-
       return res.json({
         result: {
           id: String(info.id),
@@ -596,13 +331,11 @@ router.get('/roblox/lookup', async (req, res) => {
 
     const info = await fetchWithRetry(`https://users.roblox.com/v1/users/${id}`);
     if (!info.id) return res.status(404).json({ error: 'User tidak ditemukan' });
-
     let thumbnail = null;
     try {
       const avatars = await fetchWithRetry(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${id}&size=150x150&format=Png&isCircular=false`);
       if (avatars.data?.[0]) thumbnail = avatars.data[0].imageUrl;
     } catch {}
-
     res.json({
       result: {
         id: String(info.id),

@@ -51,7 +51,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
     toast(`Memulai spoofing ${assetType} ID: ${cleanId}...`, 'info');
 
     try {
-      const response = await fetch(`${backendUrl}/api/spoof-asset`, {
+      const response = await fetch(`${backendUrl}/api/spoof`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,7 +61,6 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           creatorType: selectedAccount.type,
           creatorId: selectedAccount.id,
           apiKey: selectedAccount.apiKey,
-          robloxCookie: selectedAccount.cookie || undefined,
         }),
       });
 
