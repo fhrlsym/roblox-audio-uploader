@@ -2,7 +2,8 @@
 
 import { Copy, History, Trash2 } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
-import { CARD, cleanSongTitle } from '../lib/ui';
+import { CARD } from '../lib/ui';
+import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
 import { UploadRecord } from '../types/audio';
 
 interface UploadHistoryProps {
@@ -13,29 +14,6 @@ interface UploadHistoryProps {
 }
 
 export default function UploadHistory({ history, onClear, onRefresh, refreshingIds = [] }: UploadHistoryProps) {
-  const formatBytes = (bytes?: number) => {
-    if (!bytes) return '-';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
-
-    if (minutes < 1) return 'Baru saja';
-    if (minutes < 60) return `${minutes} menit lalu`;
-    if (hours < 24) return `${hours} jam lalu`;
-    if (days < 7) return `${days} hari lalu`;
-
-    return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
-  };
-
   const copyAssetId = (assetId: string) => {
     navigator.clipboard.writeText(assetId);
   };

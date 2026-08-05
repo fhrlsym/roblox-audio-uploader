@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { writeFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
 import { join } from 'path';
+import { LRUCache } from 'lru-cache';
 import {
   BACKEND_ROOT,
   YTDLP,
@@ -14,6 +15,11 @@ import {
   formatDuration,
 } from '../config.js';
 import { runFFmpeg } from './ffmpeg.service.js';
+
+const videoInfoCache = new LRUCache({
+  max: 200,
+  ttl: 1000 * 60 * 60 * 24, // 24 hours
+});
 
 const execFileAsync = promisify(execFile);
 
@@ -130,6 +136,12 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
 }
 
 export async function fetchYoutubeVideoInfo(url, cookies) {
+  const videoId = getVideoId(url);
+  const cacheKey = `${videoId || url}_${Boolean(cookies)}`;
+  if (videoInfoCache.has(cacheKey)) {
+    return videoInfoCache.get(cacheKey);
+  }
+
   let cookiesFile = null;
   if (cookies && typeof cookies === 'string' && cookies.trim()) {
     cookiesFile = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
@@ -147,7 +159,7 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
     const [title = '', durationString = '', duration = '0', thumbnail = '', channel = '', id = ''] =
       stdout.split('\n').map((s) => s.trim());
 
-    return {
+    const info = {
       id,
       title,
       durationString: durationString || formatDuration(parseInt(duration) || 0),
@@ -155,6 +167,10 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
       thumbnail,
       channel,
     };
+    if (info.title) {
+      videoInfoCache.set(cacheKey, info);
+    }
+    return info;
   } finally {
     if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
   }
