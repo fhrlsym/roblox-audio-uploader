@@ -118,12 +118,21 @@ export default function Home() {
 
       if (!error && data) {
         const history: UploadRecord[] = data.map((row) => {
-          let robloxSpeed: string | undefined = undefined;
-          if (row.roblox_playback_speed && Number(row.roblox_playback_speed) > 0) {
-            robloxSpeed = Number(row.roblox_playback_speed).toFixed(4);
-          } else if (row.original_speed && Number(row.original_speed) > 0) {
-            robloxSpeed = (1 / Number(row.original_speed)).toFixed(4);
+          let originalSpeed = Number(row.original_speed) || 1;
+          if (originalSpeed === 1 && row.name) {
+            const match = row.name.match(/_(\d+(?:\.\d+)?)x/i);
+            if (match && match[1]) {
+              originalSpeed = parseFloat(match[1]);
+            }
           }
+
+          let robloxSpeed: string | undefined = undefined;
+          if (row.roblox_playback_speed && Number(row.roblox_playback_speed) > 0 && Number(row.roblox_playback_speed) !== 1) {
+            robloxSpeed = Number(row.roblox_playback_speed).toFixed(4);
+          } else if (originalSpeed > 0) {
+            robloxSpeed = (1 / originalSpeed).toFixed(4);
+          }
+
           return {
             id: row.id,
             fileName: cleanSongTitle(row.name),
@@ -133,7 +142,7 @@ export default function Home() {
             accountName: 'Roblox',
             uploadedAt: new Date(row.uploaded_at).getTime(),
             robloxPlaybackSpeed: robloxSpeed,
-            originalSpeed: row.original_speed,
+            originalSpeed: originalSpeed,
             amplify: row.amplify,
             status: row.status || 'Pending',
           };
