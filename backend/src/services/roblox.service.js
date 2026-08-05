@@ -3,10 +3,22 @@ import FormData from 'form-data';
 import { createReadStream } from 'fs';
 import { sleep } from '../config.js';
 
+export function cleanSongTitle(rawTitle) {
+  if (!rawTitle) return '';
+  let name = String(rawTitle);
+  name = name.replace(/\.(mp3|ogg|wav|m4a|flac|aac)$/i, '');
+  name = name.replace(/_\d+(?:\.\d+)?x(?:_[-+]?\d+dB)?/gi, '');
+  name = name.replace(/_[-+]?\d+dB/gi, '');
+  name = name.replace(/_\d+$/g, '');
+  name = name.replace(/[\(\[](?:Official\s+)?(?:Lyric|Music|HD|4K|Full)?\s*(?:Video|Audio|Lyric|Lyrics|Track|Visualizer|Stream)?[\)\]]/gi, '');
+  name = name.replace(/[\s\-_]+/g, ' ').trim();
+  return name || String(rawTitle);
+}
+
 export async function uploadToRoblox(filePath, { assetType = 'Audio', displayName = 'Untitled', description = '', creatorType = 'user', creatorId, apiKey }) {
   const creator = creatorType === 'group' ? { groupId: creatorId } : { userId: creatorId };
 
-  const safeName = String(displayName || 'Untitled').replace(/\.[^/.]+$/, '').slice(0, 50).trim() || 'Untitled';
+  const safeName = cleanSongTitle(displayName).slice(0, 50).trim() || 'Untitled';
 
   const form = new FormData();
   form.append('request', JSON.stringify({

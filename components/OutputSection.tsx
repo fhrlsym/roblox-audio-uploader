@@ -5,7 +5,7 @@ import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-reac
 import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
-import { CARD, BTN_PRIMARY } from '../lib/ui';
+import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -50,7 +50,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     setUploading((prev) => ({ ...prev, [file.id]: true }));
 
     try {
-      const displayName = file.tunedName.replace(/\.[^/.]+$/, '');
+      const displayName = cleanSongTitle(file.tunedName);
       const formData = new FormData();
       formData.append('file', file.blob, file.tunedName);
       formData.append('displayName', displayName);
@@ -99,8 +99,8 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           if (onUploadSuccess) {
             onUploadSuccess({
               id: `${Date.now()}-${file.id}`,
-              fileName: file.tunedName,
-              displayName: file.tunedName,
+              fileName: displayName,
+              displayName,
               assetId,
               accountName: selectedAccount.name,
               uploadedAt: Date.now(),

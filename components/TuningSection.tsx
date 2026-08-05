@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { AlertTriangle, ChevronRight, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
-import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
@@ -60,7 +60,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
           continue;
         }
 
-        const tunedName = raw.name.replace(/\.[^/.]+$/, '') + `_${speed}x_${amplify}dB.mp3`;
+        const tunedName = cleanSongTitle(raw.name) + '.mp3';
 
         results.push({
           id: `tuned_${Date.now()}_${Math.random().toString(36).slice(2)}`,
