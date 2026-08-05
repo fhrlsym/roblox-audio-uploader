@@ -50,6 +50,7 @@ export interface SavedAccount {
   name: string;
   type: 'user' | 'group';
   apiKey: string;
+  cookie?: string;
   userId?: string;
   groupId?: string;
   displayName?: string;

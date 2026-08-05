@@ -69,6 +69,8 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
   const [error, setError] = useState('');
   const [selectedGroupId, setSelectedGroupId] = useState('');
 
+  const [cookie, setCookie] = useState('');
+
   if (!isOpen) return null;
 
   const handleCheck = async () => {
@@ -116,6 +118,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
         : keyInfo.owner.displayName || keyInfo.owner.name,
       type: isGroup ? 'group' : 'user',
       apiKey: apiKey.trim(),
+      cookie: cookie.trim() || undefined,
       userId: keyInfo.owner.id,
       groupId: selectedGroupId || undefined,
       displayName: keyInfo.owner.displayName || undefined,
@@ -128,6 +131,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
 
     onAccountAdded(account);
     setApiKey('');
+    setCookie('');
     setKeyInfo(null);
     setError('');
     setSelectedGroupId('');
@@ -176,8 +180,23 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
               placeholder="Paste your Roblox API key here"
               className={INPUT}
             />
+          </div>
+
+          {/* Cookie Input */}
+          <div>
+            <label className={LABEL + ' mb-2 block flex items-center justify-between'}>
+              <span>Roblox Cookie (Opsional - Auto Spoof)</span>
+              <span className="text-[10px] text-[var(--accent)]">.ROBLOSECURITY</span>
+            </label>
+            <input
+              type="password"
+              value={cookie}
+              onChange={(e) => setCookie(e.target.value)}
+              placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."
+              className={INPUT}
+            />
             <p className="mt-2 text-[11px] text-[var(--text-40)]">
-              Pemilik akun & group otomatis terdeteksi, kuota audio langsung terlihat.
+              Memungkinkan otomatisasi spoofing Private Audio tanpa perlu isi manual di Spoofer!
             </p>
           </div>
 
