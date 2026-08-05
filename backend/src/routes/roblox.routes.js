@@ -500,7 +500,7 @@ router.post('/spoof-asset', async (req, res) => {
 
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
       if (detectedAssetType === 'Audio') {
-        throw new Error(`ID ${cleanAssetId} adalah Sound/Audio privat Roblox. Masukkan Roblox Cookie (.ROBLOSECURITY) akun pemilik audio ini di form.`);
+        throw new Error(`ID ${cleanAssetId} adalah Sound/Audio privat Roblox. Gunakan tombol "Auto Upload ID Baru" atau "Download File MP3" di layar untuk membuat Sound ID Baru milik akun Anda secara instan!`);
       } else {
         throw new Error(`ID ${cleanAssetId} tidak dapat diunduh (403 Forbidden). Pastikan ID valid.`);
       }
