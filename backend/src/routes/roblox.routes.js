@@ -358,6 +358,20 @@ router.post('/spoof-asset', async (req, res) => {
     reqHeaders['Cookie'] = `.ROBLOSECURITY=${cleanCookie}`;
   }
 
+  let detectedAssetType = assetType;
+
+  try {
+    const ecoCheck = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
+    const ecoInfo = await ecoCheck.json().catch(() => ({}));
+    if (ecoInfo.AssetTypeId === 3) {
+      detectedAssetType = 'Audio';
+    } else if (ecoInfo.AssetTypeId === 24) {
+      detectedAssetType = 'Animation';
+    }
+  } catch {
+    // Keep requested assetType on error
+  }
+
   try {
     let arrayBuffer = null;
 
@@ -417,7 +431,7 @@ router.post('/spoof-asset', async (req, res) => {
 
         if (placeId) {
           const binRes = await fetch(
-            `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&placeId=${placeId}&serverplaceid=${placeId}&expectedAssetType=${assetType}&clientInsert=1`,
+            `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&placeId=${placeId}&serverplaceid=${placeId}&expectedAssetType=${detectedAssetType}&clientInsert=1`,
             { headers: { ...reqHeaders, 'Roblox-Place-Id': String(placeId) } }
           );
           if (binRes.ok) {
@@ -485,10 +499,10 @@ router.post('/spoof-asset', async (req, res) => {
     }
 
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
-      if (assetType === 'Audio') {
-        throw new Error('Gagal mengunduh audio (403 Forbidden). Masukkan Roblox Cookie (.ROBLOSECURITY) di Akun/Form untuk mengakses file audio privat ini.');
+      if (detectedAssetType === 'Audio') {
+        throw new Error(`ID ${cleanAssetId} adalah Sound/Audio privat Roblox. Masukkan Roblox Cookie (.ROBLOSECURITY) akun pemilik audio ini di form.`);
       } else {
-        throw new Error('Gagal mengunduh binary animasi Roblox (403 Forbidden). Pastikan ID Animasi valid.');
+        throw new Error(`ID ${cleanAssetId} tidak dapat diunduh (403 Forbidden). Pastikan ID valid.`);
       }
     }
 
