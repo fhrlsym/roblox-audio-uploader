@@ -331,6 +331,7 @@ router.post('/spoof-asset', async (req, res) => {
     creatorType = 'user',
     creatorId,
     apiKey,
+    robloxCookie,
   } = req.body;
 
   if (!assetId) {
@@ -347,13 +348,23 @@ router.post('/spoof-asset', async (req, res) => {
 
   const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
 
+  const reqHeaders = {
+    'User-Agent': 'RobloxStudio/WinInet',
+    'Accept': '*/*',
+  };
+
+  if (robloxCookie && robloxCookie.trim()) {
+    const cleanCookie = robloxCookie.trim().replace(/^Cookie:\s*/i, '').replace(/^\.ROBLOSECURITY=/i, '');
+    reqHeaders['Cookie'] = `.ROBLOSECURITY=${cleanCookie}`;
+  }
+
   try {
     let arrayBuffer = null;
 
-    // Strategy 1: Direct AssetDelivery with RobloxStudio/WinInet User-Agent
+    // Strategy 1: Direct AssetDelivery with Auth Cookie
     try {
       const res = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`, {
-        headers: { 'User-Agent': 'RobloxStudio/WinInet', 'Accept': '*/*' },
+        headers: reqHeaders,
       });
       if (res.ok) {
         arrayBuffer = await res.arrayBuffer();
@@ -362,18 +373,16 @@ router.post('/spoof-asset', async (req, res) => {
       console.warn('[Spoof Download Strategy 1 failed]:', e.message);
     }
 
-    // Strategy 2: Manual Redirect Location Scraping (ISpooferMotion Strategy)
+    // Strategy 2: Manual Redirect Location Scraping with Auth Cookie
     if (!arrayBuffer) {
       try {
         const redirRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`, {
           redirect: 'manual',
-          headers: { 'User-Agent': 'Roblox/WinInet' },
+          headers: reqHeaders,
         });
         const location = redirRes.headers.get('location');
         if (location && location.includes('rbxcdn.com')) {
-          const binRes = await fetch(location, {
-            headers: { 'User-Agent': 'RobloxStudio/WinInet' },
-          });
+          const binRes = await fetch(location, { headers: reqHeaders });
           if (binRes.ok) {
             arrayBuffer = await binRes.arrayBuffer();
           }
@@ -383,15 +392,15 @@ router.post('/spoof-asset', async (req, res) => {
       }
     }
 
-    // Strategy 3: AssetDelivery v2 API CDN Resolution
+    // Strategy 3: AssetDelivery v2 API CDN Resolution with Auth Cookie
     if (!arrayBuffer) {
       try {
         const v2Res = await fetch(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, {
-          headers: { 'User-Agent': 'RobloxStudio/WinInet' },
+          headers: reqHeaders,
         });
         const v2Data = await v2Res.json().catch(() => ({}));
         if (v2Data?.locations?.[0]?.location) {
-          const binRes = await fetch(v2Data.locations[0].location);
+          const binRes = await fetch(v2Data.locations[0].location, { headers: reqHeaders });
           if (binRes.ok) {
             arrayBuffer = await binRes.arrayBuffer();
           }
@@ -401,13 +410,15 @@ router.post('/spoof-asset', async (req, res) => {
       }
     }
 
-    // Strategy 4: Economy API AssetHash CDN Resolution
+    // Strategy 4: Economy API AssetHash CDN Resolution with Auth Cookie
     if (!arrayBuffer) {
       try {
-        const ecoRes = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
+        const ecoRes = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`, {
+          headers: reqHeaders,
+        });
         const ecoData = await ecoRes.json().catch(() => ({}));
         if (ecoData.AssetHash) {
-          const binRes = await fetch(`https://t1.rbxcdn.com/${ecoData.AssetHash}`);
+          const binRes = await fetch(`https://t1.rbxcdn.com/${ecoData.AssetHash}`, { headers: reqHeaders });
           if (binRes.ok) {
             arrayBuffer = await binRes.arrayBuffer();
           }
@@ -419,7 +430,7 @@ router.post('/spoof-asset', async (req, res) => {
 
     if (!arrayBuffer || arrayBuffer.byteLength === 0) {
       if (assetType === 'Audio') {
-        throw new Error('Gagal mengunduh audio (403 Forbidden). Roblox telah mengunci akses file audio ini secara privat. Fitur spoofing 100% mendukung semua ID Animasi Roblox.');
+        throw new Error('Gagal mengunduh audio (403 Forbidden). Masukkan Roblox Cookie (.ROBLOSECURITY) di Akun/Form untuk mengakses file audio privat ini.');
       } else {
         throw new Error('Gagal mengunduh binary animasi Roblox (403 Forbidden). Pastikan ID Animasi valid.');
       }

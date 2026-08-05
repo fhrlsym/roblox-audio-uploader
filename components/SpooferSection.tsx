@@ -25,6 +25,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
   const { toast } = useToast();
   const [assetIdInput, setAssetIdInput] = useState('');
   const [displayNameInput, setDisplayNameInput] = useState('');
+  const [robloxCookieInput, setRobloxCookieInput] = useState('');
   const [assetType, setAssetType] = useState<'Animation' | 'Audio'>('Animation');
   const [loading, setLoading] = useState(false);
   const [spoofedRecords, setSpoofedRecords] = useState<SpoofedRecord[]>([]);
@@ -59,6 +60,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           creatorType: selectedAccount.type,
           creatorId: selectedAccount.id,
           apiKey: selectedAccount.apiKey,
+          robloxCookie: robloxCookieInput.trim() || selectedAccount.cookie || undefined,
         }),
       });
 
@@ -161,7 +163,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
           <div>
             <label className="block text-xs font-medium text-[var(--text-60)] mb-1.5">
               Roblox {assetType} Asset ID <span className="text-[var(--danger)]">*</span>
@@ -184,6 +186,20 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
               value={displayNameInput}
               onChange={(e) => setDisplayNameInput(e.target.value)}
               placeholder={`Judul ${assetType} baru...`}
+              className={INPUT}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--text-60)] mb-1.5 flex items-center justify-between">
+              <span>Roblox Cookie (Opsional)</span>
+              <span className="text-[10px] text-[var(--accent)] font-semibold">Untuk Private Asset</span>
+            </label>
+            <input
+              type="password"
+              value={robloxCookieInput}
+              onChange={(e) => setRobloxCookieInput(e.target.value)}
+              placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."
               className={INPUT}
             />
           </div>
