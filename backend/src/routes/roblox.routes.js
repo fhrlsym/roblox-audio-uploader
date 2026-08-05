@@ -373,7 +373,63 @@ router.post('/spoof-asset', async (req, res) => {
       console.warn('[Spoof Download Strategy 1 failed]:', e.message);
     }
 
-    // Strategy 2: Manual Redirect Location Scraping with Auth Cookie
+    // Strategy 2: ISpooferMotion Saved-Versions Pipeline
+    if (!arrayBuffer) {
+      try {
+        const verRes = await fetch(`https://develop.roblox.com/v1/assets/${cleanAssetId}/saved-versions`, {
+          headers: reqHeaders,
+        });
+        const verData = await verRes.json().catch(() => ({}));
+        if (verData?.data && Array.isArray(verData.data) && verData.data.length > 0) {
+          const latestVersion = verData.data[verData.data.length - 1];
+          if (latestVersion?.assetVersionId) {
+            const binRes = await fetch(`https://assetdelivery.roblox.com/v1/assetversion?assetVersionId=${latestVersion.assetVersionId}`, {
+              headers: reqHeaders,
+            });
+            if (binRes.ok) {
+              arrayBuffer = await binRes.arrayBuffer();
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('[Spoof Download Strategy 2 (Saved Versions) failed]:', e.message);
+      }
+    }
+
+    // Strategy 3: ISpooferMotion Game Context & Place ID Emulation
+    if (!arrayBuffer) {
+      try {
+        const uniRes = await fetch(`https://games.roblox.com/v1/games/asset-to-universe?assetId=${cleanAssetId}`, {
+          headers: reqHeaders,
+        });
+        const uniData = await uniRes.json().catch(() => ({}));
+        let placeId = null;
+        if (uniData?.universeId || (uniData?.universeIds && uniData.universeIds[0])) {
+          const uId = uniData.universeId || uniData.universeIds[0];
+          const placeRes = await fetch(`https://games.roblox.com/v1/games/multiget-place-details?universeIds=${uId}`, {
+            headers: reqHeaders,
+          });
+          const placeData = await placeRes.json().catch(() => ([]));
+          if (Array.isArray(placeData) && placeData[0]?.placeId) {
+            placeId = placeData[0].placeId;
+          }
+        }
+
+        if (placeId) {
+          const binRes = await fetch(
+            `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&placeId=${placeId}&serverplaceid=${placeId}&expectedAssetType=${assetType}&clientInsert=1`,
+            { headers: { ...reqHeaders, 'Roblox-Place-Id': String(placeId) } }
+          );
+          if (binRes.ok) {
+            arrayBuffer = await binRes.arrayBuffer();
+          }
+        }
+      } catch (e) {
+        console.warn('[Spoof Download Strategy 3 (Place Emulation) failed]:', e.message);
+      }
+    }
+
+    // Strategy 4: Manual Redirect Location Scraping with Auth Cookie
     if (!arrayBuffer) {
       try {
         const redirRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`, {
@@ -388,11 +444,11 @@ router.post('/spoof-asset', async (req, res) => {
           }
         }
       } catch (e) {
-        console.warn('[Spoof Download Strategy 2 failed]:', e.message);
+        console.warn('[Spoof Download Strategy 4 failed]:', e.message);
       }
     }
 
-    // Strategy 3: AssetDelivery v2 API CDN Resolution with Auth Cookie
+    // Strategy 5: AssetDelivery v2 API CDN Resolution with Auth Cookie
     if (!arrayBuffer) {
       try {
         const v2Res = await fetch(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, {
@@ -406,11 +462,11 @@ router.post('/spoof-asset', async (req, res) => {
           }
         }
       } catch (e) {
-        console.warn('[Spoof Download Strategy 3 failed]:', e.message);
+        console.warn('[Spoof Download Strategy 5 failed]:', e.message);
       }
     }
 
-    // Strategy 4: Economy API AssetHash CDN Resolution with Auth Cookie
+    // Strategy 6: Economy API AssetHash CDN Resolution with Auth Cookie
     if (!arrayBuffer) {
       try {
         const ecoRes = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`, {
@@ -424,7 +480,7 @@ router.post('/spoof-asset', async (req, res) => {
           }
         }
       } catch (e) {
-        console.warn('[Spoof Download Strategy 4 failed]:', e.message);
+        console.warn('[Spoof Download Strategy 6 failed]:', e.message);
       }
     }
 
