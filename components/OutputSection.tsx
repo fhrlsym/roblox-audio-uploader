@@ -145,7 +145,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             opData = await opResponse.json();
           }
 
-          if (opData.done) {
+          if (opData && opData.done) {
             if (opData.response && opData.response.assetId) {
               assetId = opData.response.assetId;
               status = 'Active';
