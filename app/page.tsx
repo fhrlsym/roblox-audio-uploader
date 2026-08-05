@@ -10,7 +10,7 @@ import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import { ToastProvider } from '../components/Toast';
-import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
+import { CARD, PANEL, LABEL, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -119,12 +119,13 @@ export default function Home() {
       if (!error && data) {
         const history: UploadRecord[] = data.map((row) => ({
           id: row.id,
-          fileName: row.name,
-          displayName: row.name,
+          fileName: cleanSongTitle(row.name),
+          displayName: cleanSongTitle(row.name),
           assetId: row.asset_id,
           accountId: row.account_id || '',
           accountName: 'Roblox',
           uploadedAt: new Date(row.uploaded_at).getTime(),
+          robloxPlaybackSpeed: row.roblox_playback_speed ? Number(row.roblox_playback_speed).toFixed(4) : undefined,
           status: row.status || 'Pending',
         }));
         setUploadHistory(history);

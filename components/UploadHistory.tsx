@@ -2,7 +2,7 @@
 
 import { Copy, History, Trash2 } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
-import { CARD } from '../lib/ui';
+import { CARD, cleanSongTitle } from '../lib/ui';
 import { UploadRecord } from '../types/audio';
 
 interface UploadHistoryProps {
@@ -69,7 +69,7 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
             <div key={record.id} className="flex items-center gap-3 p-4 transition hover:bg-[var(--surface)]">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium text-[var(--text-90)]">{record.displayName}</p>
+                  <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(record.displayName || record.fileName)}</p>
                   <span className="text-xs text-[var(--text-35)] flex-shrink-0">{formatDate(record.uploadedAt)}</span>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-[var(--text-45)]">

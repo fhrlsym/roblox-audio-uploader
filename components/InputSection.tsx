@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { ChevronRight, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
-import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
 
 interface YoutubeLinkEntry {
   url: string;
@@ -292,7 +292,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[var(--text-90)]">{link.video.title}</p>
+                        <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(link.video.title)}</p>
                         <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-45)]">
                           <Clock className="w-3 h-3" />
                           {link.video.channel || 'YouTube'} · {link.video.durationString}

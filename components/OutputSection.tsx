@@ -186,7 +186,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--text-90)]">{file.tunedName}</p>
+                    <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(file.tunedName)}</p>
                     <p className="mt-0.5 text-xs text-[var(--text-45)]">
                       Speed {file.speed}x · Amplify {file.amplify > 0 ? '+' : ''}{file.amplify}dB · Playback{' '}
                       <span className="font-mono text-[var(--accent-soft)]">{(1 / file.speed).toFixed(4)}</span>

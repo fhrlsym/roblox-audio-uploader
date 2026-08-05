@@ -139,7 +139,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm text-[var(--text-90)]">
-                      {file.video?.title || file.name}
+                      {cleanSongTitle(file.video?.title || file.name)}
                     </p>
                     <p className="truncate text-xs text-[var(--text-45)]">
                       {file.video
