@@ -15,12 +15,55 @@ const upload = multer({ dest: 'uploads/' });
 const router = Router();
 
 // ============================================================
+// SPOOFER: Deteksi nama & tipe aset tanpa upload
+// ============================================================
+const ASSET_TYPE_MAP = {
+  '1': 'Image',
+  '3': 'Audio',
+  '4': 'Mesh',
+  '8': 'Hat',
+  '11': 'Decal',
+  '12': 'Video',
+  '19': 'Model',
+  '24': 'Animation',
+  '31': 'MeshPart',
+  '61': 'Texture',
+};
+
+router.post('/spoof-detect', async (req, res) => {
+  const { assetId } = req.body;
+  if (!assetId) return res.status(400).json({ error: 'assetId wajib diisi' });
+
+  const cleanId = String(assetId).replace(/\D/g, '');
+  if (!cleanId) return res.status(400).json({ error: 'Asset ID Roblox tidak valid' });
+
+  try {
+    const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanId}/details`);
+    const ecoData = await eco.json().catch(() => ({}));
+    const name = ecoData.Name || `Asset_${cleanId}`;
+    const typeId = String(ecoData.AssetTypeId || '');
+    const assetType = ASSET_TYPE_MAP[typeId] || null;
+
+    if (!assetType) {
+      return res.status(400).json({
+        error: `Tidak bisa menentukan tipe aset (AssetTypeId: ${typeId || 'tidak diketahui'}). Aset mungkin private atau tidak valid.`,
+      });
+    }
+
+    return res.json({ success: true, assetId: cleanId, name, assetType });
+  } catch (error) {
+    console.error('Spoof detect error:', error);
+    res.status(500).json({ error: error.message || 'Gagal memeriksa aset' });
+  }
+});
+
+// ============================================================
 // SPOOFER: Generate Blank Asset + Return ID Baru
 // ============================================================
 router.post('/spoof', async (req, res) => {
   const {
     assetId,
-    assetType = 'Animation',
+    assetType,
     displayName,
     creatorType = 'user',
     creatorId,
@@ -34,13 +77,21 @@ router.post('/spoof', async (req, res) => {
   const cleanAssetId = String(assetId).replace(/\D/g, '');
 
   try {
-    // Dapatkan nama asset asli
+    // Dapatkan nama & tipe aset asli
     let assetName = displayName || `Spoofed_${cleanAssetId}`;
+    let detectedType = assetType;
     try {
       const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
       const ecoData = await eco.json().catch(() => ({}));
       if (ecoData.Name) assetName = ecoData.Name;
+      if (!detectedType) {
+        const typeId = String(ecoData.AssetTypeId || '');
+        const mapped = ASSET_TYPE_MAP[typeId];
+        if (mapped) detectedType = mapped;
+      }
     } catch {}
+
+    const finalType = detectedType || 'Animation';
 
     // Buat asset kosong baru
     const headers = {
@@ -52,7 +103,7 @@ router.post('/spoof', async (req, res) => {
       method: 'POST',
       headers,
       body: JSON.stringify({
-        assetType,
+        assetType: finalType,
         displayName: assetName,
         description: `Spoofed from ${cleanAssetId}`,
         creatorType,
@@ -69,12 +120,12 @@ router.post('/spoof', async (req, res) => {
         originalAssetId: cleanAssetId,
         newAssetId,
         name: assetName,
-        assetType,
+        assetType: finalType,
       });
     }
 
     // Fallback: upload file kosong
-    const emptyBuffer = assetType === 'Audio'
+    const emptyBuffer = finalType === 'Audio'
       ? Buffer.alloc(200)
       : Buffer.from('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"></roblox>');
 
@@ -83,7 +134,7 @@ router.post('/spoof', async (req, res) => {
 
     try {
       const operationId = await uploadToRoblox(tempFile, {
-        assetType,
+        assetType: finalType,
         displayName: assetName,
         description: `Spoofed from ${cleanAssetId}`,
         creatorType,
@@ -96,7 +147,7 @@ router.post('/spoof', async (req, res) => {
         operationId,
         originalAssetId: cleanAssetId,
         name: assetName,
-        assetType,
+        assetType: finalType,
       });
     } finally {
       if (existsSync(tempFile)) {

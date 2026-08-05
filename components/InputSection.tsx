@@ -30,7 +30,6 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [converting, setConverting] = useState(false);
-  const [convertedCount, setConvertedCount] = useState(0);
   const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -173,7 +172,6 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     if (results.length > 0) {
       onFilesAdded(results);
       toast(`Berhasil mengunduh ${results.length} audio ke MP3!`, 'success');
-      setConvertedCount((c) => c + results.length);
       const done = new Set(succeeded);
       setYoutubeLinks((prev) => prev.filter((l) => !done.has(l.url)));
       onNext?.();

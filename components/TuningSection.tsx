@@ -12,9 +12,10 @@ interface TuningSectionProps {
   onTuningComplete: (tunedFiles: TunedAudioFile[]) => void;
   onRemoveRaw: (id: string) => void;
   onNext?: () => void;
+  backendUrl?: string;
 }
 
-export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw, onNext }: TuningSectionProps) {
+export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw, onNext, backendUrl }: TuningSectionProps) {
   const { toast } = useToast();
   const [speed, setSpeed] = useState(2.3);
   const [amplify, setAmplify] = useState(-4);
@@ -50,7 +51,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
             setProgress(((i + p / 100) / rawFiles.length) * 100);
           });
         } else if (raw.fileId) {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/download-file/${raw.fileId}`);
+          const response = await fetch(`${backendUrl || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001'}/api/download-file/${raw.fileId}`);
           if (!response.ok) throw new Error('File expired or not found');
 
           const arrayBuffer = await response.arrayBuffer();

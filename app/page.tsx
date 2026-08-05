@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, ChevronLeft, CloudUpload, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
+import { Building2, Check, ChevronDown, CloudUpload, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -11,7 +11,7 @@ import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
 import { ToastProvider } from '../components/Toast';
-import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
+import { CARD, PANEL, BTN_PRIMARY } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
@@ -104,6 +104,7 @@ export default function Home() {
       clearInterval(quotaTimer);
       clearInterval(statusTimer);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
   const handlePinSubmit = (e: React.FormEvent) => {
@@ -199,24 +200,24 @@ export default function Home() {
               </div>
 
               {/* Tool Switcher */}
-              <div className="hidden sm:flex items-center gap-1.5 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4">
+              <div className="flex items-center gap-1.5 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4">
                 <button
                   onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
                     activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
-                  <Music className="w-3.5 h-3.5" />
-                  Audio Master
+                  <Music className="w-3.5 h-3.5 sm:hidden" />
+                  <span>Audio Master</span>
                 </button>
                 <button
                   onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
                     activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  Animation & Sound Spoofer
+                  <span>Spoofer</span>
                 </button>
               </div>
             </div>
@@ -230,7 +231,14 @@ export default function Home() {
                 >
                   {selectedAccount ? (
                     <>
-                      {selectedAccount.type === 'group' ? (
+                      {selectedAccount.thumbnail ? (
+                        <img
+                          src={selectedAccount.thumbnail}
+                          alt={selectedAccount.name}
+                          referrerPolicy="no-referrer"
+                          className="h-5 w-5 rounded-md object-cover border border-[var(--line)]"
+                        />
+                      ) : selectedAccount.type === 'group' ? (
                         <Building2 className="w-3.5 h-3.5 text-[var(--accent)]" />
                       ) : (
                         <User className="w-3.5 h-3.5 text-[var(--accent)]" />
@@ -244,22 +252,40 @@ export default function Home() {
                 </button>
 
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface-pop)] p-2 shadow-2xl z-50 space-y-1">
+                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-1">
                     <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--text-40)] uppercase">
                       Akun Tersimpan
                     </div>
                     {savedAccounts.map((acc) => (
                       <div
                         key={acc.id}
-                        className={`flex items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition cursor-pointer ${
+                        className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs transition cursor-pointer ${
                           selectedAccount?.id === acc.id
                             ? 'bg-[var(--accent-15)] text-[var(--accent-strong)] font-semibold'
-                            : 'text-[var(--text-70)] hover:bg-[var(--surface)]'
+                            : 'text-[var(--text-70)] hover:bg-[var(--surface-50)]'
                         }`}
                         onClick={() => selectAccount(acc)}
                       >
-                        <span className="truncate">{acc.name}</span>
-                        <div className="flex items-center gap-1">
+                        {acc.thumbnail ? (
+                          <img
+                            src={acc.thumbnail}
+                            alt={acc.name}
+                            referrerPolicy="no-referrer"
+                            className="h-8 w-8 shrink-0 rounded-lg object-cover border border-[var(--line)]"
+                          />
+                        ) : (
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
+                            {acc.type === 'group' ? <Building2 className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate">{acc.name}</p>
+                          <p className="truncate text-[10px] text-[var(--text-40)] font-normal">
+                            {acc.type === 'group' ? 'Group' : acc.ownerName ? `@${acc.ownerName}` : 'User'}
+                            {acc.type === 'group' && acc.memberCount != null ? ` · ${acc.memberCount.toLocaleString()} members` : ''}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
                           {selectedAccount?.id === acc.id && <Check className="w-3.5 h-3.5 shrink-0" />}
                           <button
                             onClick={(e) => {
@@ -303,7 +329,7 @@ export default function Home() {
                 </button>
 
                 {themeOpen && (
-                  <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-[var(--line)] bg-[var(--surface-pop)] p-2 shadow-2xl z-50 grid grid-cols-2 gap-1">
+                  <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 grid grid-cols-2 gap-1">
                     {THEMES.map((t) => (
                       <button
                         key={t.id}
@@ -336,10 +362,6 @@ export default function Home() {
               <SpooferSection
                 selectedAccount={selectedAccount}
                 backendUrl={BACKEND_URL}
-                onConvertToAudioMaster={(songTitle) => {
-                  setActiveTool('audio-master');
-                  goToStep(1);
-                }}
               />
             </motion.div>
           ) : (
@@ -441,6 +463,7 @@ export default function Home() {
                       }}
                       onRemoveRaw={removeRawFile}
                       onNext={() => goToStep(3)}
+                      backendUrl={BACKEND_URL}
                     />
                   </motion.div>
                 )}

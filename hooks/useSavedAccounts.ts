@@ -106,11 +106,46 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
     }
   };
 
-  const handleAccountAdded = (account: SavedAccount) => {
+  const upsertAccountRow = async (account: SavedAccount) => {
+    const payload = {
+      id: account.id,
+      type: account.type,
+      name: account.name,
+      display_name: account.displayName || null,
+      member_count: account.memberCount ?? null,
+      has_verified_badge: account.hasVerifiedBadge ?? false,
+      thumbnail: account.thumbnail ?? null,
+      owner_id: account.userId ?? null,
+      owner_name: account.ownerName ?? null,
+      api_key: account.apiKey || null,
+      audio_usage: account.quota?.usage ?? null,
+      audio_capacity: account.quota?.capacity ?? null,
+    };
+    const { error } = await supabase
+      .from('saved_accounts')
+      .upsert(payload, { onConflict: 'id,type' });
+    if (error) {
+      console.warn('Supabase upsert fallback:', error.message);
+      const { error: insertErr } = await supabase.from('saved_accounts').insert(payload);
+      if (insertErr) console.warn('Supabase insert failed:', insertErr.message);
+    }
+  };
+
+  const handleAccountAdded = async (account: SavedAccount) => {
+    // Simpan apiKey & cookie ke localStorage (fallback jika DB read-only)
+    const apiKeys = JSON.parse(localStorage.getItem('audioUploader_apiKeys') || '{}');
+    apiKeys[account.id] = account.apiKey;
+    localStorage.setItem('audioUploader_apiKeys', JSON.stringify(apiKeys));
     if (account.cookie) {
       const cookies = JSON.parse(localStorage.getItem('audioUploader_cookies') || '{}');
       cookies[account.id] = account.cookie;
       localStorage.setItem('audioUploader_cookies', JSON.stringify(cookies));
+    }
+    // Simpan ke Supabase supaya persist saat refresh
+    try {
+      await upsertAccountRow(account);
+    } catch {
+      // tetap berjalan walau DB gagal (masih bisa di-localStorage)
     }
     setSavedAccounts((prev) => [account, ...prev.filter((a) => a.id !== account.id)]);
     setSelectedAccount(account);
@@ -145,6 +180,7 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
     if (unlocked) {
       loadSavedAccounts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
   return {

@@ -20,9 +20,14 @@ export async function uploadToRoblox(filePath, { assetType = 'Audio', displayNam
 
   const safeName = cleanSongTitle(displayName).slice(0, 50).trim() || 'Untitled';
 
+  const fileType = String(assetType || 'Audio');
+  const isAudio = fileType.toLowerCase() === 'audio' || fileType.toLowerCase() === 'sound';
+  const fileExt = isAudio ? 'mp3' : 'rbx';
+  const fileContentType = isAudio ? 'audio/mpeg' : 'application/octet-stream';
+
   const form = new FormData();
   form.append('request', JSON.stringify({
-    assetType,
+    assetType: fileType,
     displayName: safeName,
     description,
     creationContext: {
@@ -32,8 +37,8 @@ export async function uploadToRoblox(filePath, { assetType = 'Audio', displayNam
     },
   }));
   form.append('fileContent', createReadStream(filePath), {
-    filename: `${safeName}.mp3`,
-    contentType: 'audio/mpeg',
+    filename: `${safeName}.${fileExt}`,
+    contentType: fileContentType,
   });
 
   const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
