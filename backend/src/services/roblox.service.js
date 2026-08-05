@@ -24,9 +24,19 @@ export async function uploadToRoblox(filePath, { assetType = 'Audio', displayNam
   const safeName = cleanSongTitle(displayName).slice(0, 50).trim() || 'Untitled';
 
   const fileType = String(assetType || 'Audio');
-  const isAudio = fileType.toLowerCase() === 'audio' || fileType.toLowerCase() === 'sound';
-  const fileExt = isAudio ? 'mp3' : 'rbx';
-  const fileContentType = isAudio ? 'audio/mpeg' : 'application/octet-stream';
+  const typeLower = fileType.toLowerCase();
+  let fileExt = 'rbx';
+  let fileContentType = 'application/octet-stream';
+  if (typeLower === 'audio' || typeLower === 'sound') {
+    fileExt = 'mp3';
+    fileContentType = 'audio/mpeg';
+  } else if (typeLower === 'animation') {
+    fileExt = 'rbxmx';
+    fileContentType = 'model/x-rbxm';
+  } else if (typeLower === 'model') {
+    fileExt = 'rbxm';
+    fileContentType = 'model/x-rbxm';
+  }
 
   const form = new FormData();
   form.append('request', JSON.stringify({
@@ -205,15 +215,16 @@ export async function performSpoof({ assetId, assetType, displayName, creatorTyp
   const assetName = displayName || detected?.name || `Spoofed_${cleanAssetId}`;
   const finalType = assetType || detected?.assetType || 'Audio';
 
-  // Roblox Assets API hanya menerima multipart/form-data (request + fileContent).
-  // File kosong ditolak moderasi ("Failed to parse file"), jadi kita buat file VALID:
-  //   - Audio  -> mp3 senyap pendek (ffmpeg)
-  //   - lainnya-> belum didukung file blank yang valid
+  // Roblox Assets API hanya menerima multipart/form-data + konten yang VALID.
+  // Audio memakai mp3 senyap valid (ffmpeg) -> berhasil jadi aset baru.
+  // Tipe lain (Animation/Model/Mesh) tidak punya "file kosong yang valid":
+  // skeleton rbxmx ditolak ("Failed to load asset content"), dan menyalin asli
+  // butuh cookie .ROBLOSECURITY (asset delivery 403 dgn API key saja).
   if (finalType !== 'Audio') {
     return {
       success: false,
       asset: null,
-      error: `Tipe ${finalType} belum didukung pembuatan file valid untuk spoof.`,
+      error: `Tipe ${finalType} tidak bisa di-spoof tanpa file animasi/data asli.`,
     };
   }
 
