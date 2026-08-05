@@ -548,25 +548,24 @@ export default function Home() {
             </div>
 
             {/* Capsule Segmented Stepper */}
-            <div className="relative mb-6 rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-1.5">
-              <div className="grid grid-cols-3 gap-1">
+            <div className="relative mb-6 rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-1.5 overflow-x-auto">
+              <div className="grid grid-cols-3 gap-1 min-w-[340px]">
                 {steps.map((step) => {
                   const isActive = activeStep === step.id;
                   return (
                     <button
                       key={step.id}
                       onClick={() => goToStep(step.id)}
-                      className={`relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 ${
+                      className={`relative flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl py-2.5 px-2 sm:px-3 text-xs font-semibold whitespace-nowrap transition-all duration-200 ${
                         isActive
                           ? 'bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] shadow-md'
                           : 'text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
                       }`}
                     >
-                      <step.icon className="w-4 h-4" />
-                      <span className="hidden sm:inline">{step.label}</span>
-                      <span className="sm:hidden">Step {step.id}</span>
+                      <step.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span className="truncate">{step.label}</span>
                       {step.count > 0 && (
-                        <span className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold ${
+                        <span className={`inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-bold ${
                           isActive ? 'bg-[var(--on-accent)] text-[var(--accent-dark)]' : 'bg-[var(--accent-strong)] text-[var(--on-accent)]'
                         }`}>
                           {step.count}
@@ -651,23 +650,15 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Expandable History Drawer */}
-            <details open className="group mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition">
-              <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[var(--text-90)]">
-                <div className="flex items-center gap-2">
-                  <span>Riwayat Upload Audio ({uploadHistory.length})</span>
-                </div>
-                <ChevronDown className="w-4 h-4 text-[var(--text-40)] transition group-open:rotate-180" />
-              </summary>
-              <div className="px-4 pb-4">
-                <UploadHistory
-                  history={uploadHistory}
-                  onClear={handleClearHistory}
-                  onRefresh={handleRefreshStatus}
-                  refreshingIds={refreshingIds}
-                />
-              </div>
-            </details>
+            {/* Upload History Section */}
+            <div className="mt-6">
+              <UploadHistory
+                history={uploadHistory}
+                onClear={handleClearHistory}
+                onRefresh={handleRefreshStatus}
+                refreshingIds={refreshingIds}
+              />
+            </div>
 
             {/* Footer */}
             <footer className="mt-6 text-center text-xs text-[var(--text-35)]">
