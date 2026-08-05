@@ -599,6 +599,7 @@ export default function Home() {
               <div className={activeStep === 1 ? 'stagger-enter' : 'hidden'}>
                 <InputSection
                   onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
+                  rawFilesCount={rawFiles.length}
                   backendUrl={BACKEND_URL}
                   youtubeCookies={youtubeCookies}
                   onYoutubeCookiesChange={setYoutubeCookies}

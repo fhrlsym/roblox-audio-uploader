@@ -108,6 +108,10 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
               status,
             });
           }
+          // Auto remove tuned file from queue so step counts stay accurate
+          setTimeout(() => {
+            onRemoveTuned(file.id);
+          }, 1500);
         } else {
           setUploadResults((prev) => ({
             ...prev,

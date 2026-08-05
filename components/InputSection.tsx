@@ -14,6 +14,7 @@ interface YoutubeLinkEntry {
 
 interface InputSectionProps {
   onFilesAdded: (files: RawAudioFile[]) => void;
+  rawFilesCount?: number;
   backendUrl: string;
   youtubeCookies: string;
   onYoutubeCookiesChange: (cookies: string) => void;
@@ -22,7 +23,7 @@ interface InputSectionProps {
 
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
 
-export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies, onYoutubeCookiesChange, onNext }: InputSectionProps) {
+export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendUrl, youtubeCookies, onYoutubeCookiesChange, onNext }: InputSectionProps) {
   const [activeTab, setActiveTab] = useState<'file' | 'youtube'>('youtube');
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
@@ -177,7 +178,7 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
   };
 
   const readyCount = youtubeLinks.filter((l) => l.video).length;
-  const doneCount = convertedCount;
+  const doneCount = rawFilesCount;
 
   return (
     <div className={CARD + ' p-4'}>
