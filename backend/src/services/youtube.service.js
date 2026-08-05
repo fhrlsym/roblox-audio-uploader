@@ -109,18 +109,22 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       throw new Error('Audio temp file not found after download');
     }
 
-    if (existsSync(outputPath)) unlinkSync(outputPath);
-    await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
+    let finalAudioPath = tempAudioPath;
 
-    if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
+    if (speed !== 1.0 || amplify !== 0) {
+      if (existsSync(outputPath)) unlinkSync(outputPath);
+      await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
+      if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
+      finalAudioPath = outputPath;
+    }
 
     return {
       title,
-      outputPath,
+      outputPath: finalAudioPath,
       fileId: `output_${runId}`,
       cleanup: () => {
         for (const f of [tempAudioPath, outputPath]) {
-          if (existsSync(f)) unlinkSync(f);
+          if (f && existsSync(f)) unlinkSync(f);
         }
       },
     };

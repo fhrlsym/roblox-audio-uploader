@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';
 import { downloadYoutubeMp3, fetchYoutubeVideoInfo } from '../services/youtube.service.js';
@@ -83,17 +83,14 @@ router.get('/download-file/:fileId', (req, res) => {
     return res.status(400).json({ error: 'Missing fileId' });
   }
 
-  const filePath = join(BACKEND_ROOT, `${fileId}.mp3`);
+  const match = readdirSync(BACKEND_ROOT).find((f) => f.startsWith(`${fileId}.`) || f.startsWith(`${fileId}`));
 
-  if (!existsSync(filePath)) {
+  if (!match) {
     return res.status(404).json({ error: 'File not found or expired' });
   }
 
-  res.download(filePath, `${fileId}.mp3`, (err) => {
-    if (err) {
-      console.error('Download error:', err);
-    }
-  });
+  const filePath = join(BACKEND_ROOT, match);
+  res.sendFile(filePath);
 });
 
 router.post('/youtube-upload', async (req, res) => {

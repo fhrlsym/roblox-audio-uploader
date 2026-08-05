@@ -8,6 +8,7 @@ import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
+import VersionChecker from '../components/VersionChecker';
 import { ToastProvider } from '../components/Toast';
 import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
@@ -178,6 +179,7 @@ export default function Home() {
 
   return (
     <ToastProvider>
+      <VersionChecker />
       <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         {/* Header Navigation */}
         <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-80">

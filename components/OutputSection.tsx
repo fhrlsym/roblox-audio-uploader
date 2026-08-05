@@ -51,40 +51,103 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
     try {
       const displayName = cleanSongTitle(file.tunedName);
-      const formData = new FormData();
-      formData.append('file', file.blob, file.tunedName);
-      formData.append('displayName', displayName);
-      formData.append('description', `Speed: ${file.speed}x | Amplify: ${file.amplify}dB | Roblox Playback: ${(1 / file.speed).toFixed(4)}`);
-      formData.append('creatorType', selectedAccount.type);
-      formData.append('creatorId', selectedAccount.id);
-      formData.append('apiKey', selectedAccount.apiKey);
+      let operationId: string | null = null;
 
-      let response = await fetch(`${backendUrl}/api/upload-to-roblox`, {
-        method: 'POST',
-        body: formData,
-      });
+      // 1. Try Direct Client Upload to Roblox Open Cloud API
+      try {
+        const creatorObj = selectedAccount.type === 'group'
+          ? { groupId: selectedAccount.id }
+          : { userId: selectedAccount.id };
 
-      let data = await response.json();
+        const directFormData = new FormData();
+        directFormData.append('request', JSON.stringify({
+          assetType: 'Audio',
+          displayName,
+          description: `Speed: ${file.speed}x | Amplify: ${file.amplify}dB | Roblox Playback: ${(1 / file.speed).toFixed(4)}`,
+          creationContext: {
+            creator: creatorObj,
+          },
+        }));
+        directFormData.append('fileContent', file.blob, file.tunedName);
 
-      if (response.ok && data.operationId) {
+        const directRes = await fetch('https://apis.roblox.com/assets/v1/assets', {
+          method: 'POST',
+          headers: {
+            'x-api-key': selectedAccount.apiKey,
+          },
+          body: directFormData,
+        });
+
+        if (directRes.ok) {
+          const directData = await directRes.json();
+          if (directData.path) {
+            operationId = directData.path.split('/').pop() || directData.path;
+          }
+        }
+      } catch {
+        // Direct browser request blocked by CORS or network, proceed to proxy fallback
+      }
+
+      // 2. Fallback to Railway Backend Proxy if Direct Upload did not return operationId
+      if (!operationId) {
+        const formData = new FormData();
+        formData.append('file', file.blob, file.tunedName);
+        formData.append('displayName', displayName);
+        formData.append('description', `Speed: ${file.speed}x | Amplify: ${file.amplify}dB | Roblox Playback: ${(1 / file.speed).toFixed(4)}`);
+        formData.append('creatorType', selectedAccount.type);
+        formData.append('creatorId', selectedAccount.id);
+        formData.append('apiKey', selectedAccount.apiKey);
+
+        const response = await fetch(`${backendUrl}/api/upload-to-roblox`, {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+        if (response.ok && data.operationId) {
+          operationId = data.operationId;
+        } else {
+          throw new Error(data.error || 'Upload failed');
+        }
+      }
+
+      if (operationId) {
         let assetId: string | null = null;
         let status = 'Pending';
         let opError: string | null = null;
 
         for (let attempt = 0; attempt < 120; attempt++) {
-          await new Promise((r) => setTimeout(r, 1500));
+          await new Promise((r) => setTimeout(r, Math.min(1000 + attempt * 200, 3000)));
 
-          const opResponse = await fetch(
-            `${backendUrl}/api/operation-status/${data.operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
-          );
-          const opData = await opResponse.json();
+          // Try direct polling first
+          let opData: any = null;
+          try {
+            const directOpRes = await fetch(`https://apis.roblox.com/assets/v1/operations/${operationId}`, {
+              headers: { 'x-api-key': selectedAccount.apiKey },
+            });
+            if (directOpRes.ok) {
+              opData = await directOpRes.json();
+            }
+          } catch {
+            // ignore
+          }
+
+          if (!opData) {
+            const opResponse = await fetch(
+              `${backendUrl}/api/operation-status/${operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
+            );
+            opData = await opResponse.json();
+          }
 
           if (opData.done) {
-            if (opData.assetId) {
+            if (opData.response && opData.response.assetId) {
+              assetId = opData.response.assetId;
+              status = 'Active';
+            } else if (opData.assetId) {
               assetId = opData.assetId;
               status = opData.status || 'Pending';
-            } else {
-              opError = opData.error || 'Upload failed during moderation';
+            } else if (opData.error) {
+              opError = typeof opData.error === 'string' ? opData.error : opData.error.message || 'Upload failed during moderation';
             }
             break;
           }
@@ -123,8 +186,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           }));
           toast(`Gagal upload ${displayName}: ${opError || 'Upload timeout'}`, 'error');
         }
-      } else {
-        throw new Error(data.error || 'Upload failed');
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed';
