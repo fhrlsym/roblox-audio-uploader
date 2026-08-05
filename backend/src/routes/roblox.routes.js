@@ -348,25 +348,51 @@ router.post('/spoof-asset', async (req, res) => {
   const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
 
   try {
-    let downloadUrl = `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`;
+    let cdnUrl = null;
 
+    // 1. ISpooferMotion Strategy A: Manual redirect location header scraping
     try {
-      const v2Data = await fetchWithRetry(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, 3, {
+      const redirRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&expectedAssetType=${assetType}`, {
+        redirect: 'manual',
         headers: { 'User-Agent': 'Roblox/WinInet' },
       });
-      if (v2Data && v2Data.locations && v2Data.locations[0] && v2Data.locations[0].location) {
-        downloadUrl = v2Data.locations[0].location;
+      const location = redirRes.headers.get('location');
+      if (location && location.includes('rbxcdn.com')) {
+        cdnUrl = location;
       }
-    } catch {
-      // Fallback to v1 if v2 format differs
+    } catch (e) {
+      console.warn('ISpooferMotion redirect strategy fallback:', e.message);
     }
 
-    const rawRes = await fetch(downloadUrl, {
-      headers: { 'User-Agent': 'Roblox/WinInet' },
+    // 2. ISpooferMotion Strategy B: AssetDelivery v2 API resolution
+    if (!cdnUrl) {
+      try {
+        const v2Data = await fetchWithRetry(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, 3, {
+          headers: { 'User-Agent': 'RobloxStudio/WinInet' },
+        });
+        if (v2Data && v2Data.locations && v2Data.locations[0] && v2Data.locations[0].location) {
+          cdnUrl = v2Data.locations[0].location;
+        }
+      } catch (e) {
+        console.warn('AssetDelivery v2 strategy fallback:', e.message);
+      }
+    }
+
+    // Fallback to direct asset link if CDN URL not extracted
+    const finalDownloadUrl = cdnUrl || `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`;
+
+    const rawRes = await fetch(finalDownloadUrl, {
+      headers: {
+        'User-Agent': 'RobloxStudio/WinInet',
+        'Accept': '*/*',
+        'Accept-Encoding': 'gzip, deflate, br',
+      },
     });
+
     if (!rawRes.ok) {
       throw new Error(`Gagal mengunduh binary asset Roblox (${rawRes.status})`);
     }
+
     const arrayBuffer = await rawRes.arrayBuffer();
     const { writeFileSync } = await import('fs');
     writeFileSync(tempFile, Buffer.from(arrayBuffer));
