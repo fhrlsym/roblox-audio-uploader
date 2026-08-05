@@ -2,36 +2,17 @@
 
 import { useState } from 'react';
 import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-react';
-import { TunedAudioFile, UploadResult } from '../types/audio';
+import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
 import { CARD, BTN_PRIMARY } from '../lib/ui';
-
-interface AccountLike {
-  id: string;
-  name: string;
-  type: 'user' | 'group';
-  apiKey: string;
-}
-
-interface UploadRecordResult {
-  id: string;
-  fileName: string;
-  displayName: string;
-  assetId: string;
-  accountName: string;
-  uploadedAt: number;
-  fileSize?: number;
-  duration?: number;
-  status?: string;
-}
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
   onRemoveTuned: (id: string) => void;
   backendUrl: string;
-  selectedAccount: AccountLike | null;
-  onUploadSuccess?: (record: UploadRecordResult) => void;
+  selectedAccount: SavedAccount | null;
+  onUploadSuccess?: (record: UploadRecord) => void;
 }
 
 export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, selectedAccount, onUploadSuccess }: OutputSectionProps) {
@@ -154,9 +135,18 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     }
     const targets = tunedFiles.filter((f) => !uploadResults[f.id]?.success && !uploading[f.id]);
     if (targets.length === 0) return;
-    for (const file of targets) {
-      await handleUploadToRoblox(file);
-    }
+
+    const CONCURRENCY = 2;
+    let nextIndex = 0;
+
+    const worker = async () => {
+      while (nextIndex < targets.length) {
+        const file = targets[nextIndex++];
+        await handleUploadToRoblox(file);
+      }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
   };
 
   const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;

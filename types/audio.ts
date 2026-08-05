@@ -1,4 +1,5 @@
-// Info video YouTube (hasil /api/youtube-info)
+// Tipe data terpusat untuk Roblox Audio Uploader
+
 export interface VideoInfo {
   id: string;
   title: string;
@@ -8,19 +9,17 @@ export interface VideoInfo {
   channel: string;
 }
 
-// Raw audio file (belum di-tune)
 export interface RawAudioFile {
   id: string;
   name: string;
-  file?: File; // untuk file upload
-  fileId?: string; // untuk YouTube download (backend fileId)
-  url?: string; // YouTube URL
-  video?: VideoInfo; // info YouTube (thumbnail, judul, durasi)
+  file?: File;
+  fileId?: string;
+  url?: string;
+  video?: VideoInfo;
   duration?: number;
   size?: number;
 }
 
-// Tuned audio file (sudah di-tune dengan playbackRate)
 export interface TunedAudioFile {
   id: string;
   originalName: string;
@@ -29,14 +28,55 @@ export interface TunedAudioFile {
   speed: number;
   amplify: number;
   duration?: number;
-  sourceId: string; // reference ke RawAudioFile.id
+  sourceId: string;
 }
 
-// Upload result
 export interface UploadResult {
   filename: string;
   assetId?: string;
   status?: string;
   error?: string;
   success: boolean;
+}
+
+export interface RobloxQuota {
+  usage: number;
+  capacity: number;
+  period?: string;
+}
+
+export interface SavedAccount {
+  id: string;
+  name: string;
+  type: 'user' | 'group';
+  apiKey: string;
+  userId?: string;
+  groupId?: string;
+  displayName?: string;
+  memberCount?: number;
+  hasVerifiedBadge?: boolean;
+  thumbnail?: string | null;
+  ownerName?: string | null;
+  quota?: RobloxQuota | null;
+}
+
+export interface UploadRecord {
+  id: string;
+  fileName: string;
+  displayName: string;
+  assetId: string;
+  accountId?: string;
+  accountName: string;
+  uploadedAt: number;
+  fileSize?: number;
+  duration?: number;
+  status: string;
+}
+
+export interface UploadStats {
+  total: number;
+  active: number;
+  pending: number;
+  failed: number;
+  copyright: number;
 }

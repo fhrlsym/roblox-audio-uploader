@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, Loader2, Building2, Check, Sparkles, User } from 'lucide-react';
 import { INPUT, LABEL } from '../lib/ui';
+import { SavedAccount } from '../types/audio';
 
 interface KeyOwner {
   id: string;
@@ -34,29 +35,10 @@ interface KeyInfoResult {
   groups: GroupInfo[];
 }
 
-interface AddedAccount {
-  id: string;
-  name: string;
-  type: 'user' | 'group';
-  apiKey: string;
-  userId?: string;
-  groupId?: string;
-  displayName?: string;
-  memberCount?: number;
-  hasVerifiedBadge?: boolean;
-  thumbnail?: string | null;
-  ownerName?: string | null;
-  quota?: {
-    usage: number;
-    capacity: number;
-    period?: string;
-  } | null;
-}
-
 interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onAccountAdded: (account: AddedAccount) => void;
+  onAccountAdded: (account: SavedAccount) => void;
   backendUrl: string;
 }
 
@@ -127,7 +109,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
     const isGroup = !!selectedGroupId;
     const group = isGroup ? keyInfo.groups.find((g) => g.id === selectedGroupId) : undefined;
 
-    const account: AddedAccount = {
+    const account: SavedAccount = {
       id: selectedGroupId || keyInfo.owner.id,
       name: isGroup
         ? group?.name || 'Group'

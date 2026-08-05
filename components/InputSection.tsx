@@ -124,43 +124,50 @@ export default function InputSection({ onFilesAdded, backendUrl, youtubeCookies,
     const results: RawAudioFile[] = [];
     const succeeded: string[] = [];
 
-    for (const link of targets) {
-      try {
-        const response = await fetch(`${backendUrl}/api/youtube-download`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url: link.url, speed: 1.0, amplify: 0, cookies: youtubeCookies }),
-        });
+    const CONCURRENCY = 2;
+    let nextIndex = 0;
 
-        const data = await response.json();
-
-        if (data.success) {
-          results.push({
-            id: `yt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-            name: data.filename,
-            fileId: data.fileId,
-            url: link.url,
-            video: link.video,
+    const worker = async () => {
+      while (nextIndex < targets.length) {
+        const link = targets[nextIndex++];
+        try {
+          const response = await fetch(`${backendUrl}/api/youtube-download`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: link.url, speed: 1.0, amplify: 0, cookies: youtubeCookies }),
           });
-          succeeded.push(link.url);
-        } else {
-          throw new Error(data.error || 'Download failed');
+
+          const data = await response.json();
+
+          if (data.success) {
+            results.push({
+              id: `yt_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+              name: data.filename,
+              fileId: data.fileId,
+              url: link.url,
+              video: link.video,
+            });
+            succeeded.push(link.url);
+          } else {
+            throw new Error(data.error || 'Download failed');
+          }
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Download failed';
+          if (isBotError(message)) {
+            setCookieHelpUrl(link.url);
+          }
+          setYoutubeLinks((prev) =>
+            prev.map((l) => (l.url === link.url ? { ...l, error: message } : l))
+          );
         }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Download failed';
-        if (isBotError(message)) {
-          setCookieHelpUrl(link.url);
-        }
-        setYoutubeLinks((prev) =>
-          prev.map((l) => (l.url === link.url ? { ...l, error: message } : l))
-        );
       }
-    }
+    };
+
+    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
 
     if (results.length > 0) {
       onFilesAdded(results);
       setConvertedCount((c) => c + results.length);
-      // Refresh antrian: remove links that already succeeded so queue stays clean.
       const done = new Set(succeeded);
       setYoutubeLinks((prev) => prev.filter((l) => !done.has(l.url)));
       onNext?.();

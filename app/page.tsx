@@ -1,14 +1,14 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Building2, Check, ChevronDown, ChevronLeft, CloudUpload, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
-import { RawAudioFile, TunedAudioFile } from '../types/audio';
+import { RawAudioFile, TunedAudioFile, SavedAccount, UploadRecord, UploadStats } from '../types/audio';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import AccountModal from '../components/AccountModal';
-import UploadHistory, { UploadRecord } from '../components/UploadHistory';
+import UploadHistory from '../components/UploadHistory';
 import { ToastProvider } from '../components/Toast';
 import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
 
@@ -31,33 +31,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
-
-interface SavedAccount {
-  id: string;
-  name: string;
-  type: 'user' | 'group';
-  apiKey: string;
-  userId?: string;
-  groupId?: string;
-  displayName?: string;
-  memberCount?: number;
-  hasVerifiedBadge?: boolean;
-  thumbnail?: string | null;
-  ownerName?: string | null;
-  quota?: {
-    usage: number;
-    capacity: number;
-    period?: string;
-  } | null;
-}
-
-interface UploadStats {
-  total: number;
-  active: number;
-  pending: number;
-  failed: number;
-  copyright: number;
-}
 
 export default function Home() {
   const [unlocked, setUnlocked] = useState(false);
@@ -116,7 +89,15 @@ export default function Home() {
         }));
         setSavedAccounts(accounts);
         if (accounts.length > 0) {
-          setSelectedAccount((prev) => prev && accounts.some((a) => a.id === prev.id) ? prev : accounts[0]);
+          const savedAccId = localStorage.getItem('audioUploader_selectedAccountId');
+          setSelectedAccount((prev) => {
+            if (prev && accounts.some((a) => a.id === prev.id)) return prev;
+            if (savedAccId) {
+              const matched = accounts.find((a) => a.id === savedAccId);
+              if (matched) return matched;
+            }
+            return accounts[0];
+          });
         } else {
           setSelectedAccount(null);
         }
@@ -334,6 +315,13 @@ export default function Home() {
   };
 
   useEffect(() => {
+    const isUnlocked = localStorage.getItem('audioUploader_unlocked') === 'true';
+    if (isUnlocked) {
+      setUnlocked(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const saved = localStorage.getItem(SETTINGS_KEY);
     if (saved) {
       try {
@@ -362,6 +350,9 @@ export default function Home() {
 
   useEffect(() => {
     selectedAccountRef.current = selectedAccount;
+    if (selectedAccount) {
+      localStorage.setItem('audioUploader_selectedAccountId', selectedAccount.id);
+    }
   }, [selectedAccount]);
 
   useEffect(() => {
@@ -382,6 +373,7 @@ export default function Home() {
     e.preventDefault();
     if (pin === CORRECT_PIN) {
       setUnlocked(true);
+      localStorage.setItem('audioUploader_unlocked', 'true');
       setPin('');
       setPinError(false);
     } else {
@@ -446,331 +438,251 @@ export default function Home() {
 
   return (
     <ToastProvider>
-      <div data-theme={theme} className="relative min-h-screen bg-[var(--bg)] text-[var(--text)]">
-      <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 h-96 w-[60rem] rounded-full bg-[var(--glow-1)] blur-[130px]" />
-      <div className="pointer-events-none fixed bottom-0 -left-20 h-72 w-72 rounded-full bg-[var(--glow-2)] blur-[110px]" />
-      <div className="pointer-events-none fixed bottom-10 right-0 h-56 w-56 rounded-full bg-[var(--glow-3)] blur-[100px]" />
+      <div data-theme={theme} className="relative min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-[var(--accent-20)] selection:text-[var(--accent-strong)]">
+        {/* Background Ambient Glows */}
+        <div className="pointer-events-none fixed -top-40 left-1/2 -translate-x-1/2 h-96 w-[60rem] rounded-full bg-[var(--glow-1)] blur-[140px]" />
+        <div className="pointer-events-none fixed bottom-0 -left-20 h-80 w-80 rounded-full bg-[var(--glow-2)] blur-[120px]" />
+        <div className="pointer-events-none fixed bottom-10 right-0 h-64 w-64 rounded-full bg-[var(--glow-3)] blur-[110px]" />
 
-      <div className="relative mx-auto max-w-5xl px-4 pt-5 pb-12">
-        {/* Header */}
-        <header className={`${CARD} relative mb-4 p-5 sm:p-6`}>
-          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(ellipse_at_top_right,var(--accent-15),transparent_60%)]" />
-          <div className="relative flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-[var(--accent-soft)]">
-                S2 Studio
-              </p>
-              <h1 className="mt-0.5 font-serif text-2xl sm:text-3xl font-semibold tracking-tight">
-                Audio Master{' '}
-                <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
-                  to Roblox
-                </span>
-              </h1>
-              <p className="mt-1 text-sm text-[var(--text-50)]">Convert · Tune · Upload · Track</p>
+        {/* Floating Command Hub Container */}
+        <div className="relative mx-auto max-w-3xl px-4 py-8 sm:py-12">
+          {/* Main Floating Glass Hub */}
+          <div className="relative rounded-3xl border border-[var(--accent-15)] bg-[var(--panel)] p-6 sm:p-8 backdrop-blur-2xl shadow-[0_20px_50px_rgba(0,0,0,0.4)]">
+            <div className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(ellipse_at_top_right,var(--accent-10),transparent_60%)]" />
+
+            {/* Topbar: Header & Controls */}
+            <div className="relative mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-[var(--line)] pb-5">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex h-2 w-2 rounded-full bg-[var(--accent-strong)] animate-pulse" />
+                  <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[var(--accent-soft)]">
+                    S2 Studio
+                  </p>
+                </div>
+                <h1 className="mt-1 font-serif text-2xl sm:text-3xl font-semibold tracking-tight">
+                  Audio Master{' '}
+                  <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
+                    to Roblox
+                  </span>
+                </h1>
+              </div>
+
+              {/* Topbar Actions: Account Pill & Theme Dropdown */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Account Selector Pill */}
+                {selectedAccount ? (
+                  <button
+                    onClick={() => setShowAccountModal(true)}
+                    className="flex items-center gap-2.5 rounded-2xl border border-[var(--accent-25)] bg-[var(--accent-10)] px-3 py-1.5 text-xs text-[var(--text-90)] transition hover:border-[var(--accent-50)] active:scale-[0.98]"
+                    title="Ganti atau kelola akun Roblox"
+                  >
+                    {selectedAccount.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={selectedAccount.thumbnail}
+                        alt={selectedAccount.name}
+                        className="h-6 w-6 rounded-full border border-[var(--accent-30)] object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-20)]">
+                        {selectedAccount.type === 'group' ? (
+                          <Building2 className="w-3 h-3 text-[var(--accent-strong)]" />
+                        ) : (
+                          <User className="w-3 h-3 text-[var(--accent-strong)]" />
+                        )}
+                      </div>
+                    )}
+                    <span className="max-w-[110px] truncate font-medium">{selectedAccount.name}</span>
+                    <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setShowAccountModal(true)}
+                    className="flex items-center gap-1.5 rounded-2xl border border-dashed border-[var(--accent-30)] bg-[var(--accent-06)] px-3 py-1.5 text-xs font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Tambah Akun
+                  </button>
+                )}
+
+                {/* Theme Selector Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setThemeOpen((v) => !v)}
+                    className="flex items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-xs text-[var(--text-80)] transition hover:border-[var(--accent-30)]"
+                  >
+                    <span className="h-3 w-3 rounded-full" style={{ background: THEMES.find((t) => t.id === theme)?.swatch }} />
+                    <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
+                  </button>
+                  {themeOpen && (
+                    <div className="modal-enter absolute right-0 z-40 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl backdrop-blur-xl">
+                      {THEMES.map((t) => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                            setTheme(t.id);
+                            setThemeOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-2 rounded-xl px-2.5 py-2 text-left text-xs transition ${
+                            theme === t.id ? 'bg-[var(--accent-10)] text-[var(--accent-strong)] font-semibold' : 'text-[var(--text-70)] hover:bg-[var(--surface)]'
+                          }`}
+                        >
+                          <span className="h-3 w-3 rounded-full" style={{ background: t.swatch }} />
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <button
-                  onClick={() => setThemeOpen((v) => !v)}
-                  className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-80)] transition hover:border-[var(--accent-30)]"
-                >
-                  <span className="h-3.5 w-3.5 rounded-full" style={{ background: THEMES.find((t) => t.id === theme)?.swatch }} />
-                  <span className="hidden sm:inline text-xs">{THEMES.find((t) => t.id === theme)?.label}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
-                </button>
-                {themeOpen && (
-                  <div className="modal-enter absolute right-0 z-30 mt-2 w-44 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl">
-                    {THEMES.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                          setTheme(t.id);
-                          setThemeOpen(false);
-                        }}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition ${
-                          theme === t.id ? 'bg-[var(--accent-10)] text-[var(--accent-strong)]' : 'text-[var(--text-70)] hover:bg-[var(--surface)]'
-                        }`}
-                      >
-                        <span className="h-3.5 w-3.5 rounded-full" style={{ background: t.swatch }} />
-                        {t.label}
-                      </button>
-                    ))}
+
+            {/* Quick Analytics Counters */}
+            <div className="mb-6 grid grid-cols-4 gap-2 text-center">
+              {stats.map((stat) => (
+                <div key={stat.label} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2.5">
+                  <div className="text-xl font-bold tabular-nums text-[var(--text)]">{stat.value}</div>
+                  <div className="text-[9px] uppercase tracking-[0.18em] text-[var(--text-40)]">{stat.label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Capsule Segmented Stepper */}
+            <div className="relative mb-6 rounded-2xl border border-[var(--line)] bg-[var(--surface-strong)] p-1.5">
+              <div className="grid grid-cols-3 gap-1">
+                {steps.map((step) => {
+                  const isActive = activeStep === step.id;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => goToStep(step.id)}
+                      className={`relative flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-all duration-200 ${
+                        isActive
+                          ? 'bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] shadow-md'
+                          : 'text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
+                      }`}
+                    >
+                      <step.icon className="w-4 h-4" />
+                      <span className="hidden sm:inline">{step.label}</span>
+                      <span className="sm:hidden">Step {step.id}</span>
+                      {step.count > 0 && (
+                        <span className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-bold ${
+                          isActive ? 'bg-[var(--on-accent)] text-[var(--accent-dark)]' : 'bg-[var(--accent-strong)] text-[var(--on-accent)]'
+                        }`}>
+                          {step.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* YouTube Cookies Option (Collapsible) */}
+            <details className="group mb-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition">
+              <summary className="flex cursor-pointer items-center justify-between px-4 py-3 text-xs font-medium text-[var(--text-70)] hover:text-[var(--text)]">
+                <span>YouTube Cookies (Opsional untuk video bertanda login)</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)] transition group-open:rotate-180" />
+              </summary>
+              <div className="px-4 pb-4 pt-1">
+                <textarea
+                  value={youtubeCookies}
+                  onChange={(e) => setYoutubeCookies(e.target.value)}
+                  placeholder="Paste Netscape cookies format..."
+                  rows={2}
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-3 py-2 font-mono text-xs text-[var(--text)] outline-none transition focus:border-[var(--accent-40)]"
+                />
+              </div>
+            </details>
+
+            {/* Active Workbench Section */}
+            <div className="relative">
+              <div className={activeStep === 1 ? 'stagger-enter' : 'hidden'}>
+                <InputSection
+                  onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
+                  backendUrl={BACKEND_URL}
+                  youtubeCookies={youtubeCookies}
+                  onYoutubeCookiesChange={setYoutubeCookies}
+                  onNext={() => goToStep(2)}
+                />
+              </div>
+
+              <div className={activeStep === 2 ? 'stagger-enter' : 'hidden'}>
+                {rawFiles.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center">
+                    <Wand2 className="mx-auto mb-3 h-8 w-8 text-[var(--text-30)]" />
+                    <p className="text-sm font-medium text-[var(--text-70)]">Belum ada file audio untuk di-tune.</p>
+                    <p className="mt-1 text-xs text-[var(--text-40)]">Tambahkan link YouTube atau upload file di Langkah 1.</p>
+                    <button onClick={() => goToStep(1)} className={BTN_PRIMARY + ' mt-4'}>
+                      <ChevronLeft className="w-4 h-4" />
+                      Kembali ke Langkah 1
+                    </button>
                   </div>
+                ) : (
+                  <TuningSection
+                    rawFiles={rawFiles}
+                    onTuningComplete={(tuned) => setTunedFiles((prev) => [...prev, ...tuned])}
+                    onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
+                    onNext={() => goToStep(3)}
+                  />
+                )}
+              </div>
+
+              <div className={activeStep === 3 ? 'stagger-enter' : 'hidden'}>
+                {tunedFiles.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-[var(--line)] p-8 text-center">
+                    <CloudUpload className="mx-auto mb-3 h-8 w-8 text-[var(--text-30)]" />
+                    <p className="text-sm font-medium text-[var(--text-70)]">Belum ada file hasil tuning untuk di-upload.</p>
+                    <p className="mt-1 text-xs text-[var(--text-40)]">Proses tuning file Anda di Langkah 2 dulu.</p>
+                    <button onClick={() => goToStep(2)} className={BTN_PRIMARY + ' mt-4'}>
+                      <ChevronLeft className="w-4 h-4" />
+                      Kembali ke Langkah 2
+                    </button>
+                  </div>
+                ) : (
+                  <OutputSection
+                    tunedFiles={tunedFiles}
+                    onRemoveTuned={(id) => setTunedFiles((prev) => prev.filter((f) => f.id !== id))}
+                    backendUrl={BACKEND_URL}
+                    selectedAccount={selectedAccount}
+                    onUploadSuccess={handleUploadSuccess}
+                  />
                 )}
               </div>
             </div>
-          </div>
-        </header>
 
-        {/* Stats */}
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {stats.map((stat) => (
-            <div key={stat.label} className={`${PANEL} px-4 py-3 text-center`}>
-              <div className="text-2xl font-semibold tabular-nums text-[var(--text)]">{stat.value}</div>
-              <div className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-[var(--text-40)]">{stat.label}</div>
-            </div>
-          ))}
-        </div>
+            {/* Expandable History Drawer */}
+            <details open className="group mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition">
+              <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-semibold text-[var(--text-90)]">
+                <div className="flex items-center gap-2">
+                  <span>Riwayat Upload Audio ({uploadHistory.length})</span>
+                </div>
+                <ChevronDown className="w-4 h-4 text-[var(--text-40)] transition group-open:rotate-180" />
+              </summary>
+              <div className="px-4 pb-4">
+                <UploadHistory
+                  history={uploadHistory}
+                  onClear={handleClearHistory}
+                  onRefresh={handleRefreshStatus}
+                  refreshingIds={refreshingIds}
+                />
+              </div>
+            </details>
 
-        {/* Account Selector */}
-        <div className={`${CARD} mb-4 p-4`}>
-          <div className="mb-3 flex items-center justify-between">
-            <label className={LABEL}>Roblox Account</label>
-            <button
-              onClick={() => setShowAccountModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--accent-25)] px-3 py-1.5 text-xs text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Tambah akun
-            </button>
-          </div>
-          {savedAccounts.length === 0 ? (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-dashed border-[var(--line)] p-4">
-              <p className="text-sm text-[var(--text-45)]">Belum ada akun tersimpan. Tambahkan API key Roblox untuk mulai upload.</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {savedAccounts.map((account) => {
-                const selected = selectedAccount?.id === account.id;
-                const pct = account.quota && account.quota.capacity > 0
-                  ? Math.min(100, (account.quota.usage / account.quota.capacity) * 100)
-                  : null;
-                const quotaColor = pct == null ? '' : pct >= 90 ? 'bg-rose-400' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
-                return (
-                  <div
-                    key={account.id}
-                    className={`flex items-center gap-3 rounded-xl border p-3 transition ${
-                      selected
-                        ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
-                        : 'border-[var(--line)] bg-[var(--surface)] hover:border-[var(--accent-25)]'
-                    }`}
-                  >
-                    <button
-                      onClick={() => setSelectedAccount(account)}
-                      className="flex flex-1 items-center gap-3 text-left min-w-0"
-                    >
-                      {account.thumbnail ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={account.thumbnail}
-                          alt={account.name}
-                          className="h-10 w-10 shrink-0 rounded-lg border border-[var(--line)] object-cover"
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border ${
-                          account.type === 'group' ? 'border-[var(--accent-25)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-strong)]'
-                        }`}>
-                          {account.type === 'group' ? (
-                            <Building2 className="w-4 h-4 text-[var(--accent-soft)]" />
-                          ) : (
-                            <User className="w-4 h-4 text-[var(--text-50)]" />
-                          )}
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{account.name}</p>
-                          {account.hasVerifiedBadge && (
-                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-strong)] text-[9px] font-bold text-[var(--on-accent)]">
-                              <Check className="w-2.5 h-2.5" />
-                            </span>
-                          )}
-                          {selected && (
-                            <span className="rounded-full bg-[var(--accent-20)] px-2 py-0.5 text-[10px] font-medium text-[var(--accent-strong)]">
-                              Aktif
-                            </span>
-                          )}
-                        </div>
-                        <p className="truncate text-[11px] text-[var(--text-45)]">
-                          {account.type === 'user' ? `@${account.name}` : account.name}
-                          {account.memberCount != null && ` · ${account.memberCount.toLocaleString('id-ID')} member`}
-                          {account.id && ` · ID ${account.id}`}
-                        </p>
-                        {account.type === 'group' && account.ownerName && (
-                          <p className="truncate text-[10px] text-[var(--accent-soft)]">
-                            milik @{account.ownerName} · menyimpan aset di group ini
-                          </p>
-                        )}
-                        {account.quota && (
-                          <div className="mt-1.5">
-                            <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
-                              <span>Kuota audio bulan ini</span>
-                              <span className="tabular-nums text-[var(--text-50)]">
-                                {account.quota.usage.toLocaleString('id-ID')} / {account.quota.capacity.toLocaleString('id-ID')}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 h-1 w-full overflow-hidden rounded-full bg-[var(--surface-strong)]">
-                              <div className={`h-full rounded-full ${quotaColor}`} style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                    <button
-                      onClick={() => handleDeleteAccount(account.id)}
-                      className="shrink-0 p-2 text-[var(--text-40)] transition hover:text-rose-300"
-                      title="Hapus akun"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* YouTube Cookies */}
-        <details className={`${CARD} mb-4 group`}>
-          <summary className="flex cursor-pointer items-center justify-between p-4 text-sm font-medium text-[var(--text-80)]">
-            YouTube Cookies (optional)
-            <ChevronDown className="w-4 h-4 text-[var(--text-40)] transition group-open:rotate-180" />
-          </summary>
-          <div className="px-4 pb-4">
-            <textarea
-              value={youtubeCookies}
-              onChange={(e) => setYoutubeCookies(e.target.value)}
-              placeholder="Paste Netscape cookies format..."
-              rows={3}
-              className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] px-4 py-3 font-mono text-xs text-[var(--text)] outline-none transition focus:border-[var(--accent-50)]"
-            />
-            <p className="mt-2 text-xs text-[var(--text-40)]">
-              Untuk mengunduh audio YouTube yang memerlukan login.
-            </p>
-          </div>
-        </details>
-
-        {/* Stepper Nav */}
-        <div className={`${CARD} mb-4 p-3 sm:p-4`}>
-          <div className="flex items-center gap-1 sm:gap-2">
-            {steps.map((step, i) => (
-              <Fragment key={step.id}>
-                {i > 0 && (
-                  <div
-                    className={`h-px flex-1 ${
-                      activeStep >= step.id ? 'bg-[var(--accent-30)]' : 'bg-[var(--line)]'
-                    }`}
-                  />
-                )}
-                <button
-                  onClick={() => goToStep(step.id)}
-                  className="group flex min-w-0 flex-1 flex-col items-center gap-1 sm:flex-row sm:justify-center sm:gap-2.5 rounded-xl px-2 py-2 transition sm:px-3"
-                >
-                  <span
-                    className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-sm transition ${
-                      activeStep === step.id
-                        ? 'border-transparent bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] shadow-[0_0_18px_var(--accent-30)]'
-                        : activeStep > step.id
-                          ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                          : 'border-[var(--line)] bg-[var(--surface)] text-[var(--text-40)] group-hover:border-[var(--accent-30)]'
-                    }`}
-                  >
-                    <step.icon className="w-4 h-4" />
-                    {step.count > 0 && (
-                      <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--accent-strong)] px-1 text-[10px] font-bold text-[var(--on-accent)]">
-                        {step.count}
-                      </span>
-                    )}
-                  </span>
-                  <span className="flex min-w-0 flex-col text-center sm:text-left">
-                    <span
-                      className={`truncate text-xs font-semibold ${
-                        activeStep === step.id ? 'text-[var(--accent-strong)]' : 'text-[var(--text-80)]'
-                      }`}
-                    >
-                      {step.id}. {step.label}
-                    </span>
-                    <span className="hidden text-[10px] text-[var(--text-40)] sm:block">{step.sub}</span>
-                  </span>
-                </button>
-              </Fragment>
-            ))}
+            {/* Footer */}
+            <footer className="mt-6 text-center text-xs text-[var(--text-35)]">
+              <p>S2 Studio · Audio Master to Roblox</p>
+            </footer>
           </div>
         </div>
 
-        {/* Sections (all kept mounted so progress isn't lost) */}
-        <div className={activeStep === 1 ? '' : 'hidden'}>
-          <InputSection
-            onFilesAdded={(files) => setRawFiles((prev) => [...prev, ...files])}
-            backendUrl={BACKEND_URL}
-            youtubeCookies={youtubeCookies}
-            onYoutubeCookiesChange={setYoutubeCookies}
-            onNext={() => goToStep(2)}
-          />
-        </div>
-
-        <div className={activeStep === 2 ? '' : 'hidden'}>
-          {rawFiles.length === 0 ? (
-            <div className={`${CARD} p-8 text-center`}>
-              <Wand2 className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
-              <p className="text-sm text-[var(--text-50)]">Belum ada file audio untuk di-tune.</p>
-              <p className="mt-1 text-xs text-[var(--text-40)]">Unduh dari YouTube atau tambah file di langkah 1 dulu.</p>
-              <button onClick={() => goToStep(1)} className={BTN_PRIMARY + ' mt-5'}>
-                <ChevronLeft className="w-4 h-4" />
-                Kembali ke Input Audio
-              </button>
-            </div>
-          ) : (
-            <TuningSection
-              rawFiles={rawFiles}
-              onTuningComplete={(tuned) => setTunedFiles((prev) => [...prev, ...tuned])}
-              onRemoveRaw={(id) => setRawFiles((prev) => prev.filter((f) => f.id !== id))}
-              onNext={() => goToStep(3)}
-            />
-          )}
-        </div>
-
-        <div className={activeStep === 3 ? '' : 'hidden'}>
-          {tunedFiles.length === 0 ? (
-            <div className={`${CARD} p-8 text-center`}>
-              <CloudUpload className="mx-auto mb-3 h-10 w-10 text-[var(--text-30)]" />
-              <p className="text-sm text-[var(--text-50)]">Belum ada file hasil tuning untuk di-upload.</p>
-              <p className="mt-1 text-xs text-[var(--text-40)]">Tune file di langkah 2 dulu.</p>
-              <button onClick={() => goToStep(2)} className={BTN_PRIMARY + ' mt-5'}>
-                <ChevronLeft className="w-4 h-4" />
-                Kembali ke Audio Tuning
-              </button>
-            </div>
-          ) : (
-            <OutputSection
-              tunedFiles={tunedFiles}
-              onRemoveTuned={(id) => setTunedFiles((prev) => prev.filter((f) => f.id !== id))}
-              backendUrl={BACKEND_URL}
-              selectedAccount={selectedAccount}
-              onUploadSuccess={handleUploadSuccess}
-            />
-          )}
-        </div>
-
-        {/* History */}
-        <div className="mt-5">
-          <UploadHistory
-            history={uploadHistory}
-            onClear={handleClearHistory}
-            onRefresh={handleRefreshStatus}
-            refreshingIds={refreshingIds}
-          />
-        </div>
-
-        {/* Footer */}
-        <footer className="mt-8 text-center">
-          <p className="font-serif text-lg">
-            <span className="bg-gradient-to-r from-[var(--accent-strong)] to-[var(--accent-deep)] bg-clip-text text-transparent">
-              S2 Studio
-            </span>
-          </p>
-          <p className="mt-1 text-xs text-[var(--text-40)]">Audio Master to Roblox · Created by fhrlsym</p>
-          <p className="mt-1 font-mono text-[10px] text-[var(--text-30)]">V.123142</p>
-        </footer>
-      </div>
-
-      <AccountModal
-        isOpen={showAccountModal}
-        onClose={() => setShowAccountModal(false)}
-        onAccountAdded={handleAccountAdded}
-        backendUrl={BACKEND_URL}
-      />
+        {/* Account Modal */}
+        <AccountModal
+          isOpen={showAccountModal}
+          onClose={() => setShowAccountModal(false)}
+          onAccountAdded={handleAccountAdded}
+          backendUrl={BACKEND_URL}
+        />
       </div>
     </ToastProvider>
   );

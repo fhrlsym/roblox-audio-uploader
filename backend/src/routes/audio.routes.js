@@ -1,0 +1,150 @@
+import { Router } from 'express';
+import multer from 'multer';
+import { existsSync, unlinkSync } from 'fs';
+import { join } from 'path';
+import { BACKEND_ROOT } from '../config.js';
+import { downloadYoutubeMp3, fetchYoutubeVideoInfo } from '../services/youtube.service.js';
+import { runFFmpeg } from '../services/ffmpeg.service.js';
+import { uploadToRoblox } from '../services/roblox.service.js';
+
+const upload = multer({ dest: 'uploads/' });
+const router = Router();
+
+router.post('/youtube-download', async (req, res) => {
+  const { url, speed = 1.0, amplify = 0, cookies } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+
+  try {
+    const { title, fileId } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
+    res.json({
+      success: true,
+      filename: `${title}.mp3`,
+      fileId,
+    });
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: error.message || 'Download failed' });
+  }
+});
+
+router.post('/youtube-info', async (req, res) => {
+  const { url, cookies } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+
+  try {
+    const video = await fetchYoutubeVideoInfo(url, cookies);
+    res.json({
+      success: true,
+      video,
+    });
+  } catch (error) {
+    console.error('YouTube info error:', error);
+    res.status(500).json({ error: error.message || 'Failed to fetch video info' });
+  }
+});
+
+router.post('/convert-file', upload.single('file'), async (req, res) => {
+  const { speed = 1.0, amplify = 0 } = req.body;
+
+  if (!req.file) {
+    return res.status(400).json({ error: 'Missing file' });
+  }
+
+  const fileId = `converted_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const outputPath = join(BACKEND_ROOT, `${fileId}.mp3`);
+
+  try {
+    await runFFmpeg(req.file.path, outputPath, parseFloat(speed), parseFloat(amplify));
+    res.json({
+      success: true,
+      fileId,
+      filename: req.file.originalname.replace(/\.[^/.]+$/, '') + `_${speed}x.mp3`,
+    });
+  } catch (error) {
+    console.error('Convert file error:', error);
+    res.status(500).json({ error: error.message || 'Convert failed' });
+  } finally {
+    if (req.file && existsSync(req.file.path)) {
+      try { unlinkSync(req.file.path); } catch (e) { console.error('Cleanup error:', e); }
+    }
+  }
+});
+
+router.get('/download-file/:fileId', (req, res) => {
+  const { fileId } = req.params;
+
+  if (!fileId) {
+    return res.status(400).json({ error: 'Missing fileId' });
+  }
+
+  const filePath = join(BACKEND_ROOT, `${fileId}.mp3`);
+
+  if (!existsSync(filePath)) {
+    return res.status(404).json({ error: 'File not found or expired' });
+  }
+
+  res.download(filePath, `${fileId}.mp3`, (err) => {
+    if (err) {
+      console.error('Download error:', err);
+    }
+  });
+});
+
+router.post('/youtube-upload', async (req, res) => {
+  const {
+    url,
+    speed = 1.0,
+    amplify = 0,
+    cookies,
+    displayName,
+    description = '',
+    creatorType = 'user',
+    creatorId,
+    apiKey,
+  } = req.body;
+
+  if (!url || !/youtube\.com|youtu\.be/.test(url)) {
+    return res.status(400).json({ error: 'Invalid YouTube URL' });
+  }
+  if (!creatorId) {
+    return res.status(400).json({ error: 'Missing creator ID' });
+  }
+  if (!apiKey) {
+    return res.status(400).json({ error: 'Missing API key' });
+  }
+
+  try {
+    const { title, outputPath, cleanup } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
+    const name = `${displayName || title}.mp3`;
+    try {
+      const operationId = await uploadToRoblox(outputPath, {
+        assetType: 'Audio',
+        displayName: name,
+        description,
+        creatorType,
+        creatorId,
+        apiKey,
+      });
+      res.json({ success: true, filename: name, operationId });
+    } catch (uploadErr) {
+      console.error('Roblox upload error:', uploadErr);
+      res.status(uploadErr.status || 500).json({
+        error: uploadErr.message || 'Upload failed',
+        details: uploadErr.details,
+      });
+    } finally {
+      cleanup();
+    }
+  } catch (error) {
+    console.error('Download error:', error);
+    res.status(500).json({ error: error.message || 'Download failed' });
+  }
+});
+
+export default router;

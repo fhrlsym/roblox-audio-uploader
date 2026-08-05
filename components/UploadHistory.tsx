@@ -3,19 +3,7 @@
 import { Copy, History, Trash2 } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { CARD } from '../lib/ui';
-
-export interface UploadRecord {
-  id: string;
-  fileName: string;
-  displayName: string;
-  assetId: string;
-  accountId?: string;
-  accountName: string;
-  uploadedAt: number;
-  fileSize?: number;
-  duration?: number;
-  status?: string;
-}
+import { UploadRecord } from '../types/audio';
 
 interface UploadHistoryProps {
   history: UploadRecord[];
