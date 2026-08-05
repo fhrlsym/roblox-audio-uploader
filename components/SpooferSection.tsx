@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Copy, Film, Loader2, Music, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { Check, Copy, Download, Film, Loader2, Music, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { SavedAccount } from '../types/audio';
 import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
@@ -244,39 +244,148 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
         </div>
       </div>
 
-      {/* Private Audio 1-Click Converter Banner */}
+      {/* Private Audio Direct Download & Auto Upload Card */}
       {detectedPrivateAudioTitle && (
         <motion.div
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-5 rounded-2xl border border-[var(--accent-15)] bg-gradient-to-r from-[var(--surface-50)] via-[var(--surface-pop)] to-[var(--surface-50)] shadow-lg space-y-3"
+          className="p-5 rounded-2xl border border-[var(--accent-15)] bg-gradient-to-r from-[var(--surface-50)] via-[var(--surface-pop)] to-[var(--surface-50)] shadow-lg space-y-4"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
+              <div className="w-10 h-10 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
                 <Music className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Judul Lagu Terdeteksi</h4>
+                  <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Judul Audio Terdeteksi</h4>
                   <span className="px-2 py-0.5 rounded-md bg-[var(--danger)] text-[#ffffff] text-[10px] font-bold">Private Audio</span>
                 </div>
                 <p className="text-sm font-bold text-[var(--accent-strong)] mt-0.5">"{detectedPrivateAudioTitle}"</p>
               </div>
             </div>
 
-            {onConvertToAudioMaster && (
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => onConvertToAudioMaster(detectedPrivateAudioTitle)}
-                className={`${BTN_PRIMARY} px-5 py-2.5 text-xs font-bold flex items-center gap-2 shadow-lg`}
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    toast(`Mencari & Mengunduh "${detectedPrivateAudioTitle}"...`, 'info');
+                    const searchRes = await fetch(`${backendUrl}/api/youtube-search?q=${encodeURIComponent(detectedPrivateAudioTitle)}`);
+                    const searchData = await searchRes.json();
+                    if (!searchData.video?.id) throw new Error('Video lagu tidak ditemukan');
+
+                    const dlRes = await fetch(`${backendUrl}/api/youtube-download`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        url: `https://www.youtube.com/watch?v=${searchData.video.id}`,
+                        speed: 2.3,
+                      }),
+                    });
+                    const dlData = await dlRes.json();
+                    if (!dlData.fileId) throw new Error('Gagal mengunduh audio MP3');
+
+                    window.open(`${backendUrl}/api/download/${dlData.fileId}?filename=${encodeURIComponent(dlData.filename)}`, '_blank');
+                    toast('✨ Berhasil mendownload file MP3 hasil tuning 2.3x!', 'success');
+                  } catch (e) {
+                    toast(e instanceof Error ? e.message : 'Gagal mendownload MP3', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className={`${BTN_PRIMARY} px-4 py-2 text-xs font-bold flex items-center gap-2 shadow-md`}
               >
-                <Sparkles className="w-4 h-4" />
-                Convert & Tune via Audio Master 🎵
+                <Download className="w-3.5 h-3.5" />
+                Download File MP3
               </button>
-            )}
+
+              <button
+                onClick={async () => {
+                  if (!selectedAccount || !selectedAccount.apiKey) {
+                    toast('Pilih Akun Roblox terlebih dahulu di Header', 'error');
+                    return;
+                  }
+                  try {
+                    setLoading(true);
+                    toast(`Memproses Auto Upload "${detectedPrivateAudioTitle}" ke Roblox...`, 'info');
+                    const searchRes = await fetch(`${backendUrl}/api/youtube-search?q=${encodeURIComponent(detectedPrivateAudioTitle)}`);
+                    const searchData = await searchRes.json();
+                    if (!searchData.video?.id) throw new Error('Video lagu tidak ditemukan');
+
+                    const dlRes = await fetch(`${backendUrl}/api/youtube-download`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        url: `https://www.youtube.com/watch?v=${searchData.video.id}`,
+                        speed: 2.3,
+                      }),
+                    });
+                    const dlData = await dlRes.json();
+                    if (!dlData.fileId) throw new Error('Gagal mengkonversi audio MP3');
+
+                    const upRes = await fetch(`${backendUrl}/api/roblox/upload-converted`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        fileId: dlData.fileId,
+                        displayName: detectedPrivateAudioTitle,
+                        creatorType: selectedAccount.type,
+                        creatorId: selectedAccount.id,
+                        apiKey: selectedAccount.apiKey,
+                      }),
+                    });
+                    const upData = await upRes.json();
+                    if (!upData.operationId) throw new Error(upData.error || 'Gagal mengunggah ke Roblox');
+
+                    // Poll status
+                    let newAssetId: string | null = null;
+                    for (let attempt = 0; attempt < 60; attempt++) {
+                      await new Promise((r) => setTimeout(r, 1500));
+                      const opRes = await fetch(
+                        `${backendUrl}/api/operation-status/${upData.operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
+                      );
+                      const opData = await opRes.json();
+                      if (opData.done) {
+                        newAssetId = opData.assetId || opData.response?.assetId || null;
+                        break;
+                      }
+                    }
+
+                    if (newAssetId) {
+                      setSpoofedRecords((prev) => [
+                        {
+                          id: `spoof_${Date.now()}`,
+                          originalAssetId: assetIdInput.replace(/\D/g, ''),
+                          newAssetId,
+                          assetType: 'Audio',
+                          title: detectedPrivateAudioTitle,
+                          createdAt: Date.now(),
+                        },
+                        ...prev,
+                      ]);
+                      toast(`✨ Berhasil Auto Upload Audio Baru! ID: ${newAssetId}`, 'success');
+                      setDetectedPrivateAudioTitle(null);
+                    } else {
+                      toast('Audio berhasil diunggah, moderasi Roblox sedang berjalan', 'info');
+                    }
+                  } catch (e) {
+                    toast(e instanceof Error ? e.message : 'Gagal Auto Upload ke Roblox', 'error');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                disabled={loading}
+                className={`${BTN_PRIMARY} px-4 py-2 text-xs font-bold flex items-center gap-2 shadow-md bg-gradient-to-r from-[var(--emerald)] to-[#059669] text-[#ffffff]`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Auto Upload ID Baru
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-[var(--text-60)] pt-1 border-t border-[var(--line)]">
-            💡 Audio ini privat di Roblox. Klik tombol di atas untuk mencari lagu ini langsung di YouTube, men-tune kecepatannya (<code className="text-[var(--accent)] font-bold">2.3x</code>), dan mengunggahnya ke Roblox secara otomatis!
+          <p className="text-xs text-[var(--text-60)] pt-2 border-t border-[var(--line)]">
+            💡 <strong>Tersedia 2 Opsi Langsung Tanpa Pindah Halaman:</strong> Anda bisa langsung men-download file MP3-nya atau mengklik <strong>Auto Upload ID Baru</strong> untuk membuatkan Sound ID Roblox baru milik akun Anda sendiri!
           </p>
         </motion.div>
       )}
