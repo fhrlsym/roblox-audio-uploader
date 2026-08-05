@@ -5,6 +5,7 @@ import { AlertTriangle, ChevronRight, Loader2, Music, Trash2, Wand2 } from 'luci
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
 import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
+import { useToast } from './Toast';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
@@ -14,6 +15,7 @@ interface TuningSectionProps {
 }
 
 export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw, onNext }: TuningSectionProps) {
+  const { toast } = useToast();
   const [speed, setSpeed] = useState(2.3);
   const [amplify, setAmplify] = useState(-4);
   const [tuning, setTuning] = useState(false);
@@ -32,6 +34,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
 
     setTuning(true);
     setProgress(0);
+    toast(`Memulai tuning ${rawFiles.length} file audio (Speed ${speed}x)...`, 'info');
 
     const results: TunedAudioFile[] = [];
     const succeededIds: string[] = [];
@@ -80,12 +83,14 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
     }
 
     onTuningComplete(results);
+    toast(`Berhasil men-tune ${results.length} file audio!`, 'success');
     // Refresh file list: remove files that were successfully tuned.
     const done = new Set(succeededIds);
     rawFiles.forEach((f) => {
       if (done.has(f.id)) onRemoveRaw(f.id);
     });
     setTuning(false);
+    onNext?.();
     setProgress(0);
     if (results.length > 0) onNext?.();
   };

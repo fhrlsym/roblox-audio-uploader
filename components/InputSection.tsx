@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { ChevronRight, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
 import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
+import { useToast } from './Toast';
 
 interface YoutubeLinkEntry {
   url: string;
@@ -24,6 +25,7 @@ interface InputSectionProps {
 const YT_RE = /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{11})/;
 
 export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendUrl, youtubeCookies, onYoutubeCookiesChange, onNext }: InputSectionProps) {
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<'file' | 'youtube'>('youtube');
   const [youtubeInput, setYoutubeInput] = useState('');
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
@@ -56,6 +58,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
       setYoutubeLinks((prev) =>
         prev.map((l) => (l.url === candidate ? { ...l, loading: false, video: data.video } : l))
       );
+      toast(`Berhasil mengambil info: ${cleanSongTitle(data.video.title)}`, 'success');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal mengambil info video';
       if (isBotError(message)) {
@@ -112,6 +115,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     }));
 
     onFilesAdded(rawFiles);
+    toast(`Berhasil menambahkan ${rawFiles.length} file audio`, 'success');
     if (fileInputRef.current) fileInputRef.current.value = '';
     onNext?.();
   };
@@ -168,6 +172,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
 
     if (results.length > 0) {
       onFilesAdded(results);
+      toast(`Berhasil mengunduh ${results.length} audio ke MP3!`, 'success');
       setConvertedCount((c) => c + results.length);
       const done = new Set(succeeded);
       setYoutubeLinks((prev) => prev.filter((l) => !done.has(l.url)));

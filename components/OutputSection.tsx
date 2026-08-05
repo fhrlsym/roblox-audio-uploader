@@ -111,6 +111,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
               status,
             });
           }
+          toast(`Berhasil mengunggah "${displayName}" ke Roblox!`, 'success');
           // Auto remove tuned file from queue so step counts stay accurate
           setTimeout(() => {
             onRemoveTuned(file.id);
@@ -120,6 +121,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             ...prev,
             [file.id]: { filename: file.tunedName, error: opError || 'Upload timeout', success: false },
           }));
+          toast(`Gagal upload ${displayName}: ${opError || 'Upload timeout'}`, 'error');
         }
       } else {
         throw new Error(data.error || 'Upload failed');
@@ -130,6 +132,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         ...prev,
         [file.id]: { filename: file.tunedName, error: message, success: false },
       }));
+      toast(`Gagal upload: ${message}`, 'error');
     } finally {
       setUploading((prev) => ({ ...prev, [file.id]: false }));
     }
@@ -143,6 +146,8 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     const targets = tunedFiles.filter((f) => !uploadResults[f.id]?.success && !uploading[f.id]);
     if (targets.length === 0) return;
 
+    toast(`Memulai batch upload ${targets.length} audio ke Roblox...`, 'info');
+
     const CONCURRENCY = 2;
     let nextIndex = 0;
 
@@ -154,6 +159,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     };
 
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
+    toast(`Selesai memproses batch upload ${targets.length} audio!`, 'success');
   };
 
   const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;
