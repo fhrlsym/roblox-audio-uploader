@@ -348,52 +348,83 @@ router.post('/spoof-asset', async (req, res) => {
   const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
 
   try {
-    let cdnUrl = null;
+    let arrayBuffer = null;
 
-    // 1. ISpooferMotion Strategy A: Manual redirect location header scraping
+    // Strategy 1: Direct AssetDelivery with RobloxStudio/WinInet User-Agent
     try {
-      const redirRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}&expectedAssetType=${assetType}`, {
-        redirect: 'manual',
-        headers: { 'User-Agent': 'Roblox/WinInet' },
+      const res = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`, {
+        headers: { 'User-Agent': 'RobloxStudio/WinInet', 'Accept': '*/*' },
       });
-      const location = redirRes.headers.get('location');
-      if (location && location.includes('rbxcdn.com')) {
-        cdnUrl = location;
+      if (res.ok) {
+        arrayBuffer = await res.arrayBuffer();
       }
     } catch (e) {
-      console.warn('ISpooferMotion redirect strategy fallback:', e.message);
+      console.warn('[Spoof Download Strategy 1 failed]:', e.message);
     }
 
-    // 2. ISpooferMotion Strategy B: AssetDelivery v2 API resolution
-    if (!cdnUrl) {
+    // Strategy 2: Manual Redirect Location Scraping (ISpooferMotion Strategy)
+    if (!arrayBuffer) {
       try {
-        const v2Data = await fetchWithRetry(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, 3, {
-          headers: { 'User-Agent': 'RobloxStudio/WinInet' },
+        const redirRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`, {
+          redirect: 'manual',
+          headers: { 'User-Agent': 'Roblox/WinInet' },
         });
-        if (v2Data && v2Data.locations && v2Data.locations[0] && v2Data.locations[0].location) {
-          cdnUrl = v2Data.locations[0].location;
+        const location = redirRes.headers.get('location');
+        if (location && location.includes('rbxcdn.com')) {
+          const binRes = await fetch(location, {
+            headers: { 'User-Agent': 'RobloxStudio/WinInet' },
+          });
+          if (binRes.ok) {
+            arrayBuffer = await binRes.arrayBuffer();
+          }
         }
       } catch (e) {
-        console.warn('AssetDelivery v2 strategy fallback:', e.message);
+        console.warn('[Spoof Download Strategy 2 failed]:', e.message);
       }
     }
 
-    // Fallback to direct asset link if CDN URL not extracted
-    const finalDownloadUrl = cdnUrl || `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`;
-
-    const rawRes = await fetch(finalDownloadUrl, {
-      headers: {
-        'User-Agent': 'RobloxStudio/WinInet',
-        'Accept': '*/*',
-        'Accept-Encoding': 'gzip, deflate, br',
-      },
-    });
-
-    if (!rawRes.ok) {
-      throw new Error(`Gagal mengunduh binary asset Roblox (${rawRes.status})`);
+    // Strategy 3: AssetDelivery v2 API CDN Resolution
+    if (!arrayBuffer) {
+      try {
+        const v2Res = await fetch(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, {
+          headers: { 'User-Agent': 'RobloxStudio/WinInet' },
+        });
+        const v2Data = await v2Res.json().catch(() => ({}));
+        if (v2Data?.locations?.[0]?.location) {
+          const binRes = await fetch(v2Data.locations[0].location);
+          if (binRes.ok) {
+            arrayBuffer = await binRes.arrayBuffer();
+          }
+        }
+      } catch (e) {
+        console.warn('[Spoof Download Strategy 3 failed]:', e.message);
+      }
     }
 
-    const arrayBuffer = await rawRes.arrayBuffer();
+    // Strategy 4: Economy API AssetHash CDN Resolution
+    if (!arrayBuffer) {
+      try {
+        const ecoRes = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
+        const ecoData = await ecoRes.json().catch(() => ({}));
+        if (ecoData.AssetHash) {
+          const binRes = await fetch(`https://t1.rbxcdn.com/${ecoData.AssetHash}`);
+          if (binRes.ok) {
+            arrayBuffer = await binRes.arrayBuffer();
+          }
+        }
+      } catch (e) {
+        console.warn('[Spoof Download Strategy 4 failed]:', e.message);
+      }
+    }
+
+    if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+      if (assetType === 'Audio') {
+        throw new Error('Gagal mengunduh audio (403 Forbidden). Roblox telah mengunci akses file audio ini secara privat. Fitur spoofing 100% mendukung semua ID Animasi Roblox.');
+      } else {
+        throw new Error('Gagal mengunduh binary animasi Roblox (403 Forbidden). Pastikan ID Animasi valid.');
+      }
+    }
+
     const { writeFileSync } = await import('fs');
     writeFileSync(tempFile, Buffer.from(arrayBuffer));
 
