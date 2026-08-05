@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Copy, Download, Film, Loader2, Music, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { Check, Copy, Download, Film, Loader2, Music, Sparkles, Wand2 } from 'lucide-react';
 import { SavedAccount } from '../types/audio';
 import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
@@ -22,7 +22,7 @@ interface SpooferSectionProps {
   onConvertToAudioMaster?: (songTitle: string) => void;
 }
 
-export default function SpooferSection({ selectedAccount, backendUrl, onConvertToAudioMaster }: SpooferSectionProps) {
+export default function SpooferSection({ selectedAccount, backendUrl }: SpooferSectionProps) {
   const { toast } = useToast();
   const [assetIdInput, setAssetIdInput] = useState('');
   const [displayNameInput, setDisplayNameInput] = useState('');
@@ -246,7 +246,7 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
                   <h4 className="text-xs font-bold text-[var(--text)] uppercase tracking-wider">Judul Audio Terdeteksi</h4>
                   <span className="px-2 py-0.5 rounded-md bg-[var(--danger)] text-[#ffffff] text-[10px] font-bold">Private Audio</span>
                 </div>
-                <p className="text-sm font-bold text-[var(--accent-strong)] mt-0.5">"{detectedPrivateAudioTitle}"</p>
+                <p className="text-sm font-bold text-[var(--accent-strong)] mt-0.5">&quot;{detectedPrivateAudioTitle}&quot;</p>
               </div>
             </div>
 
@@ -271,7 +271,7 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
                     const dlData = await dlRes.json();
                     if (!dlData.fileId) throw new Error('Gagal mengunduh audio MP3');
 
-                    window.open(`${backendUrl}/api/download/${dlData.fileId}?filename=${encodeURIComponent(dlData.filename)}`, '_blank');
+                    window.open(`${backendUrl}/api/download-file/${dlData.fileId}?filename=${encodeURIComponent(dlData.filename)}`, '_blank');
                     toast('✨ Berhasil mendownload file MP3 audio asli!', 'success');
                   } catch (e) {
                     toast(e instanceof Error ? e.message : 'Gagal mendownload MP3', 'error');

@@ -120,7 +120,13 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           await new Promise((r) => setTimeout(r, Math.min(1000 + attempt * 200, 3000)));
 
           // Try direct polling first
-          let opData: any = null;
+          let opData: {
+            done?: boolean;
+            assetId?: string;
+            status?: string;
+            error?: string | { message?: string; status?: string };
+            response?: { assetId?: string };
+          } | null = null;
           try {
             const directOpRes = await fetch(`https://apis.roblox.com/assets/v1/operations/${operationId}`, {
               headers: { 'x-api-key': selectedAccount.apiKey },

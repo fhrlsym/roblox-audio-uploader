@@ -8,8 +8,6 @@ export default function VersionChecker() {
   const currentVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-
     const checkVersion = async () => {
       try {
         const res = await fetch(`/api/version?t=${Date.now()}`, { cache: 'no-store' });
@@ -32,7 +30,7 @@ export default function VersionChecker() {
     };
 
     checkVersion();
-    interval = setInterval(checkVersion, 30000);
+    const interval = setInterval(checkVersion, 30000);
 
     return () => clearInterval(interval);
   }, []);

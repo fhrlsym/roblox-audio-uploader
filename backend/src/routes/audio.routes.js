@@ -3,7 +3,7 @@ import multer from 'multer';
 import { existsSync, unlinkSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';
-import { downloadYoutubeMp3, fetchYoutubeVideoInfo } from '../services/youtube.service.js';
+import { downloadYoutubeMp3, fetchYoutubeVideoInfo, searchYoutube } from '../services/youtube.service.js';
 import { runFFmpeg } from '../services/ffmpeg.service.js';
 import { uploadToRoblox } from '../services/roblox.service.js';
 
@@ -46,6 +46,26 @@ router.post('/youtube-info', async (req, res) => {
   } catch (error) {
     console.error('YouTube info error:', error);
     res.status(500).json({ error: error.message || 'Failed to fetch video info' });
+  }
+});
+
+router.get('/youtube-search', async (req, res) => {
+  const q = String(req.query.q || '').trim();
+  const cookies = String(req.query.cookies || '').trim() || undefined;
+
+  if (!q) {
+    return res.status(400).json({ error: 'Masukkan kata kunci pencarian' });
+  }
+
+  try {
+    const video = await searchYoutube(q, cookies);
+    if (!video) {
+      return res.status(404).json({ error: 'Video audio tidak ditemukan di YouTube' });
+    }
+    res.json({ success: true, video });
+  } catch (error) {
+    console.error('YouTube search error:', error);
+    res.status(500).json({ error: error.message || 'Gagal mencari video di YouTube' });
   }
 });
 

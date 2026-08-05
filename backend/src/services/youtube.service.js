@@ -141,6 +141,41 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
   }
 }
 
+export async function searchYoutube(query, cookies) {
+  let cookiesFile = null;
+  if (cookies && typeof cookies === 'string' && cookies.trim()) {
+    cookiesFile = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
+    writeFileSync(cookiesFile, cookies);
+  }
+
+  try {
+    const stdout = await runYtCommand([
+      '--print',
+      '%(id)s\n%(title)s\n%(duration_string)s\n%(thumbnail)s\n%(channel)s\n%(duration)s',
+      `ytsearch1:${query}`,
+    ], cookiesFile);
+
+    const [id = '', title = '', durationString = '', thumbnail = '', channel = '', duration = '0'] =
+      stdout.split('\n').map((s) => s.trim());
+
+    if (!id) return null;
+
+    return {
+      id,
+      title,
+      durationString: durationString || formatDuration(parseInt(duration) || 0),
+      duration: parseInt(duration) || 0,
+      thumbnail,
+      channel,
+    };
+  } catch (error) {
+    console.error('YouTube search error:', error);
+    return null;
+  } finally {
+    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
+  }
+}
+
 export async function fetchYoutubeVideoInfo(url, cookies) {
   const videoId = getVideoId(url);
   const cacheKey = `${videoId || url}_${Boolean(cookies)}`;
