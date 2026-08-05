@@ -6,6 +6,7 @@ import { Building2, Check, ChevronDown, ChevronLeft, CloudUpload, Music, Plus, T
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
+import SpooferSection from '../components/SpooferSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
@@ -14,6 +15,7 @@ import { CARD, PANEL, LABEL, BTN_PRIMARY } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
+import { Sparkles } from 'lucide-react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -31,6 +33,7 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
 ];
 
 export default function Home() {
+  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -190,7 +193,31 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="font-bold text-sm leading-none text-[var(--text)]">S2 Studio</h1>
-                <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5">Audio Master to Roblox</p>
+                <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5">
+                  {activeTool === 'audio-master' ? 'Audio Master to Roblox' : 'Animation & Sound Spoofer'}
+                </p>
+              </div>
+
+              {/* Tool Switcher */}
+              <div className="hidden sm:flex items-center gap-1.5 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4">
+                <button
+                  onClick={() => setActiveTool('audio-master')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  Audio Master
+                </button>
+                <button
+                  onClick={() => setActiveTool('spoofer')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition ${
+                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Animation & Sound Spoofer
+                </button>
               </div>
             </div>
 
@@ -298,133 +325,147 @@ export default function Home() {
 
         {/* Main Application Workbench */}
         <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          {/* Top Overview & Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <div className={`${CARD} p-4 text-center`}>
-              <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Upload</p>
-              <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
-            </div>
-            <div className={`${CARD} p-4 text-center`}>
-              <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Active</p>
-              <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
-            </div>
-            <div className={`${CARD} p-4 text-center`}>
-              <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Pending</p>
-              <p className="text-2xl font-bold text-[var(--accent)] mt-1">{uploadStats.pending}</p>
-            </div>
-            <div className={`${CARD} p-4 text-center`}>
-              <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Copyright</p>
-              <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
-            </div>
-            <div className={`${CARD} p-4 text-center col-span-2 md:col-span-1`}>
-              <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Sisa Kuota Roblox</p>
-              <p className="text-2xl font-bold text-[var(--accent-strong)] mt-1">
-                {selectedAccount?.quota ? `${selectedAccount.quota.capacity - selectedAccount.quota.usage}` : '-'}
-              </p>
-            </div>
-          </div>
+          {activeTool === 'spoofer' ? (
+            <motion.div
+              key="spoofer-tool"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+            >
+              <SpooferSection selectedAccount={selectedAccount} backendUrl={BACKEND_URL} />
+            </motion.div>
+          ) : (
+            <>
+              {/* Top Overview & Stats Bar */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div className={`${CARD} p-4 text-center`}>
+                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Upload</p>
+                  <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
+                </div>
+                <div className={`${CARD} p-4 text-center`}>
+                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Active</p>
+                  <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
+                </div>
+                <div className={`${CARD} p-4 text-center`}>
+                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Pending</p>
+                  <p className="text-2xl font-bold text-[var(--accent)] mt-1">{uploadStats.pending}</p>
+                </div>
+                <div className={`${CARD} p-4 text-center`}>
+                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Copyright</p>
+                  <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
+                </div>
+                <div className={`${CARD} p-4 text-center col-span-2 md:col-span-1`}>
+                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Sisa Kuota Roblox</p>
+                  <p className="text-2xl font-bold text-[var(--accent-strong)] mt-1">
+                    {selectedAccount?.quota ? `${selectedAccount.quota.capacity - selectedAccount.quota.usage}` : '-'}
+                  </p>
+                </div>
+              </div>
 
-          {/* Stepper Navigation */}
-          <div className="flex items-center justify-between max-w-2xl mx-auto bg-[var(--surface-50)] p-1.5 rounded-2xl border border-[var(--line)]">
-            {[
-              { id: 1, label: '1. Input Audio', icon: Music, badge: rawFiles.length },
-              { id: 2, label: '2. Audio Tuning', icon: Wand2, badge: tunedFiles.length },
-              { id: 3, label: '3. Output & Upload', icon: CloudUpload, badge: 0 },
-            ].map((step) => {
-              const Icon = step.icon;
-              const isActive = activeStep === step.id;
-              return (
-                <button
-                  key={step.id}
-                  onClick={() => goToStep(step.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                    isActive
-                      ? 'bg-[var(--accent)] text-[#000000] shadow-md'
-                      : 'text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{step.label}</span>
-                  {step.badge > 0 && (
-                    <span
-                      className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                        isActive ? 'bg-[#000000] text-[var(--accent)]' : 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+              {/* Stepper Navigation */}
+              <div className="flex items-center justify-between max-w-2xl mx-auto bg-[var(--surface-50)] p-1.5 rounded-2xl border border-[var(--line)]">
+                {[
+                  { id: 1, label: '1. Input Audio', icon: Music, badge: rawFiles.length },
+                  { id: 2, label: '2. Audio Tuning', icon: Wand2, badge: tunedFiles.length },
+                  { id: 3, label: '3. Output & Upload', icon: CloudUpload, badge: 0 },
+                ].map((step) => {
+                  const Icon = step.icon;
+                  const isActive = activeStep === step.id;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => goToStep(step.id)}
+                      className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
+                        isActive
+                          ? 'bg-[var(--accent)] text-[#000000] shadow-md'
+                          : 'text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
                       }`}
                     >
-                      {step.badge}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
+                      <Icon className="w-4 h-4" />
+                      <span>{step.label}</span>
+                      {step.badge > 0 && (
+                        <span
+                          className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
+                            isActive ? 'bg-[#000000] text-[var(--accent)]' : 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                          }`}
+                        >
+                          {step.badge}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
 
-          {/* Animated Step Workstation Panels */}
-          <AnimatePresence mode="wait">
-            {activeStep === 1 && (
-              <motion.div
-                key="step1"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <InputSection
-                  onFilesAdded={addRawFiles}
-                  rawFilesCount={rawFiles.length}
-                  backendUrl={BACKEND_URL}
-                  youtubeCookies={youtubeCookies}
-                  onYoutubeCookiesChange={handleYoutubeCookiesChange}
-                  onNext={() => goToStep(2)}
-                />
-              </motion.div>
-            )}
+              {/* Animated Step Workstation Panels */}
+              <AnimatePresence mode="wait">
+                {activeStep === 1 && (
+                  <motion.div
+                    key="step1"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <InputSection
+                      onFilesAdded={addRawFiles}
+                      rawFilesCount={rawFiles.length}
+                      backendUrl={BACKEND_URL}
+                      youtubeCookies={youtubeCookies}
+                      onYoutubeCookiesChange={handleYoutubeCookiesChange}
+                      onNext={() => goToStep(2)}
+                    />
+                  </motion.div>
+                )}
 
-            {activeStep === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <TuningSection
-                  rawFiles={rawFiles}
-                  onTuningComplete={(results) => {
-                    addTunedFiles(results);
-                  }}
-                  onRemoveRaw={removeRawFile}
-                  onNext={() => goToStep(3)}
-                />
-              </motion.div>
-            )}
+                {activeStep === 2 && (
+                  <motion.div
+                    key="step2"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <TuningSection
+                      rawFiles={rawFiles}
+                      onTuningComplete={(results) => {
+                        addTunedFiles(results);
+                      }}
+                      onRemoveRaw={removeRawFile}
+                      onNext={() => goToStep(3)}
+                    />
+                  </motion.div>
+                )}
 
-            {activeStep === 3 && (
-              <motion.div
-                key="step3"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-              >
-                <OutputSection
-                  tunedFiles={tunedFiles}
-                  selectedAccount={selectedAccount}
-                  onRemoveTuned={removeTunedFile}
-                  onUploadSuccess={handleUploadSuccess}
-                  backendUrl={BACKEND_URL}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {activeStep === 3 && (
+                  <motion.div
+                    key="step3"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <OutputSection
+                      tunedFiles={tunedFiles}
+                      selectedAccount={selectedAccount}
+                      onRemoveTuned={removeTunedFile}
+                      onUploadSuccess={handleUploadSuccess}
+                      backendUrl={BACKEND_URL}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
-          {/* Global Upload History Table */}
-          <UploadHistory
-            history={uploadHistory}
-            onClear={handleClearHistory}
-            onRefresh={handleRefreshStatus}
-            refreshingIds={refreshingIds}
-          />
+              {/* Global Upload History Table */}
+              <UploadHistory
+                history={uploadHistory}
+                onClear={handleClearHistory}
+                onRefresh={handleRefreshStatus}
+                refreshingIds={refreshingIds}
+              />
+            </>
+          )}
         </main>
 
         {/* Account Modal Component */}

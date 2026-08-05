@@ -323,4 +323,61 @@ router.get('/roblox/key-info', async (req, res) => {
   }
 });
 
+router.post('/spoof-asset', async (req, res) => {
+  const {
+    assetId,
+    assetType = 'Animation',
+    displayName,
+    creatorType = 'user',
+    creatorId,
+    apiKey,
+  } = req.body;
+
+  if (!assetId) {
+    return res.status(400).json({ error: 'Masukkan Roblox Asset ID' });
+  }
+  if (!creatorId || !apiKey) {
+    return res.status(400).json({ error: 'Pilih Akun Roblox terlebih dahulu' });
+  }
+
+  const cleanAssetId = String(assetId).replace(/\D/g, '');
+  if (!cleanAssetId) {
+    return res.status(400).json({ error: 'Asset ID Roblox tidak valid' });
+  }
+
+  const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
+
+  try {
+    const rawRes = await fetchWithRetry(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`);
+    const arrayBuffer = await rawRes.arrayBuffer();
+    const { writeFileSync } = await import('fs');
+    writeFileSync(tempFile, Buffer.from(arrayBuffer));
+
+    const finalTitle = displayName || `Spoofed_${assetType}_${cleanAssetId}`;
+
+    const operationId = await uploadToRoblox(tempFile, {
+      assetType,
+      displayName: finalTitle,
+      description: `Spoofed Asset (Original ID: ${cleanAssetId})`,
+      creatorType,
+      creatorId,
+      apiKey,
+    });
+
+    res.json({
+      success: true,
+      operationId,
+      title: finalTitle,
+      originalAssetId: cleanAssetId,
+    });
+  } catch (error) {
+    console.error('Spoof asset error:', error);
+    res.status(500).json({ error: error.message || 'Gagal me-spoof asset Roblox' });
+  } finally {
+    if (existsSync(tempFile)) {
+      try { unlinkSync(tempFile); } catch (e) { console.error('Cleanup temp error:', e); }
+    }
+  }
+});
+
 export default router;
