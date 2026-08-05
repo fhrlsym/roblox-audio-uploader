@@ -258,21 +258,21 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
                     toast(`Mencari & Mengunduh "${detectedPrivateAudioTitle}"...`, 'info');
                     const searchRes = await fetch(`${backendUrl}/api/youtube-search?q=${encodeURIComponent(detectedPrivateAudioTitle)}`);
                     const searchData = await searchRes.json();
-                    if (!searchData.video?.id) throw new Error('Video lagu tidak ditemukan');
+                    if (!searchData.video?.id) throw new Error('Video audio tidak ditemukan');
 
                     const dlRes = await fetch(`${backendUrl}/api/youtube-download`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         url: `https://www.youtube.com/watch?v=${searchData.video.id}`,
-                        speed: 2.3,
+                        speed: 1.0,
                       }),
                     });
                     const dlData = await dlRes.json();
                     if (!dlData.fileId) throw new Error('Gagal mengunduh audio MP3');
 
                     window.open(`${backendUrl}/api/download/${dlData.fileId}?filename=${encodeURIComponent(dlData.filename)}`, '_blank');
-                    toast('✨ Berhasil mendownload file MP3 hasil tuning 2.3x!', 'success');
+                    toast('✨ Berhasil mendownload file MP3 audio asli!', 'success');
                   } catch (e) {
                     toast(e instanceof Error ? e.message : 'Gagal mendownload MP3', 'error');
                   } finally {
@@ -297,14 +297,14 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
                     toast(`Memproses Auto Upload "${detectedPrivateAudioTitle}" ke Roblox...`, 'info');
                     const searchRes = await fetch(`${backendUrl}/api/youtube-search?q=${encodeURIComponent(detectedPrivateAudioTitle)}`);
                     const searchData = await searchRes.json();
-                    if (!searchData.video?.id) throw new Error('Video lagu tidak ditemukan');
+                    if (!searchData.video?.id) throw new Error('Video audio tidak ditemukan');
 
                     const dlRes = await fetch(`${backendUrl}/api/youtube-download`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         url: `https://www.youtube.com/watch?v=${searchData.video.id}`,
-                        speed: 2.3,
+                        speed: 1.0,
                       }),
                     });
                     const dlData = await dlRes.json();
@@ -370,7 +370,7 @@ export default function SpooferSection({ selectedAccount, backendUrl, onConvertT
             </div>
           </div>
           <p className="text-xs text-[var(--text-60)] pt-2 border-t border-[var(--line)]">
-            💡 <strong>Tersedia 2 Opsi Langsung Tanpa Pindah Halaman:</strong> Anda bisa langsung men-download file MP3-nya atau mengklik <strong>Auto Upload ID Baru</strong> untuk membuatkan Sound ID Roblox baru milik akun Anda sendiri!
+            💡 <strong>Audio Original (Speed 1.0x)</strong>: Menghasilkan audio asli 100% tanpa perubahan pitch/kecepatan.
           </p>
         </motion.div>
       )}
