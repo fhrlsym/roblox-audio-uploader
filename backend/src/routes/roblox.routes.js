@@ -348,7 +348,23 @@ router.post('/spoof-asset', async (req, res) => {
   const tempFile = join(BACKEND_ROOT, `temp_spoof_${Date.now()}_${cleanAssetId}`);
 
   try {
-    const rawRes = await fetchWithRetry(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`);
+    let downloadUrl = `https://assetdelivery.roblox.com/v1/asset/?id=${cleanAssetId}`;
+
+    try {
+      const v2Res = await fetchWithRetry(`https://assetdelivery.roblox.com/v2/assetId/${cleanAssetId}`, {
+        headers: { 'User-Agent': 'Roblox/WinInet' },
+      });
+      const v2Data = await v2Res.json();
+      if (v2Data && v2Data.locations && v2Data.locations[0] && v2Data.locations[0].location) {
+        downloadUrl = v2Data.locations[0].location;
+      }
+    } catch {
+      // Fallback to v1 if v2 format differs
+    }
+
+    const rawRes = await fetchWithRetry(downloadUrl, {
+      headers: { 'User-Agent': 'Roblox/WinInet' },
+    });
     const arrayBuffer = await rawRes.arrayBuffer();
     const { writeFileSync } = await import('fs');
     writeFileSync(tempFile, Buffer.from(arrayBuffer));
