@@ -105,6 +105,9 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
               accountName: selectedAccount.name,
               uploadedAt: Date.now(),
               fileSize: file.blob.size,
+              robloxPlaybackSpeed: (1 / file.speed).toFixed(4),
+              originalSpeed: file.speed,
+              amplify: file.amplify,
               status,
             });
           }

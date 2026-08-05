@@ -70,6 +70,9 @@ export interface UploadRecord {
   uploadedAt: number;
   fileSize?: number;
   duration?: number;
+  robloxPlaybackSpeed?: number | string;
+  originalSpeed?: number;
+  amplify?: number;
   status: string;
 }
 

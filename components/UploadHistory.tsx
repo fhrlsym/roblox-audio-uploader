@@ -78,16 +78,23 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
                 </p>
               </div>
 
-              <button
-                onClick={() => copyAssetId(record.assetId)}
-                className="group flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 transition hover:border-[var(--accent-30)]"
-                title="Salin asset ID"
-              >
-                <code className="text-[11px] text-[var(--accent-soft)] font-mono">
-                  {record.assetId}
-                </code>
-                <Copy className="w-3 h-3 text-[var(--text-40)] transition group-hover:text-[var(--accent-soft)]" />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                {record.robloxPlaybackSpeed && (
+                  <span className="rounded-lg border border-[var(--accent-20)] bg-[var(--accent-06)] px-2 py-1 text-[11px] font-mono text-[var(--accent-soft)]" title="Roblox Studio PlaybackRate">
+                    Playback: <strong className="font-semibold">{record.robloxPlaybackSpeed}</strong>
+                  </span>
+                )}
+                <button
+                  onClick={() => copyAssetId(record.assetId)}
+                  className="group flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 transition hover:border-[var(--accent-30)]"
+                  title="Salin asset ID"
+                >
+                  <code className="text-[11px] text-[var(--accent-soft)] font-mono">
+                    {record.assetId}
+                  </code>
+                  <Copy className="w-3 h-3 text-[var(--text-40)] transition group-hover:text-[var(--accent-soft)]" />
+                </button>
+              </div>
 
               <div className="flex shrink-0 items-center gap-2">
                 <StatusBadge status={record.status || 'Pending'} />

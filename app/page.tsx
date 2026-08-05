@@ -51,6 +51,7 @@ export default function Home() {
   const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
   const [selectedAccount, setSelectedAccount] = useState<SavedAccount | null>(null);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
 
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
   const [uploadStats, setUploadStats] = useState<UploadStats>({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
@@ -469,41 +470,135 @@ export default function Home() {
 
               {/* Topbar Actions: Account Pill & Theme Dropdown */}
               <div className="flex flex-wrap items-center gap-2">
-                {/* Account Selector Pill */}
-                {selectedAccount ? (
-                  <button
-                    onClick={() => setShowAccountModal(true)}
-                    className="flex items-center gap-2.5 rounded-2xl border border-[var(--accent-25)] bg-[var(--accent-10)] px-3 py-1.5 text-xs text-[var(--text-90)] transition hover:border-[var(--accent-50)] active:scale-[0.98]"
-                    title="Ganti atau kelola akun Roblox"
-                  >
-                    {selectedAccount.thumbnail ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={selectedAccount.thumbnail}
-                        alt={selectedAccount.name}
-                        className="h-6 w-6 rounded-full border border-[var(--accent-30)] object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-20)]">
-                        {selectedAccount.type === 'group' ? (
-                          <Building2 className="w-3 h-3 text-[var(--accent-strong)]" />
+                {/* Account Selector Pill & Dropdown Menu */}
+                <div className="relative">
+                  {selectedAccount ? (
+                    <button
+                      onClick={() => setAccountMenuOpen((v) => !v)}
+                      className="flex items-center gap-2.5 rounded-2xl border border-[var(--accent-25)] bg-[var(--accent-10)] px-3 py-1.5 text-xs text-[var(--text-90)] transition hover:border-[var(--accent-50)] active:scale-[0.98]"
+                      title="Profil & Ganti Akun Roblox"
+                    >
+                      {selectedAccount.thumbnail ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={selectedAccount.thumbnail}
+                          alt={selectedAccount.name}
+                          className="h-6 w-6 rounded-full border border-[var(--accent-30)] object-cover shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--accent-20)] shrink-0">
+                          {selectedAccount.type === 'group' ? (
+                            <Building2 className="w-3 h-3 text-[var(--accent-strong)]" />
+                          ) : (
+                            <User className="w-3 h-3 text-[var(--accent-strong)]" />
+                          )}
+                        </div>
+                      )}
+                      <span className="max-w-[120px] truncate font-medium shrink-0">{selectedAccount.name}</span>
+                      <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)] transition" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAccountModal(true)}
+                      className="flex items-center gap-1.5 rounded-2xl border border-dashed border-[var(--accent-30)] bg-[var(--accent-06)] px-3 py-1.5 text-xs font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Tambah Akun
+                    </button>
+                  )}
+
+                  {/* Profile & Account Switcher Dropdown */}
+                  {accountMenuOpen && selectedAccount && (
+                    <div className="modal-enter absolute right-0 z-50 mt-2 w-72 rounded-3xl border border-[var(--accent-20)] bg-[var(--panel)] p-4 shadow-2xl backdrop-blur-2xl">
+                      {/* Account Profile Header */}
+                      <div className="flex items-center gap-3 pb-3 border-b border-[var(--line)]">
+                        {selectedAccount.thumbnail ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={selectedAccount.thumbnail}
+                            alt={selectedAccount.name}
+                            className="h-10 w-10 rounded-full border border-[var(--accent-30)] object-cover shrink-0"
+                          />
                         ) : (
-                          <User className="w-3 h-3 text-[var(--accent-strong)]" />
+                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-20)] shrink-0">
+                            {selectedAccount.type === 'group' ? (
+                              <Building2 className="w-5 h-5 text-[var(--accent-strong)]" />
+                            ) : (
+                              <User className="w-5 h-5 text-[var(--accent-strong)]" />
+                            )}
+                          </div>
                         )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-semibold text-[var(--text-90)]">{selectedAccount.name}</p>
+                          <p className="truncate text-[11px] text-[var(--text-45)]">
+                            {selectedAccount.type === 'group' ? `Group ID: ${selectedAccount.id}` : `User ID: ${selectedAccount.id}`}
+                          </p>
+                        </div>
                       </div>
-                    )}
-                    <span className="max-w-[110px] truncate font-medium">{selectedAccount.name}</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-[var(--text-40)]" />
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => setShowAccountModal(true)}
-                    className="flex items-center gap-1.5 rounded-2xl border border-dashed border-[var(--accent-30)] bg-[var(--accent-06)] px-3 py-1.5 text-xs font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Tambah Akun
-                  </button>
-                )}
+
+                      {/* Quota Progress */}
+                      {selectedAccount.quota && (
+                        <div className="py-3 border-b border-[var(--line)]">
+                          <div className="flex items-center justify-between text-[11px] text-[var(--text-60)]">
+                            <span>Kuota Audio Bulan Ini</span>
+                            <span className="font-mono font-medium text-[var(--accent-soft)]">
+                              {selectedAccount.quota.usage.toLocaleString('id-ID')} / {selectedAccount.quota.capacity.toLocaleString('id-ID')}
+                            </span>
+                          </div>
+                          <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-strong)]">
+                            <div
+                              className="h-full rounded-full bg-[var(--accent-strong)] transition-all duration-300"
+                              style={{
+                                width: `${Math.min(100, (selectedAccount.quota.usage / (selectedAccount.quota.capacity || 1)) * 100)}%`,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Account Switcher */}
+                      <div className="py-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] mb-1.5">
+                          Ganti Akun ({savedAccounts.length})
+                        </p>
+                        <div className="max-h-36 overflow-y-auto space-y-1">
+                          {savedAccounts.map((acc) => (
+                            <button
+                              key={acc.id}
+                              onClick={() => {
+                                setSelectedAccount(acc);
+                                localStorage.setItem('audioUploader_selectedAccountId', acc.id);
+                                setAccountMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs transition ${
+                                selectedAccount.id === acc.id
+                                  ? 'bg-[var(--accent-15)] text-[var(--accent-strong)] font-semibold'
+                                  : 'text-[var(--text-70)] hover:bg-[var(--surface)]'
+                              }`}
+                            >
+                              <span className="truncate">{acc.name}</span>
+                              {selectedAccount.id === acc.id && <Check className="w-3.5 h-3.5 shrink-0" />}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Account Actions */}
+                      <div className="pt-2 border-t border-[var(--line)] space-y-1">
+                        <button
+                          onClick={() => {
+                            setAccountMenuOpen(false);
+                            setShowAccountModal(true);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Tambah Akun Baru
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
                 {/* Theme Selector Dropdown */}
                 <div className="relative">
