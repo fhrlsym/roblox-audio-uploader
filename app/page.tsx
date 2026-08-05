@@ -393,38 +393,58 @@ export default function Home() {
               </div>
 
               {/* Stepper Navigation */}
-              <div className="flex items-center justify-between max-w-2xl mx-auto bg-[var(--surface-50)] p-1.5 rounded-2xl border border-[var(--line)]">
-                {[
-                  { id: 1, label: '1. Input Audio', icon: Music, badge: rawFiles.length },
-                  { id: 2, label: '2. Audio Tuning', icon: Wand2, badge: tunedFiles.length },
-                  { id: 3, label: '3. Output & Upload', icon: CloudUpload, badge: 0 },
-                ].map((step) => {
-                  const Icon = step.icon;
-                  const isActive = activeStep === step.id;
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => goToStep(step.id)}
-                      className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition ${
-                        isActive
-                          ? 'bg-[var(--accent)] text-[#000000] shadow-md'
-                          : 'text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span>{step.label}</span>
-                      {step.badge > 0 && (
+              <div className="max-w-2xl mx-auto">
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
+                    { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
+                    { id: 3, label: 'Output & Upload', icon: CloudUpload, badge: 0 },
+                  ].map((step) => {
+                    const Icon = step.icon;
+                    const isActive = activeStep === step.id;
+                    const isDone = step.id < activeStep;
+                    return (
+                      <button
+                        key={step.id}
+                        onClick={() => goToStep(step.id)}
+                        className={`relative flex flex-col items-center gap-2 px-2 py-3 rounded-2xl border text-xs font-semibold transition ${
+                          isActive
+                            ? 'bg-[var(--accent)] text-[#000000] border-transparent shadow-md'
+                            : isDone
+                              ? 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-70)] hover:border-[var(--accent-30)]'
+                              : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-50)] hover:border-[var(--accent-25)] hover:text-[var(--text)]'
+                        }`}
+                      >
                         <span
-                          className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] ${
-                            isActive ? 'bg-[#000000] text-[var(--accent)]' : 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold transition ${
+                            isActive
+                              ? 'bg-[#000000] text-[var(--accent)]'
+                              : isDone
+                                ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                                : 'bg-[var(--surface-strong)] text-[var(--text-40)]'
                           }`}
                         >
-                          {step.badge}
+                          {isDone ? <Check className="w-3.5 h-3.5" /> : step.id}
                         </span>
-                      )}
-                    </button>
-                  );
-                })}
+                        <span className="flex items-center gap-1">
+                          <Icon className="w-3.5 h-3.5" />
+                          <span>{step.label}</span>
+                        </span>
+                        {step.badge > 0 && (
+                          <span
+                            className={`absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${
+                              isActive
+                                ? 'bg-[#000000] text-[var(--accent)]'
+                                : 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                            }`}
+                          >
+                            {step.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               {/* Animated Step Workstation Panels */}
