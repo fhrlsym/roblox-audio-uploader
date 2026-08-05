@@ -84,3 +84,14 @@ export interface UploadStats {
   failed: number;
   copyright: number;
 }
+
+export interface SpoofRecord {
+  id: string;
+  originalAssetId: string;
+  newAssetId?: string;
+  assetType: 'Animation' | 'Audio';
+  title: string;
+  status: 'Active' | 'Pending' | 'Failed';
+  error?: string;
+  createdAt: number;
+}

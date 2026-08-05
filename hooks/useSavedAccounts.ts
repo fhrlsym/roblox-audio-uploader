@@ -72,18 +72,26 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
         }));
 
         setSavedAccounts(accounts);
+        accountsRef.current = accounts;
 
         const rememberId = localStorage.getItem('audioUploader_selectedAccountId');
         const found = accounts.find((a) => a.id === rememberId);
         const activeAcc = found || accounts[0] || null;
 
+        setSelectedAccount(activeAcc);
         if (activeAcc) {
-          setSelectedAccount(activeAcc);
-          const q = await fetchQuota(activeAcc);
-          if (q) {
-            setSelectedAccount((prev) => (prev && prev.id === activeAcc.id ? { ...prev, quota: q } : prev));
-          }
+          localStorage.setItem('audioUploader_selectedAccountId', activeAcc.id);
         }
+
+        // Isi kuota untuk semua akun sekaligus (agar tiap akun tampil kuotanya di dropdown)
+        const withQuota = await Promise.all(
+          accounts.map(async (a) => ({ ...a, quota: await fetchQuota(a) }))
+        );
+        setSavedAccounts(withQuota);
+        accountsRef.current = withQuota;
+        setSelectedAccount((prev) =>
+          prev ? withQuota.find((a) => a.id === prev.id) || prev : withQuota[0] || null
+        );
       }
     } catch {
       // ignore

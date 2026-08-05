@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, History, Trash2 } from 'lucide-react';
+import { CheckCircle2, Copy, History, Music2, Trash2 } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { CARD } from '../lib/ui';
 import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
@@ -11,6 +11,12 @@ interface UploadHistoryProps {
   onClear: () => void;
   onRefresh?: (assetId: string) => Promise<void>;
   refreshingIds?: string[];
+}
+
+function StatusIcon({ status }: { status: string }) {
+  if (status === 'Active') return <CheckCircle2 className="w-3 h-3 text-[var(--emerald)] shrink-0" />;
+  if (status === 'Copyright') return <Music2 className="w-3 h-3 text-rose-300 shrink-0" />;
+  return null;
 }
 
 export default function UploadHistory({ history, onClear, onRefresh, refreshingIds = [] }: UploadHistoryProps) {
@@ -24,11 +30,16 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
         <div className="flex items-center gap-2">
           <History className="w-4 h-4 text-[var(--accent-soft)]" />
           <h3 className="text-base font-semibold text-[var(--text)]">Riwayat Upload</h3>
+          {history.length > 0 && (
+            <span className="rounded-full bg-[var(--surface-strong)] px-2 py-0.5 text-[11px] font-medium text-[var(--text-45)]">
+              {history.length}
+            </span>
+          )}
         </div>
         {history.length > 0 && (
           <button
             onClick={onClear}
-            className="inline-flex items-center gap-1 text-xs text-[var(--text-40)] transition hover:text-rose-300"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-[var(--text-40)] transition hover:bg-rose-400/10 hover:text-rose-300"
           >
             <Trash2 className="w-3.5 h-3.5" />
             Hapus semua
@@ -42,49 +53,57 @@ export default function UploadHistory({ history, onClear, onRefresh, refreshingI
           <p className="text-sm text-[var(--text-45)]">Belum ada riwayat upload.</p>
         </div>
       ) : (
-        <div className="divide-y divide-[var(--line)] max-h-96 overflow-y-auto">
-          {history.map((record) => (
-            <div key={record.id} className="flex items-center gap-3 p-4 transition hover:bg-[var(--surface)]">
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(record.displayName || record.fileName)}</p>
-                  <span className="text-xs text-[var(--text-35)] flex-shrink-0">{formatDate(record.uploadedAt)}</span>
+        <div className="max-h-[32rem] overflow-y-auto divide-y divide-[var(--line)]">
+          {history.map((record) => {
+            const isPending = record.status === 'Pending';
+            return (
+              <div key={record.id} className="group p-4 sm:p-5 transition hover:bg-[var(--surface)]">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[var(--text-90)]">
+                      {cleanSongTitle(record.displayName || record.fileName)}
+                    </p>
+                    <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-40)]">
+                      <StatusIcon status={record.status || 'Pending'} />
+                      <span className="truncate">{record.accountName}</span>
+                      {record.fileSize ? <span>· {formatBytes(record.fileSize)}</span> : null}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-[11px] text-[var(--text-35)]">{formatDate(record.uploadedAt)}</span>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-[var(--text-45)]">
-                  {record.accountName}
-                  {record.fileSize ? ` · ${formatBytes(record.fileSize)}` : ''}
-                </p>
-              </div>
 
-              <div className="flex shrink-0 items-center gap-2">
-                {record.robloxPlaybackSpeed && (
-                  <span className="rounded-lg border border-[var(--accent-20)] bg-[var(--accent-06)] px-2 py-1 text-[11px] font-mono text-[var(--accent-soft)]" title="Roblox Studio PlaybackRate">
-                    Playback: <strong className="font-semibold">{record.robloxPlaybackSpeed}</strong>
-                  </span>
-                )}
-                <button
-                  onClick={() => copyAssetId(record.assetId)}
-                  className="group flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 transition hover:border-[var(--accent-30)]"
-                  title="Salin asset ID"
-                >
-                  <code className="text-[11px] text-[var(--accent-soft)] font-mono">
-                    {record.assetId}
-                  </code>
-                  <Copy className="w-3 h-3 text-[var(--text-40)] transition group-hover:text-[var(--accent-soft)]" />
-                </button>
-              </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={() => copyAssetId(record.assetId)}
+                    className="group/id inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] px-2.5 py-1.5 transition hover:border-[var(--accent-30)]"
+                    title="Salin Asset ID"
+                  >
+                    <code className="truncate text-[11px] text-[var(--accent-soft)] font-mono">{record.assetId}</code>
+                    <Copy className="w-3 h-3 shrink-0 text-[var(--text-35)] transition group-hover/id:text-[var(--accent-soft)]" />
+                  </button>
 
-              <div className="flex shrink-0 items-center gap-2">
-                <StatusBadge status={record.status || 'Pending'} />
-                {record.status === 'Pending' && onRefresh && (
-                  <RefreshBadge
-                    busy={refreshingIds.includes(record.assetId)}
-                    onClick={() => onRefresh(record.assetId)}
-                  />
-                )}
+                  {record.robloxPlaybackSpeed && (
+                    <span
+                      className="rounded-lg border border-[var(--accent-20)] bg-[var(--accent-06)] px-2 py-1 text-[11px] font-mono text-[var(--accent-soft)]"
+                      title="Roblox Studio PlaybackRate"
+                    >
+                      Playback {record.robloxPlaybackSpeed}
+                    </span>
+                  )}
+
+                  <div className="ml-auto flex shrink-0 items-center gap-2">
+                    <StatusBadge status={record.status || 'Pending'} />
+                    {isPending && onRefresh && (
+                      <RefreshBadge
+                        busy={refreshingIds.includes(record.assetId)}
+                        onClick={() => onRefresh(record.assetId)}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

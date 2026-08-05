@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import { createReadStream } from 'fs';
-import { sleep } from '../config.js';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { join } from 'path';
+import { sleep, BACKEND_ROOT } from '../config.js';
 
 export function cleanSongTitle(rawTitle) {
   if (!rawTitle) return '';
@@ -165,4 +167,94 @@ export async function fetchWithRetry(url, tries = 3, options = {}) {
     }
   }
   return {};
+}
+
+export const ASSET_TYPE_MAP = {
+  '1': 'Image',
+  '3': 'Audio',
+  '4': 'Mesh',
+  '8': 'Hat',
+  '11': 'Decal',
+  '12': 'Video',
+  '19': 'Model',
+  '24': 'Animation',
+  '31': 'MeshPart',
+  '61': 'Texture',
+};
+
+export async function detectAsset(assetId) {
+  const cleanId = String(assetId).replace(/\D/g, '');
+  if (!cleanId) return { assetId: null };
+  const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanId}/details`);
+  const ecoData = await eco.json().catch(() => ({}));
+  const name = ecoData.Name || `Asset_${cleanId}`;
+  const typeId = String(ecoData.AssetTypeId || '');
+  const assetType = ASSET_TYPE_MAP[typeId] || null;
+  return { assetId: cleanId, name, assetType };
+}
+
+export async function performSpoof({ assetId, assetType, displayName, creatorType = 'user', creatorId, apiKey }) {
+  const cleanAssetId = String(assetId).replace(/\D/g, '');
+  const detected = await detectAsset(cleanAssetId);
+  const assetName = displayName || detected.name || `Spoofed_${cleanAssetId}`;
+  const finalType = assetType || detected.assetType || 'Animation';
+
+  const headers = {
+    'x-api-key': apiKey,
+    'Content-Type': 'application/json',
+  };
+
+  const createRes = await fetch('https://apis.roblox.com/assets/v1/assets', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      assetType: finalType,
+      displayName: assetName,
+      description: `Spoofed from ${cleanAssetId}`,
+      creatorType,
+      creatorId,
+    }),
+  });
+
+  if (createRes.ok) {
+    const data = await createRes.json();
+    return {
+      success: true,
+      newAssetId: String(data.assetId || data.id),
+      originalAssetId: cleanAssetId,
+      name: assetName,
+      assetType: finalType,
+    };
+  }
+
+  // Fallback: upload file kosong
+  const emptyBuffer = finalType === 'Audio'
+    ? Buffer.alloc(200)
+    : Buffer.from('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"></roblox>');
+
+  const tempFile = join(BACKEND_ROOT, `blank_${Date.now()}_${cleanAssetId}`);
+  writeFileSync(tempFile, emptyBuffer);
+
+  try {
+    const operationId = await uploadToRoblox(tempFile, {
+      assetType: finalType,
+      displayName: assetName,
+      description: `Spoofed from ${cleanAssetId}`,
+      creatorType,
+      creatorId,
+      apiKey,
+    });
+
+    return {
+      success: true,
+      operationId,
+      originalAssetId: cleanAssetId,
+      name: assetName,
+      assetType: finalType,
+    };
+  } finally {
+    if (existsSync(tempFile)) {
+      try { unlinkSync(tempFile); } catch {}
+    }
+  }
 }

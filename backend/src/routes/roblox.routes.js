@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import multer from 'multer';
 import fetch from 'node-fetch';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';
 import {
@@ -9,6 +9,8 @@ import {
   checkOperationStatus,
   checkAssetStatus,
   fetchWithRetry,
+  detectAsset,
+  performSpoof,
 } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
@@ -17,19 +19,6 @@ const router = Router();
 // ============================================================
 // SPOOFER: Deteksi nama & tipe aset tanpa upload
 // ============================================================
-const ASSET_TYPE_MAP = {
-  '1': 'Image',
-  '3': 'Audio',
-  '4': 'Mesh',
-  '8': 'Hat',
-  '11': 'Decal',
-  '12': 'Video',
-  '19': 'Model',
-  '24': 'Animation',
-  '31': 'MeshPart',
-  '61': 'Texture',
-};
-
 router.post('/spoof-detect', async (req, res) => {
   const { assetId } = req.body;
   if (!assetId) return res.status(400).json({ error: 'assetId wajib diisi' });
@@ -38,19 +27,13 @@ router.post('/spoof-detect', async (req, res) => {
   if (!cleanId) return res.status(400).json({ error: 'Asset ID Roblox tidak valid' });
 
   try {
-    const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanId}/details`);
-    const ecoData = await eco.json().catch(() => ({}));
-    const name = ecoData.Name || `Asset_${cleanId}`;
-    const typeId = String(ecoData.AssetTypeId || '');
-    const assetType = ASSET_TYPE_MAP[typeId] || null;
-
-    if (!assetType) {
+    const asset = await detectAsset(cleanId);
+    if (!asset.assetType) {
       return res.status(400).json({
-        error: `Tidak bisa menentukan tipe aset (AssetTypeId: ${typeId || 'tidak diketahui'}). Aset mungkin private atau tidak valid.`,
+        error: `Tidak bisa menentukan tipe aset. Aset mungkin private atau tidak valid.`,
       });
     }
-
-    return res.json({ success: true, assetId: cleanId, name, assetType });
+    return res.json({ success: true, assetId: cleanId, name: asset.name, assetType: asset.assetType });
   } catch (error) {
     console.error('Spoof detect error:', error);
     res.status(500).json({ error: error.message || 'Gagal memeriksa aset' });
@@ -77,83 +60,24 @@ router.post('/spoof', async (req, res) => {
   const cleanAssetId = String(assetId).replace(/\D/g, '');
 
   try {
-    // Dapatkan nama & tipe aset asli
-    let assetName = displayName || `Spoofed_${cleanAssetId}`;
-    let detectedType = assetType;
-    try {
-      const eco = await fetch(`https://economy.roblox.com/v2/assets/${cleanAssetId}/details`);
-      const ecoData = await eco.json().catch(() => ({}));
-      if (ecoData.Name) assetName = ecoData.Name;
-      if (!detectedType) {
-        const typeId = String(ecoData.AssetTypeId || '');
-        const mapped = ASSET_TYPE_MAP[typeId];
-        if (mapped) detectedType = mapped;
-      }
-    } catch {}
+    const result = await performSpoof({ assetId: cleanAssetId, assetType, displayName, creatorType, creatorId, apiKey });
 
-    const finalType = detectedType || 'Animation';
-
-    // Buat asset kosong baru
-    const headers = {
-      'x-api-key': apiKey,
-      'Content-Type': 'application/json',
-    };
-
-    const createRes = await fetch('https://apis.roblox.com/assets/v1/assets', {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        assetType: finalType,
-        displayName: assetName,
-        description: `Spoofed from ${cleanAssetId}`,
-        creatorType,
-        creatorId,
-      }),
-    });
-
-    if (createRes.ok) {
-      const data = await createRes.json();
-      const newAssetId = String(data.assetId || data.id);
-
+    if (result.newAssetId) {
       return res.json({
         success: true,
-        originalAssetId: cleanAssetId,
-        newAssetId,
-        name: assetName,
-        assetType: finalType,
+        originalAssetId: result.originalAssetId,
+        newAssetId: result.newAssetId,
+        name: result.name,
+        assetType: result.assetType,
       });
     }
-
-    // Fallback: upload file kosong
-    const emptyBuffer = finalType === 'Audio'
-      ? Buffer.alloc(200)
-      : Buffer.from('<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://www.roblox.com/roblox.xsd" version="4"></roblox>');
-
-    const tempFile = join(BACKEND_ROOT, `blank_${Date.now()}_${cleanAssetId}`);
-    writeFileSync(tempFile, emptyBuffer);
-
-    try {
-      const operationId = await uploadToRoblox(tempFile, {
-        assetType: finalType,
-        displayName: assetName,
-        description: `Spoofed from ${cleanAssetId}`,
-        creatorType,
-        creatorId,
-        apiKey,
-      });
-
-      res.json({
-        success: true,
-        operationId,
-        originalAssetId: cleanAssetId,
-        name: assetName,
-        assetType: finalType,
-      });
-    } finally {
-      if (existsSync(tempFile)) {
-        try { unlinkSync(tempFile); } catch {}
-      }
-    }
+    return res.json({
+      success: true,
+      operationId: result.operationId,
+      originalAssetId: result.originalAssetId,
+      name: result.name,
+      assetType: result.assetType,
+    });
   } catch (error) {
     console.error('Spoof error:', error);
     res.status(500).json({ error: error.message });
@@ -183,31 +107,25 @@ router.post('/spoof-batch', async (req, res) => {
 
   for (const asset of assets) {
     const cleanId = String(asset.assetId).replace(/\D/g, '');
+    const key = asset.key ? String(asset.key) : cleanId;
     try {
-      const spoofRes = await fetch(`http://localhost:${process.env.PORT || 3001}/api/spoof`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          assetId: cleanId,
-          assetType: asset.assetType || 'Animation',
-          creatorType,
-          creatorId,
-          apiKey,
-        }),
+      const spoofResult = await performSpoof({
+        assetId: cleanId,
+        assetType: asset.assetType,
+        displayName: asset.displayName,
+        creatorType,
+        creatorId,
+        apiKey,
       });
-      const spoofData = await spoofRes.json();
 
-      let newId = spoofData.newAssetId;
+      let newId = spoofResult.newAssetId;
 
-      if (spoofData.operationId && !newId) {
+      if (spoofResult.operationId && !newId) {
         for (let i = 0; i < 30; i++) {
-          await new Promise(r => setTimeout(r, 2000));
-          const opRes = await fetch(
-            `http://localhost:${process.env.PORT || 3001}/api/operation-status/${spoofData.operationId}?apiKey=${encodeURIComponent(apiKey)}`
-          );
-          const opData = await opRes.json();
+          await new Promise((r) => setTimeout(r, 2000));
+          const opData = await checkOperationStatus(spoofResult.operationId, apiKey);
           if (opData.done) {
-            newId = opData.assetId || opData.response?.assetId;
+            newId = opData.assetId || null;
             break;
           }
         }
@@ -215,14 +133,29 @@ router.post('/spoof-batch', async (req, res) => {
 
       if (newId) {
         replacements[cleanId] = String(newId);
-        results.push({ oldId: cleanId, newId: String(newId), success: true });
+        results.push({
+          key,
+          oldId: cleanId,
+          newId: String(newId),
+          name: spoofResult.name,
+          assetType: spoofResult.assetType,
+          success: true,
+          status: 'Active',
+        });
       } else {
-        results.push({ oldId: cleanId, success: false, error: 'Gagal generate ID' });
+        results.push({
+          key,
+          oldId: cleanId,
+          name: spoofResult.name,
+          assetType: spoofResult.assetType,
+          success: false,
+          error: 'Gagal generate ID',
+        });
       }
     } catch (e) {
-      results.push({ oldId: cleanId, success: false, error: e.message });
+      results.push({ key, oldId: cleanId, success: false, error: e.message || 'Gagal' });
     }
-    await new Promise(r => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 300));
   }
 
   res.json({

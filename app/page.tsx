@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, CloudUpload, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
+import { Building2, Check, ChevronDown, CloudUpload, Lock, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -11,7 +11,7 @@ import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
 import { ToastProvider } from '../components/Toast';
-import { CARD, PANEL, BTN_PRIMARY } from '../lib/ui';
+import { CARD, BTN_PRIMARY } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
@@ -40,6 +40,21 @@ export default function Home() {
   const [theme, setTheme] = useState('gold-dark');
   const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
+  const [webVersion, setWebVersion] = useState('');
+
+  useEffect(() => {
+    const loadVersion = async () => {
+      try {
+        const res = await fetch(`/api/version?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.version) setWebVersion(data.version);
+      } catch {
+        // ignore
+      }
+    };
+    loadVersion();
+  }, []);
 
   // Clean Modular Custom Hooks
   const {
@@ -78,16 +93,9 @@ export default function Home() {
   } = useAudioQueue();
 
   useEffect(() => {
-    const savedPin = localStorage.getItem('audioUploader_pin');
-    if (savedPin === CORRECT_PIN) setUnlocked(true);
-
-    try {
-      const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-      if (settings.theme) setTheme(settings.theme);
-      if (settings.youtubeCookies) setYoutubeCookies(settings.youtubeCookies);
-    } catch {
-      // ignore
-    }
+    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    if (settings.theme) setTheme(settings.theme);
+    if (settings.youtubeCookies) setYoutubeCookies(settings.youtubeCookies);
   }, []);
 
   useEffect(() => {
@@ -110,7 +118,6 @@ export default function Home() {
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin === CORRECT_PIN) {
-      localStorage.setItem('audioUploader_pin', pin);
       setUnlocked(true);
     } else {
       setPinError(true);
@@ -144,37 +151,81 @@ export default function Home() {
   if (!unlocked) {
     return (
       <ToastProvider>
-        <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] p-4">
+        <div className="relative min-h-screen flex items-center justify-center bg-[var(--bg)] p-4 overflow-hidden">
+          {/* Ambient Accent Glow */}
+          <div
+            className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-[120px]"
+            style={{ background: 'var(--accent-soft)' }}
+          />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+            style={{
+              backgroundImage: 'radial-gradient(circle at 1px 1px, var(--text) 1px, transparent 0)',
+              backgroundSize: '28px 28px',
+            }}
+          />
+
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className={`${PANEL} w-full max-w-sm p-6 space-y-4 text-center`}
+            initial={{ opacity: 0, y: 20, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="relative w-full max-w-sm"
           >
-            <div className="w-12 h-12 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center mx-auto text-[var(--accent)]">
-              <Music className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-[var(--text)] tracking-tight">Audio Master to Roblox</h1>
-              <p className="text-xs text-[var(--text-45)] mt-1">Masukkan PIN untuk melanjutkan</p>
+            <div className={`${CARD} p-7 space-y-6 text-center`}>
+              {/* Logo */}
+              <motion.div
+                initial={{ scale: 0.7, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 16 }}
+                className="relative mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent-strong)] to-[var(--accent-deep)] shadow-lg"
+              >
+                <Music className="w-8 h-8 text-[var(--on-accent)]" />
+                <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--bg)] bg-[var(--emerald)]">
+                  <Check className="w-3.5 h-3.5 text-[#000000]" />
+                </span>
+              </motion.div>
+
+              <div>
+                <h1 className="font-serif text-2xl font-bold tracking-tight text-[var(--text)]">S2 Studio</h1>
+                <p className="text-sm text-[var(--text-50)] mt-1">Audio Master & Asset Spoofer</p>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[11px] font-medium text-[var(--accent-strong)]">
+                  <Sparkles className="w-3 h-3" />
+                  Akses Terproteksi
+                </span>
+              </div>
+
+              <form onSubmit={handlePinSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <p className={`text-xs transition ${pinError ? 'text-[var(--danger)]' : 'text-[var(--text-40)]'}`}>
+                    {pinError ? 'PIN salah, coba lagi.' : 'Masukkan PIN untuk melanjutkan'}
+                  </p>
+                  <input
+                    type="password"
+                    maxLength={6}
+                    value={pin}
+                    onChange={(e) => {
+                      setPin(e.target.value);
+                      setPinError(false);
+                    }}
+                    placeholder="••••••"
+                    autoFocus
+                    className="w-full text-center text-3xl tracking-[0.6em] py-3 bg-[var(--surface-focus)] border border-[var(--line)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent-40)] focus:ring-1 focus:ring-[var(--accent-30)] placeholder:text-[var(--text-30)] transition"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={pin.length < 1}
+                  className={`${BTN_PRIMARY} w-full py-3 text-sm`}
+                >
+                  <Lock className="w-4 h-4" />
+                  Buka Akses
+                </button>
+              </form>
             </div>
 
-            <form onSubmit={handlePinSubmit} className="space-y-3">
-              <input
-                type="password"
-                maxLength={6}
-                value={pin}
-                onChange={(e) => {
-                  setPin(e.target.value);
-                  setPinError(false);
-                }}
-                placeholder="******"
-                className="w-full text-center text-2xl tracking-[0.5em] py-2 bg-[var(--surface-50)] border border-[var(--line)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent)] transition"
-              />
-              {pinError && <p className="text-xs text-[var(--danger)]">PIN salah, coba lagi.</p>}
-              <button type="submit" className={`${BTN_PRIMARY} w-full py-2.5 text-sm font-medium`}>
-                Buka Akses
-              </button>
-            </form>
+            <p className="mt-6 text-center text-[11px] text-[var(--text-35)]">
+              Created &amp; developed by fhrlsym
+            </p>
           </motion.div>
         </div>
       </ToastProvider>
@@ -194,7 +245,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="font-bold text-sm leading-none text-[var(--text)]">S2 Studio</h1>
-                <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5">
+                <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5 w-[150px] truncate">
                   {activeTool === 'audio-master' ? 'Audio Master to Roblox' : 'Animation & Sound Spoofer'}
                 </p>
               </div>
@@ -252,53 +303,88 @@ export default function Home() {
                 </button>
 
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-1">
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-1 max-h-[70vh] overflow-y-auto">
                     <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--text-40)] uppercase">
-                      Akun Tersimpan
+                      Akun Tersimpan ({savedAccounts.length})
                     </div>
-                    {savedAccounts.map((acc) => (
-                      <div
-                        key={acc.id}
-                        className={`flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs transition cursor-pointer ${
-                          selectedAccount?.id === acc.id
-                            ? 'bg-[var(--accent-15)] text-[var(--accent-strong)] font-semibold'
-                            : 'text-[var(--text-70)] hover:bg-[var(--surface-50)]'
-                        }`}
-                        onClick={() => selectAccount(acc)}
-                      >
-                        {acc.thumbnail ? (
-                          <img
-                            src={acc.thumbnail}
-                            alt={acc.name}
-                            referrerPolicy="no-referrer"
-                            className="h-8 w-8 shrink-0 rounded-lg object-cover border border-[var(--line)]"
-                          />
-                        ) : (
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
-                            {acc.type === 'group' ? <Building2 className="w-4 h-4" /> : <User className="w-4 h-4" />}
+                    {savedAccounts.map((acc) => {
+                      const hasQuota = acc.quota && acc.quota.capacity > 0;
+                      const qPct = hasQuota ? Math.min(100, (acc.quota!.usage / acc.quota!.capacity) * 100) : 0;
+                      const qColor = qPct >= 90 ? 'bg-rose-400' : qPct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
+                      return (
+                        <div
+                          key={acc.id}
+                          className={`rounded-xl px-2.5 py-2.5 text-xs transition cursor-pointer ${
+                            selectedAccount?.id === acc.id
+                              ? 'bg-[var(--accent-15)] text-[var(--accent-strong)] font-semibold'
+                              : 'text-[var(--text-70)] hover:bg-[var(--surface-50)]'
+                          }`}
+                          onClick={() => selectAccount(acc)}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {acc.thumbnail ? (
+                              <img
+                                src={acc.thumbnail}
+                                alt={acc.name}
+                                referrerPolicy="no-referrer"
+                                className="h-10 w-10 shrink-0 rounded-lg object-cover border border-[var(--line)]"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
+                                {acc.type === 'group' ? <Building2 className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                              </div>
+                            )}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5">
+                                <p className="min-w-0 flex-1 text-xs font-semibold text-[var(--text-90)] leading-snug break-words">
+                                  {acc.name}
+                                </p>
+                                {acc.type === 'group' ? (
+                                  <Building2 className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                                ) : (
+                                  <User className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                                )}
+                              </div>
+                              <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
+                                {acc.type === 'group'
+                                  ? `Komunitas · ${acc.memberCount != null ? acc.memberCount.toLocaleString() + ' member' : ''}`
+                                  : acc.ownerName
+                                    ? `@${acc.ownerName}`
+                                    : 'Akun User'}
+                              </p>
+                              {acc.type === 'group' && (
+                                <p className="text-[10px] text-[var(--accent-soft)]">Upload akan masuk ke komunitas ini</p>
+                              )}
+                              {hasQuota && (
+                                <div className="mt-2">
+                                  <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
+                                    <span>Kuota audio dipakai</span>
+                                    <span className="font-medium text-[var(--text-60)]">
+                                      {acc.quota!.usage.toLocaleString()} / {acc.quota!.capacity.toLocaleString()}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--surface-strong)] overflow-hidden">
+                                    <div className={`h-full ${qColor} transition-all duration-300`} style={{ width: `${qPct}%` }} />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate">{acc.name}</p>
-                          <p className="truncate text-[10px] text-[var(--text-40)] font-normal">
-                            {acc.type === 'group' ? 'Group' : acc.ownerName ? `@${acc.ownerName}` : 'User'}
-                            {acc.type === 'group' && acc.memberCount != null ? ` · ${acc.memberCount.toLocaleString()} members` : ''}
-                          </p>
+                          <div className="flex items-center gap-1.5 mt-2 justify-end">
+                            {selectedAccount?.id === acc.id && <Check className="w-3.5 h-3.5 shrink-0" />}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAccount(acc.id);
+                              }}
+                              className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          {selectedAccount?.id === acc.id && <Check className="w-3.5 h-3.5 shrink-0" />}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteAccount(acc.id);
-                            }}
-                            className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     <div className="pt-2 border-t border-[var(--line)] space-y-1">
                       <button
@@ -329,17 +415,18 @@ export default function Home() {
                 </button>
 
                 {themeOpen && (
-                  <div className="absolute right-0 mt-2 w-40 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 grid grid-cols-2 gap-1">
+                  <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5">
                     {THEMES.map((t) => (
                       <button
                         key={t.id}
                         onClick={() => changeTheme(t.id)}
-                        className={`flex items-center gap-2 p-1.5 rounded-xl text-[11px] font-medium transition ${
+                        className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[11px] font-medium transition ${
                           theme === t.id ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'hover:bg-[var(--surface)] text-[var(--text-70)]'
                         }`}
                       >
-                        <span className="w-3 h-3 rounded-full shrink-0" style={{ background: t.swatch }} />
-                        <span className="truncate">{t.label}</span>
+                        <span className="h-3.5 w-3.5 rounded-full shrink-0 border border-[var(--line)]" style={{ background: t.swatch }} />
+                        <span className="whitespace-nowrap">{t.label}</span>
+                        {theme === t.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
                       </button>
                     ))}
                   </div>
@@ -350,47 +437,24 @@ export default function Home() {
         </header>
 
         {/* Main Application Workbench */}
-        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-          {activeTool === 'spoofer' ? (
-            <motion.div
-              key="spoofer-tool"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-            >
-              <SpooferSection
-                selectedAccount={selectedAccount}
-                backendUrl={BACKEND_URL}
-              />
-            </motion.div>
-          ) : (
-            <>
-              {/* Top Overview & Stats Bar */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                <div className={`${CARD} p-4 text-center`}>
-                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Upload</p>
-                  <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
-                </div>
-                <div className={`${CARD} p-4 text-center`}>
-                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Active</p>
-                  <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
-                </div>
-                <div className={`${CARD} p-4 text-center`}>
-                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Pending</p>
-                  <p className="text-2xl font-bold text-[var(--accent)] mt-1">{uploadStats.pending}</p>
-                </div>
-                <div className={`${CARD} p-4 text-center`}>
-                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Copyright</p>
-                  <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
-                </div>
-                <div className={`${CARD} p-4 text-center col-span-2 md:col-span-1`}>
-                  <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Sisa Kuota Roblox</p>
-                  <p className="text-2xl font-bold text-[var(--accent-strong)] mt-1">
-                    {selectedAccount?.quota ? `${selectedAccount.quota.capacity - selectedAccount.quota.usage}` : '-'}
-                  </p>
-                </div>
+        <main className="max-w-7xl mx-auto px-4 py-6">
+          {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
+          <div className={activeTool === 'spoofer' ? 'hidden' : 'space-y-6'}>
+            {/* Top Overview & Stats Bar */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <div className={`${CARD} p-4 text-center`}>
+                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Upload</p>
+                <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
               </div>
+              <div className={`${CARD} p-4 text-center`}>
+                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Success</p>
+                <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
+              </div>
+              <div className={`${CARD} p-4 text-center`}>
+                <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Copyright</p>
+                <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
+              </div>
+            </div>
 
               {/* Stepper Navigation */}
               <div className="max-w-2xl mx-auto">
@@ -514,9 +578,29 @@ export default function Home() {
                 onRefresh={handleRefreshStatus}
                 refreshingIds={refreshingIds}
               />
-            </>
-          )}
+          </div>
+
+          {/* Spoofer Tool (selalu ter-mount agar state tidak reset) */}
+          <div className={activeTool === 'spoofer' ? 'space-y-6' : 'hidden'}>
+            <SpooferSection
+              selectedAccount={selectedAccount}
+              backendUrl={BACKEND_URL}
+            />
+          </div>
         </main>
+
+        {/* Footer */}
+        <footer className="border-t border-[var(--line)] py-4">
+          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--emerald)]" />
+              <span>S2 Studio</span>
+            </div>
+            {webVersion && (
+              <p className="text-[11px] text-[var(--text-35)] font-mono">v{webVersion}</p>
+            )}
+          </div>
+        </footer>
 
         {/* Account Modal Component */}
         <AccountModal
