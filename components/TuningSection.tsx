@@ -83,16 +83,19 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
     }
 
     onTuningComplete(results);
-    toast(`Berhasil men-tune ${results.length} file audio!`, 'success');
+    if (results.length > 0) {
+      toast(`Berhasil men-tune ${results.length} file audio!`, 'success');
+      onNext?.();
+    } else {
+      toast('Gagal men-tune file audio. Silakan coba lagi.', 'error');
+    }
     // Refresh file list: remove files that were successfully tuned.
     const done = new Set(succeededIds);
     rawFiles.forEach((f) => {
       if (done.has(f.id)) onRemoveRaw(f.id);
     });
     setTuning(false);
-    onNext?.();
     setProgress(0);
-    if (results.length > 0) onNext?.();
   };
 
   return (

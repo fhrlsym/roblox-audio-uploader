@@ -118,10 +118,12 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       finalAudioPath = outputPath;
     }
 
+    const actualFileId = finalAudioPath === tempAudioPath ? `temp_${runId}` : `output_${runId}`;
+
     return {
       title,
       outputPath: finalAudioPath,
-      fileId: `output_${runId}`,
+      fileId: actualFileId,
       cleanup: () => {
         for (const f of [tempAudioPath, outputPath]) {
           if (f && existsSync(f)) unlinkSync(f);
