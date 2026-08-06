@@ -33,8 +33,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
       const { data, error } = await supabase
         .from('audio_uploads')
         .select('*')
-        .order('uploaded_at', { ascending: false })
-        .limit(300);
+        .order('uploaded_at', { ascending: false });
 
       if (!error && data) {
         const history: UploadRecord[] = data.map((row) => {

@@ -16,8 +16,7 @@ export function useSpoofHistory() {
       const { data, error } = await supabase
         .from('spoof_history')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(300);
+        .order('created_at', { ascending: false });
 
       if (!error && data) {
         const list: SpoofRecord[] = data.map((row) => ({
