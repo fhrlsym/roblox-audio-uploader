@@ -264,7 +264,7 @@ const j = data.job as unknown as SpoofJob;
     failed: records.filter((r) => r.status === 'Failed').length,
   };
 
-  const readyItems = (job?.items || []).filter((it) => it.status === 'downloaded');
+  const readyItems = (job?.items || []).filter((it) => it.status === 'downloaded' || (it.status !== 'failed' && !it.error));
   const newIdCount = (job?.items || []).filter((it) => it.uploadStatus === 'done').length;
 
   return (
@@ -295,7 +295,7 @@ const j = data.job as unknown as SpoofJob;
             <div>
               <h2 className="text-base font-bold text-[var(--text)] tracking-tight">Asset Spoofer</h2>
               <p className="text-xs text-[var(--text-45)]">
-                Ubah ID Animation, Sound, Decal &amp; lainnya menjadi milik Anda â€” dukungan batch
+                Ubah ID Animation, Sound, Decal &amp; lainnya menjadi milik Anda — dukungan batch
               </p>
             </div>
           </div>
@@ -308,7 +308,7 @@ const j = data.job as unknown as SpoofJob;
             value={assetInput}
             onChange={(e) => setAssetInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Masukkan Asset ID Roblox lalu Enterâ€¦ (Contoh: 86280001082394)"
+            placeholder="Masukkan Asset ID Roblox lalu Enter... (Contoh: 86280001082394)"
             className={INPUT}
             disabled={polling || uploading}
           />
@@ -417,8 +417,8 @@ const j = data.job as unknown as SpoofJob;
                     <h3 className="font-serif text-lg font-semibold text-[var(--text)]">
                       {uploading ? 'Uploading ke Roblox' : polling ? 'Memproses Spoof' : 'Hasil Spoof'}
                     </h3>
-                    <p className="text-[11px] text-[var(--text-40)]">
-                      Job {job.jobId} Â· {job.items.length} asset
+                    <p className="text-[11px] text-[var(--text-40)] font-mono">
+                      Job {job.jobId || 'Active'} · {job.items.length} asset
                     </p>
                   </div>
                 </div>

@@ -569,8 +569,8 @@ export default function Home() {
                           isActive
                             ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
                             : isDone
-                              ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--text-40)]'
+                              ? 'border-[var(--accent-soft)] bg-[var(--bg)] text-[var(--accent-strong)]'
+                              : 'border-[var(--line)] bg-[var(--bg)] text-[var(--text-40)]'
                         }`}
                       >
                         {isDone ? <Check className="w-3.5 h-3.5" /> : isActive ? <Icon className="w-4 h-4" /> : step.id}
