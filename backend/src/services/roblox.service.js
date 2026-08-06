@@ -212,9 +212,17 @@ const SPOOFER_API_BASE = (process.env.SPOOFER_API_URL || 'https://spoofer.blokma
 
 function spoofHeaders() {
   return {
-    Origin: 'https://spoofer.blokmarket.store',
-    Referer: 'https://blokmarket.store/',
-    'User-Agent': 'Mozilla/5.0',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'application/json, text/plain, */*',
+    'Accept-Language': 'en-US,en;q=0.9,id;q=0.8',
+    'Origin': 'https://spoofer.blokmarket.store',
+    'Referer': 'https://spoofer.blokmarket.store/',
+    'Sec-Ch-Ua': '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Fetch-Dest': 'empty',
+    'Sec-Fetch-Mode': 'cors',
+    'Sec-Fetch-Site': 'same-origin',
   };
 }
 
@@ -223,59 +231,78 @@ export async function downloadOriginalAssetAPI(assetId) {
   const cleanId = String(assetId).replace(/\D/g, '');
   if (!cleanId) throw new Error('Asset ID Roblox tidak valid');
 
-  // 1) Submit batch async
-  const submitRes = await fetch(`${SPOOFER_API_BASE}/api/download/batch/async`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...spoofHeaders() },
-    body: JSON.stringify({
-      assets: [{ id: Number(cleanId), custom_name: `Asset_${cleanId}` }],
-      is_free: true,
-    }),
-  });
-  const submit = await submitRes.json().catch(() => ({}));
-  const taskId = submit.task_id;
-  if (!submitRes.ok || !taskId) {
-    throw new Error(`Gagal memulai batch download (${submitRes.status}): ${submit.error || submit.message || 'tidak ada task_id'}`);
-  }
+  let lastError = null;
 
-  // 2) Poll status sampai completed
-  const deadline = Date.now() + 5 * 60 * 1000;
-  let taskData = null;
-  while (Date.now() < deadline) {
-    await sleep(2000);
-    const statusRes = await fetch(`${SPOOFER_API_BASE}/api/task/${taskId}/status`, { headers: spoofHeaders() });
-    if (!statusRes.ok) continue;
-    taskData = await statusRes.json().catch(() => ({}));
-    if (taskData.status === 'completed') break;
-    if (taskData.status === 'failed' || taskData.status === 'error') {
-      throw new Error(taskData.error || `Task download gagal (${taskData.status})`);
+  // 1) Percobaan utama: API Blokmarket dengan Header Chrome 124
+  try {
+    const submitRes = await fetch(`${SPOOFER_API_BASE}/api/download/batch/async`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...spoofHeaders() },
+      body: JSON.stringify({
+        assets: [{ id: Number(cleanId), custom_name: `Asset_${cleanId}` }],
+        is_free: true,
+      }),
+    });
+    const submit = await submitRes.json().catch(() => ({}));
+    const taskId = submit.task_id;
+    if (submitRes.ok && taskId) {
+      const deadline = Date.now() + 5 * 60 * 1000;
+      let taskData = null;
+      while (Date.now() < deadline) {
+        await sleep(1500);
+        const statusRes = await fetch(`${SPOOFER_API_BASE}/api/task/${taskId}/status`, { headers: spoofHeaders() });
+        if (!statusRes.ok) continue;
+        taskData = await statusRes.json().catch(() => ({}));
+        if (taskData.status === 'completed') break;
+        if (taskData.status === 'failed' || taskData.status === 'error') {
+          throw new Error(taskData.error || `Task download gagal (${taskData.status})`);
+        }
+      }
+      if (taskData && taskData.status === 'completed') {
+        const result = (Array.isArray(taskData.results) && taskData.results[0]) || {};
+        const downloadUrl = result.download_url;
+        if (downloadUrl) {
+          const rawPath = String(downloadUrl).replace(/^\/+/, '');
+          let fileUrl = /^https?:\/\//i.test(downloadUrl)
+            ? downloadUrl
+            : rawPath.startsWith('api/files/download/')
+            ? `${SPOOFER_API_BASE}/${rawPath}`
+            : `${SPOOFER_API_BASE}/api/files/download/${encodeURIComponent(rawPath)}`;
+
+          const fileRes = await fetch(fileUrl, { headers: spoofHeaders() });
+          if (fileRes.ok) {
+            const buffer = Buffer.from(await fileRes.arrayBuffer());
+            if (buffer.length > 0) {
+              return { buffer, fileName: rawPath.split('/').pop() || `Asset_${cleanId}` };
+            }
+          }
+        }
+      }
     }
-  }
-  if (!taskData || taskData.status !== 'completed') {
-    throw new Error('Task download melewati batas waktu (5 menit).');
+  } catch (err) {
+    console.warn(`[Blokmarket Download Warning] Asset ${cleanId}:`, err.message);
+    lastError = err;
   }
 
-  const result = (Array.isArray(taskData.results) && taskData.results[0]) || {};
-  const downloadUrl = result.download_url;
-  if (!downloadUrl) throw new Error('Tidak ada download_url pada hasil task.');
-
-  // 3) Unduh file (format sesuai aset asli, tidak wajib OGG)
-  // download_url bisa berupa: URL penuh, path "/api/files/download/xxx", atau nama file.
-  const rawPath = String(downloadUrl).replace(/^\/+/, '');
-  let fileUrl;
-  if (/^https?:\/\//i.test(downloadUrl)) {
-    fileUrl = downloadUrl;
-  } else if (rawPath.startsWith('api/files/download/')) {
-    fileUrl = `${SPOOFER_API_BASE}/${rawPath}`;
-  } else {
-    fileUrl = `${SPOOFER_API_BASE}/api/files/download/${encodeURIComponent(rawPath)}`;
+  // 2) Percobaan Cadangan: Roblox Official Asset Delivery CDN
+  try {
+    const cdnRes = await fetch(`https://assetdelivery.roblox.com/v1/asset/?id=${cleanId}`, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': '*/*',
+      },
+    });
+    if (cdnRes.ok) {
+      const buffer = Buffer.from(await cdnRes.arrayBuffer());
+      if (buffer.length > 100) {
+        return { buffer, fileName: `Asset_${cleanId}.bin` };
+      }
+    }
+  } catch (err) {
+    lastError = err;
   }
-  const fileRes = await fetch(fileUrl, { headers: spoofHeaders() });
-  if (!fileRes.ok) throw new Error(`Gagal mengunduh file (${fileRes.status})`);
-  const buffer = Buffer.from(await fileRes.arrayBuffer());
-  if (!buffer.length) throw new Error('File hasil download kosong.');
 
-  return { buffer, fileName: rawPath.split('/').pop() || `Asset_${cleanId}` };
+  throw lastError || new Error(`Gagal mengunduh file aset Roblox (${cleanId}).`);
 }
 
 // Wrapper kompat: tulis hasil API ke outputPath.
