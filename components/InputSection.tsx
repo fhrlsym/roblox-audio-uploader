@@ -457,9 +457,12 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
             <div className="mt-4 flex gap-3">
               <button
                 onClick={() => {
-                  const url = cookieHelpUrl;
+                  const targetUrl = cookieHelpUrl;
                   setCookieHelpUrl(null);
-                  retryLink(url);
+                  if (targetUrl) retryLink(targetUrl);
+                  youtubeLinks.forEach((l) => {
+                    if (l.error && l.url !== targetUrl) retryLink(l.url);
+                  });
                 }}
                 className={BTN_PRIMARY + ' flex-1'}
               >

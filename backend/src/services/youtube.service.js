@@ -37,7 +37,7 @@ async function runYtdl(args, cookiesFile) {
 
 async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
   let lastError;
-  const candidates = [...clients];
+  const candidates = cookiesFile ? ['web', 'mweb', 'default'] : [...clients];
   if (!candidates.includes('default')) {
     candidates.push('default');
   }
@@ -87,16 +87,19 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
   };
 
   try {
-    const stdout = String(await runYtCommand([
+    const ytArgs = [
       '--print', 'title',
       '--no-simulate',
       cleanYoutubeUrl(url),
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio[ext=m4a]/bestaudio/best',
-      '--downloader', 'aria2c',
-      '--downloader-args', 'aria2c:-j 8 -x 8 -k 1M',
-      '--retries', '3',
-    ], cookiesFile));
+      '--retries', '5',
+    ];
+    if (!cookiesFile) {
+      ytArgs.push('--downloader', 'aria2c', '--downloader-args', 'aria2c:-j 8 -x 8 -k 1M');
+    }
+
+    const stdout = String(await runYtCommand(ytArgs, cookiesFile));
 
     const title = stdout.trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
