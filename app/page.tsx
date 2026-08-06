@@ -298,11 +298,11 @@ export default function Home() {
               </div>
 
               {/* Tool Switcher */}
-              <div className="flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] ml-4 shrink-0">
+              <div className="flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-2xl border border-[var(--line)] ml-4 shrink-0">
                 <button
                   onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center justify-center gap-1.5 w-[92px] px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
-                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
                   <Music className="w-3.5 h-3.5 shrink-0" />
@@ -310,8 +310,8 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center justify-center gap-1.5 w-[92px] px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
-                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -350,31 +350,33 @@ export default function Home() {
                 </button>
 
                 {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-1 max-h-[70vh] overflow-y-auto">
-                    <div className="px-2 py-1.5 text-[10px] font-semibold tracking-wider text-[var(--text-40)] uppercase">
-                      Akun Tersimpan ({savedAccounts.length})
-                    </div>
+                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl z-50 space-y-2 max-h-[75vh] overflow-y-auto">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] px-1">
+                      Pilih Akun Roblox Target
+                    </p>
                     {savedAccounts.map((acc) => {
-                      const hasQuota = acc.quota && acc.quota.capacity > 0;
-                      const qPct = hasQuota ? Math.min(100, (acc.quota!.usage / acc.quota!.capacity) * 100) : 0;
+                      const hasQuota = acc.quota != null && acc.quota.capacity > 0;
+                      const qUsage = acc.quota?.usage ?? 0;
+                      const qCap = acc.quota?.capacity ?? 1;
+                      const qPct = Math.min(100, (qUsage / qCap) * 100);
                       const qColor = qPct >= 90 ? 'bg-rose-400' : qPct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
+
                       return (
                         <div
                           key={acc.id}
-                          className={`relative rounded-xl px-2.5 py-2.5 text-xs transition cursor-pointer ${
-                            selectedAccount?.id === acc.id
-                              ? 'bg-[var(--accent-15)]'
-                              : 'text-[var(--text-70)] hover:bg-[var(--surface-50)]'
-                          }`}
                           onClick={() => selectAccount(acc)}
+                          className={`group flex w-full flex-col rounded-xl border p-2.5 transition cursor-pointer ${
+                            selectedAccount?.id === acc.id
+                              ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
+                              : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)] hover:bg-[var(--surface)]'
+                          }`}
                         >
                           <div className="flex items-start gap-2.5">
                             {acc.thumbnail ? (
                               <img
                                 src={acc.thumbnail}
                                 alt={acc.name}
-                                referrerPolicy="no-referrer"
-                                className="h-10 w-10 shrink-0 rounded-lg object-cover border border-[var(--line)]"
+                                className="h-10 w-10 rounded-lg object-cover border border-[var(--line)] shrink-0"
                               />
                             ) : (
                               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
@@ -539,10 +541,10 @@ export default function Home() {
             {/* Stepper Navigation */}
             <div className="max-w-2xl mx-auto py-2">
               <div className="relative flex items-center justify-between">
-                {/* Precise Connector line anchored between step 1 and step 3 */}
-                <div className="absolute left-[16.66%] right-[16.66%] top-[17px] h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)] z-0 pointer-events-none" />
+                {/* Precise Connector line anchored exactly at center of 34px step circles (top-[21px]) */}
+                <div className="absolute left-[16.66%] right-[16.66%] top-[21px] h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)] z-0 pointer-events-none" />
                 <div
-                  className="absolute top-[17px] h-[2px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] transition-all duration-500 z-0 pointer-events-none"
+                  className="absolute top-[21px] h-[2px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] transition-all duration-500 z-0 pointer-events-none"
                   style={{
                     left: '16.66%',
                     width: `${(activeStep - 1) * 33.33}%`,
