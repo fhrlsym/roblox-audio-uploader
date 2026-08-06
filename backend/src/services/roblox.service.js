@@ -1,10 +1,9 @@
 import fetch from 'node-fetch';
 import FormData from 'form-data';
 import { createReadStream } from 'fs';
-import { existsSync, unlinkSync } from 'fs';
+import { existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { sleep, BACKEND_ROOT } from '../config.js';
-import { generateSilentMp3 } from './ffmpeg.service.js';
 
 export function cleanSongTitle(rawTitle) {
   if (!rawTitle) return '';
@@ -31,11 +30,20 @@ export async function uploadToRoblox(filePath, { assetType = 'Audio', displayNam
     fileExt = 'mp3';
     fileContentType = 'audio/mpeg';
   } else if (typeLower === 'animation') {
-    fileExt = 'rbxmx';
+    fileExt = 'rbx';
     fileContentType = 'model/x-rbxm';
-  } else if (typeLower === 'model') {
+  } else if (typeLower === 'model' || typeLower === 'hat') {
     fileExt = 'rbxm';
     fileContentType = 'model/x-rbxm';
+  } else if (typeLower === 'decal' || typeLower === 'image' || typeLower === 'texture' || typeLower === 'tshirt') {
+    fileExt = 'png';
+    fileContentType = 'image/png';
+  } else if (typeLower === 'mesh' || typeLower === 'meshpart') {
+    fileExt = 'mesh';
+    fileContentType = 'model/x-file-mesh-data';
+  } else if (typeLower === 'video') {
+    fileExt = 'mp4';
+    fileContentType = 'video/mp4';
   }
 
   const form = new FormData();
@@ -193,6 +201,83 @@ export const ASSET_TYPE_MAP = {
   '61': 'Texture',
 };
 
+// ============================================================
+// SPOOFER: Unduh byte asli via API Blokmarket (batch async)
+// Ala: POST /api/download/batch/async -> task_id
+//      GET  /api/task/{task_id}/status   -> poll sampai completed
+//      GET  /api/files/download/<file>   -> ambil file (format bebas)
+// Tidak perlu cookie/auth — cukup Origin/Referer Blokmarket.
+// ============================================================
+const SPOOFER_API_BASE = (process.env.SPOOFER_API_URL || 'https://spoofer.blokmarket.store').replace(/\/+$/, '');
+
+function spoofHeaders() {
+  return {
+    Origin: 'https://spoofer.blokmarket.store',
+    Referer: 'https://blokmarket.store/',
+    'User-Agent': 'Mozilla/5.0',
+  };
+}
+
+// Unduh byte asli asset (format apa pun: Audio/Animation/Decal/Image/dll) via API.
+export async function downloadOriginalAssetAPI(assetId) {
+  const cleanId = String(assetId).replace(/\D/g, '');
+  if (!cleanId) throw new Error('Asset ID Roblox tidak valid');
+
+  // 1) Submit batch async
+  const submitRes = await fetch(`${SPOOFER_API_BASE}/api/download/batch/async`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...spoofHeaders() },
+    body: JSON.stringify({
+      assets: [{ id: Number(cleanId), custom_name: `Asset_${cleanId}` }],
+      is_free: true,
+    }),
+  });
+  const submit = await submitRes.json().catch(() => ({}));
+  const taskId = submit.task_id;
+  if (!submitRes.ok || !taskId) {
+    throw new Error(`Gagal memulai batch download (${submitRes.status}): ${submit.error || submit.message || 'tidak ada task_id'}`);
+  }
+
+  // 2) Poll status sampai completed
+  const deadline = Date.now() + 5 * 60 * 1000;
+  let taskData = null;
+  while (Date.now() < deadline) {
+    await sleep(2000);
+    const statusRes = await fetch(`${SPOOFER_API_BASE}/api/task/${taskId}/status`, { headers: spoofHeaders() });
+    if (!statusRes.ok) continue;
+    taskData = await statusRes.json().catch(() => ({}));
+    if (taskData.status === 'completed') break;
+    if (taskData.status === 'failed' || taskData.status === 'error') {
+      throw new Error(taskData.error || `Task download gagal (${taskData.status})`);
+    }
+  }
+  if (!taskData || taskData.status !== 'completed') {
+    throw new Error('Task download melewati batas waktu (5 menit).');
+  }
+
+  const result = (Array.isArray(taskData.results) && taskData.results[0]) || {};
+  const downloadUrl = result.download_url;
+  if (!downloadUrl) throw new Error('Tidak ada download_url pada hasil task.');
+
+  // 3) Unduh file (format sesuai aset asli, tidak wajib OGG)
+  const fileUrl = /^https?:\/\//.test(downloadUrl)
+    ? downloadUrl
+    : `${SPOOFER_API_BASE}/api/files/download/${encodeURIComponent(String(downloadUrl).replace(/^\/+/, ''))}`;
+  const fileRes = await fetch(fileUrl, { headers: spoofHeaders() });
+  if (!fileRes.ok) throw new Error(`Gagal mengunduh file (${fileRes.status})`);
+  const buffer = Buffer.from(await fileRes.arrayBuffer());
+  if (!buffer.length) throw new Error('File hasil download kosong.');
+
+  return { buffer, fileName: String(downloadUrl).split('/').pop() || `Asset_${cleanId}` };
+}
+
+// Wrapper kompat: tulis hasil API ke outputPath.
+export async function downloadOriginalAsset(outputPath, assetId, cookie, assetType) {
+  const { buffer } = await downloadOriginalAssetAPI(assetId);
+  writeFileSync(outputPath, buffer);
+  return false;
+}
+
 export async function detectAsset(assetId) {
   const cleanId = String(assetId).replace(/\D/g, '');
   if (!cleanId) return { assetId: null };
@@ -203,6 +288,19 @@ export async function detectAsset(assetId) {
   const assetType = ASSET_TYPE_MAP[typeId] || null;
   return { assetId: cleanId, name, assetType };
 }
+
+const SPOOF_FILE_EXT = {
+  Audio: 'mp3',
+  Image: 'png',
+  Decal: 'png',
+  Texture: 'png',
+  Animation: 'rbx',
+  Model: 'rbxm',
+  Hat: 'rbxm',
+  Mesh: 'mesh',
+  MeshPart: 'mesh',
+  Video: 'mp4',
+};
 
 export async function performSpoof({ assetId, assetType, displayName, creatorType = 'user', creatorId, apiKey }) {
   const cleanAssetId = String(assetId).replace(/\D/g, '');
@@ -215,23 +313,12 @@ export async function performSpoof({ assetId, assetType, displayName, creatorTyp
   const assetName = displayName || detected?.name || `Spoofed_${cleanAssetId}`;
   const finalType = assetType || detected?.assetType || 'Audio';
 
-  // Roblox Assets API hanya menerima multipart/form-data + konten yang VALID.
-  // Audio memakai mp3 senyap valid (ffmpeg) -> berhasil jadi aset baru.
-  // Tipe lain (Animation/Model/Mesh) tidak punya "file kosong yang valid":
-  // skeleton rbxmx ditolak ("Failed to load asset content"), dan menyalin asli
-  // butuh cookie .ROBLOSECURITY (asset delivery 403 dgn API key saja).
-  if (finalType !== 'Audio') {
-    return {
-      success: false,
-      asset: null,
-      error: `Tipe ${finalType} tidak bisa di-spoof tanpa file animasi/data asli.`,
-    };
-  }
-
-  const tempFile = join(BACKEND_ROOT, `spoof_${Date.now()}_${cleanAssetId}.mp3`);
-  await generateSilentMp3(tempFile, 1);
-
+  const ext = SPOOF_FILE_EXT[finalType] || 'bin';
+  const tempFile = join(BACKEND_ROOT, `spoof_${Date.now()}_${cleanAssetId}.${ext}`);
   try {
+    const { buffer } = await downloadOriginalAssetAPI(cleanAssetId);
+    writeFileSync(tempFile, buffer);
+
     const operationId = await uploadToRoblox(tempFile, {
       assetType: finalType,
       displayName: assetName,
@@ -248,6 +335,8 @@ export async function performSpoof({ assetId, assetType, displayName, creatorTyp
       name: assetName,
       assetType: finalType,
     };
+  } catch (e) {
+    return { success: false, asset: null, error: (e && e.message) || String(e) };
   } finally {
     if (existsSync(tempFile)) {
       try { unlinkSync(tempFile); } catch {}

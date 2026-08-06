@@ -127,6 +127,7 @@ export function useSavedAccounts(unlocked: boolean, backendUrl: string) {
       owner_id: account.userId ?? null,
       owner_name: account.ownerName ?? null,
       api_key: account.apiKey || null,
+      cookie: account.cookie || null,
       audio_usage: account.quota?.usage ?? null,
       audio_capacity: account.quota?.capacity ?? null,
     };

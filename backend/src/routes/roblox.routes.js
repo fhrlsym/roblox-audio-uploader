@@ -51,6 +51,7 @@ router.post('/spoof', async (req, res) => {
     creatorType = 'user',
     creatorId,
     apiKey,
+    cookie,
   } = req.body;
 
   if (!assetId || !creatorId || !apiKey) {
@@ -60,7 +61,7 @@ router.post('/spoof', async (req, res) => {
   const cleanAssetId = String(assetId).replace(/\D/g, '');
 
   try {
-    const result = await performSpoof({ assetId: cleanAssetId, assetType, displayName, creatorType, creatorId, apiKey });
+    const result = await performSpoof({ assetId: cleanAssetId, assetType, displayName, creatorType, creatorId, apiKey, cookie });
 
     if (!result.success) {
       return res.status(400).json({ success: false, error: result.error || 'Gagal membuat asset spoof' });
@@ -87,6 +88,7 @@ router.post('/spoof-batch', async (req, res) => {
     creatorType = 'user',
     creatorId,
     apiKey,
+    cookie,
   } = req.body;
 
   if (!assets || !Array.isArray(assets) || assets.length === 0) {
@@ -107,9 +109,10 @@ router.post('/spoof-batch', async (req, res) => {
         assetId: cleanId,
         assetType: asset.assetType,
         displayName: asset.displayName,
-        creatorType,
+        creatorType: asset.creatorType || creatorType,
         creatorId,
         apiKey,
+        cookie,
       });
 
       let newId = spoofResult.newAssetId;

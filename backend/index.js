@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { readdirSync, statSync, unlinkSync } from 'fs';
@@ -5,15 +6,21 @@ import { join } from 'path';
 import { BACKEND_ROOT } from './src/config.js';
 import audioRoutes from './src/routes/audio.routes.js';
 import robloxRoutes from './src/routes/roblox.routes.js';
+import discordBridgeRoutes from './src/routes/discordBridge.routes.js';
+import { discordBridge } from './src/services/discordBridge.service.js';
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
+// Serve file hasil dari Discord bridge (upload temp)
+app.use('/uploads', express.static(join(BACKEND_ROOT, 'uploads')));
+
 // Routes
 app.use('/api', audioRoutes);
 app.use('/api', robloxRoutes);
+app.use('/api', discordBridgeRoutes);
 
 // Version endpoint
 process.env.STARTED_AT = process.env.STARTED_AT || new Date().toISOString();
@@ -51,4 +58,6 @@ setInterval(sweepOldFiles, 10 * 60 * 1000);
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);
+  // Inisialisasi Discord bridge bot (jika env ter-set)
+  discordBridge.init();
 });

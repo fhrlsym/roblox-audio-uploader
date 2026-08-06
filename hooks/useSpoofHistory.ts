@@ -24,7 +24,7 @@ export function useSpoofHistory() {
           id: row.id,
           originalAssetId: row.original_asset_id,
           newAssetId: row.new_asset_id || undefined,
-          assetType: row.asset_type === 'Audio' ? 'Audio' : 'Animation',
+          assetType: String(row.asset_type || 'Audio'),
           title: row.title,
           status: (row.status || 'Pending') as SpoofRecord['status'],
           error: row.error || undefined,

@@ -16,7 +16,7 @@ interface QueueItem {
 
 interface VerifiedAsset extends QueueItem {
   name: string;
-  assetType: 'Animation' | 'Audio';
+  assetType: string;
   status: 'ok' | 'error';
   error?: string;
 }
@@ -146,7 +146,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           if (!response.ok || !data?.success) {
             throw new Error(str(data?.error) || 'Gagal memeriksa asset');
           }
-          const type = (data.assetType as string) === 'Audio' ? 'Audio' : 'Animation';
+          const type = String((data.assetType as string) || 'Audio');
           verified.push({
             id: item.id,
             originalAssetId: item.originalAssetId,
@@ -159,7 +159,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
             id: item.id,
             originalAssetId: item.originalAssetId,
             name: `Asset_${item.originalAssetId}`,
-            assetType: 'Animation',
+            assetType: 'Audio',
             status: 'error',
             error: error instanceof Error ? error.message : 'Gagal memeriksa',
           });
@@ -216,6 +216,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           creatorType: selectedAccount.type,
           creatorId: selectedAccount.id,
           apiKey: selectedAccount.apiKey,
+          cookie: selectedAccount.cookie || undefined,
         }),
       });
 

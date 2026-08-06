@@ -90,7 +90,7 @@ export interface SpoofRecord {
   id: string;
   originalAssetId: string;
   newAssetId?: string;
-  assetType: 'Animation' | 'Audio';
+  assetType: string;
   title: string;
   status: 'Active' | 'Pending' | 'Failed';
   error?: string;
