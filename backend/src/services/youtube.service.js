@@ -23,8 +23,25 @@ const videoInfoCache = new LRUCache({
 
 const execFileAsync = promisify(execFile);
 
+function prepareCookiesFile(cookies) {
+  if (!cookies || typeof cookies !== 'string' || !cookies.trim()) return null;
+  let text = cookies.trim();
+  if (!text.startsWith('# Netscape')) {
+    text = `# Netscape HTTP Cookie File\n# http://curl.haxx.se/rfc/cookie_spec.html\n# This is a generated file! Do not edit.\n\n` + text;
+  }
+  const filePath = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
+  writeFileSync(filePath, text.replace(/\r\n/g, '\n') + '\n');
+  return filePath;
+}
+
 async function runYtdl(args, cookiesFile) {
-  const baseArgs = ['--no-warnings', '--no-check-certificates', '--no-playlist'];
+  const baseArgs = [
+    '--no-warnings',
+    '--no-check-certificates',
+    '--no-playlist',
+    '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    '--referer', 'https://www.youtube.com/',
+  ];
   if (cookiesFile) {
     baseArgs.push('--cookies', cookiesFile);
   }
@@ -37,7 +54,7 @@ async function runYtdl(args, cookiesFile) {
 
 async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
   let lastError;
-  const candidates = cookiesFile ? ['web', 'mweb', 'default'] : [...clients];
+  const candidates = cookiesFile ? ['web', 'mweb', 'ios', 'android', 'tvhtml5', 'default'] : [...clients];
   if (!candidates.includes('default')) {
     candidates.push('default');
   }
@@ -59,14 +76,7 @@ async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) 
 }
 
 export async function runYtCommand(args, cookiesFile) {
-  if (cookiesFile) {
-    try {
-      return await runYtdlWithClients(args, cookiesFile);
-    } catch (err) {
-      return await runYtdlWithClients(args, null);
-    }
-  }
-  return await runYtdlWithClients(args, null);
+  return await runYtdlWithClients(args, cookiesFile);
 }
 
 export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
@@ -75,11 +85,7 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
   const tempBase = join(BACKEND_ROOT, `temp_${runId}`);
   const outputPath = join(BACKEND_ROOT, `output_${runId}.mp3`);
 
-  let cookiesFile = null;
-  if (cookies && typeof cookies === 'string' && cookies.trim()) {
-    cookiesFile = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
-    writeFileSync(cookiesFile, cookies);
-  }
+  const cookiesFile = prepareCookiesFile(cookies);
 
   const findTempFile = () => {
     const match = readdirSync(BACKEND_ROOT).find((f) => f.startsWith(`temp_${runId}.`));
@@ -145,11 +151,7 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
 }
 
 export async function searchYoutube(query, cookies) {
-  let cookiesFile = null;
-  if (cookies && typeof cookies === 'string' && cookies.trim()) {
-    cookiesFile = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
-    writeFileSync(cookiesFile, cookies);
-  }
+  const cookiesFile = prepareCookiesFile(cookies);
 
   try {
     const stdout = await runYtCommand([
@@ -186,11 +188,7 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
     return videoInfoCache.get(cacheKey);
   }
 
-  let cookiesFile = null;
-  if (cookies && typeof cookies === 'string' && cookies.trim()) {
-    cookiesFile = join(BACKEND_ROOT, `cookies_${Date.now()}_${Math.random().toString(36).slice(2)}.txt`);
-    writeFileSync(cookiesFile, cookies);
-  }
+  const cookiesFile = prepareCookiesFile(cookies);
 
   try {
     const stdout = await runYtCommand([
