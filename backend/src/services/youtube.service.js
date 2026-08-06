@@ -54,7 +54,9 @@ async function runYtdl(args, cookiesFile) {
 
 async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
   let lastError;
-  const candidates = cookiesFile ? ['android', 'ios', 'mweb', 'web', 'default'] : [...clients];
+  const candidates = cookiesFile
+    ? ['web', 'mweb', 'tvhtml5', 'web_safari', 'web_creator', 'default']
+    : ['android', 'ios', 'tvhtml5', 'mweb', 'default'];
   if (!candidates.includes('default')) {
     candidates.push('default');
   }
