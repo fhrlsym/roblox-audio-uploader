@@ -74,9 +74,9 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       let status = 'Pending';
       let opError: string | null = null;
 
-      // Poll status every 1000ms directly via backend
-      for (let attempt = 0; attempt < 60; attempt++) {
-        await new Promise((r) => setTimeout(r, 1000));
+      // Poll status every 400ms directly via backend
+      for (let attempt = 0; attempt < 80; attempt++) {
+        await new Promise((r) => setTimeout(r, 400));
 
         const opResponse = await fetch(
           `${backendUrl}/api/operation-status/${operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`

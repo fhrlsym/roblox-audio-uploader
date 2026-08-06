@@ -17,7 +17,7 @@ export function useSpoofHistory() {
         .from('spoof_history')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(300);
 
       if (!error && data) {
         const list: SpoofRecord[] = data.map((row) => ({

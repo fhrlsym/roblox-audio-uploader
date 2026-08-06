@@ -34,7 +34,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
         .from('audio_uploads')
         .select('*')
         .order('uploaded_at', { ascending: false })
-        .limit(50);
+        .limit(300);
 
       if (!error && data) {
         const history: UploadRecord[] = data.map((row) => {

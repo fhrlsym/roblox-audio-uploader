@@ -542,8 +542,8 @@ export async function runSpoofUpload({ jobId, creatorType = 'user', creatorId, a
         });
 
         let newId = null;
-        for (let i = 0; i < 30; i++) {
-          await sleep(2000);
+        for (let i = 0; i < 40; i++) {
+          await sleep(400);
           const opData = await checkOperationStatus(operationId, apiKey);
           if (opData.done) {
             newId = opData.assetId || null;
@@ -648,8 +648,8 @@ export async function runSpoofDirect({ assetIds, creatorType = 'user', creatorId
             });
 
             let newId = null;
-            for (let i = 0; i < 30; i++) {
-              await sleep(2000);
+            for (let i = 0; i < 40; i++) {
+              await sleep(400);
               const opData = await checkOperationStatus(operationId, apiKey);
               if (opData.done) {
                 newId = opData.assetId || null;
