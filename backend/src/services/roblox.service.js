@@ -315,12 +315,12 @@ const SPOOF_FILE_EXT = {
 //           simpan sementara per job untuk terminal progress.
 //  Fase 2 — upload file yang sudah diunduh ke Roblox, balikin ID baru.
 // ============================================================
-const spoofJobs = new Map();
+const spoofJobs = globalThis.__spoofJobs || (globalThis.__spoofJobs = new Map());
 let spoofJobSeq = 0;
 
-// Periodic cleanup for stale spoofJobs (> 30 mins) to prevent Node.js RAM memory leaks
+// Periodic cleanup for stale spoofJobs (> 2 hours) to prevent Node.js RAM memory leaks
 setInterval(() => {
-  const cutoff = Date.now() - 30 * 60 * 1000;
+  const cutoff = Date.now() - 2 * 60 * 60 * 1000;
   for (const [id, job] of spoofJobs.entries()) {
     if (job.createdAt && job.createdAt < cutoff) {
       if (job.items) {
@@ -331,7 +331,7 @@ setInterval(() => {
       spoofJobs.delete(id);
     }
   }
-}, 5 * 60 * 1000);
+}, 10 * 60 * 1000);
 
 function sanitizeAssetId(value) {
   return String(value == null ? '' : value).replace(/\D/g, '');
@@ -460,11 +460,13 @@ async function runDownloadPhase(job) {
 }
 
 export function getSpoofJob(jobId) {
-  return spoofJobs.get(jobId) || null;
+  if (!jobId) return null;
+  const cleanId = String(jobId).trim();
+  return spoofJobs.get(cleanId) || Array.from(spoofJobs.values()).find((j) => j.id === cleanId) || null;
 }
 
 export function getSpoofJobPublic(jobId) {
-  const job = spoofJobs.get(jobId);
+  const job = getSpoofJob(jobId);
   return job ? spoofJobPublic(job) : null;
 }
 
