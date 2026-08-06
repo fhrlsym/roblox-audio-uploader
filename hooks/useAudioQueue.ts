@@ -41,7 +41,12 @@ export function useAudioQueue() {
   }, [tunedFiles]);
 
   const addRawFiles = (files: RawAudioFile[]) => {
-    setRawFiles((prev) => [...prev, ...files]);
+    setRawFiles((prev) => {
+      const existingIds = new Set(prev.map((f) => f.id));
+      const existingNames = new Set(prev.map((f) => f.name));
+      const newFiles = files.filter((f) => !existingIds.has(f.id) && !existingNames.has(f.name));
+      return [...prev, ...newFiles];
+    });
   };
 
   const removeRawFile = (id: string) => {
@@ -49,7 +54,14 @@ export function useAudioQueue() {
   };
 
   const addTunedFiles = (tuned: TunedAudioFile[]) => {
-    setTunedFiles((prev) => [...prev, ...tuned]);
+    setTunedFiles((prev) => {
+      const incomingSourceIds = new Set(tuned.map((t) => t.sourceId).filter(Boolean));
+      const incomingNames = new Set(tuned.map((t) => t.originalName));
+      const filteredPrev = prev.filter(
+        (p) => (!p.sourceId || !incomingSourceIds.has(p.sourceId)) && !incomingNames.has(p.originalName)
+      );
+      return [...filteredPrev, ...tuned];
+    });
   };
 
   const removeTunedFile = (id: string) => {
