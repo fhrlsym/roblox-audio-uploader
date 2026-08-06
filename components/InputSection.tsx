@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronRight, Clock, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
 import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
@@ -294,75 +295,81 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                   Hapus semua
                 </button>
               </div>
-              {youtubeLinks.map((link) => (
-                <div
-                  key={link.url}
-                  className={`flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 transition ${
-                    link.error ? 'border-rose-400/25' : 'hover:border-[var(--accent-25)]'
-                  }`}
-                >
-                  {link.loading ? (
-                    <>
-                      <div className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
-                      <div className="flex-1 space-y-2">
-                        <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--surface-strong)]" />
-                        <div className="h-2.5 w-1/3 animate-pulse rounded bg-[var(--surface-strong)]" />
-                      </div>
-                      <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[var(--accent-soft)]" />
-                    </>
-                  ) : link.video ? (
-                    <>
-                      {link.video.thumbnail ? (
-                        <img
-                          src={link.video.thumbnail}
-                          alt=""
-                          referrerPolicy="no-referrer"
-                          className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-14 sm:h-12 sm:w-20 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
-                          <Music className="w-5 h-5 text-[var(--text-40)]" />
+              <AnimatePresence>
+                {youtubeLinks.map((link) => (
+                  <motion.div
+                    key={link.url}
+                    initial={{ opacity: 0, height: 0, y: 6 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -6 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 transition ${
+                      link.error ? 'border-rose-400/25' : 'hover:border-[var(--accent-25)]'
+                    }`}
+                  >
+                    {link.loading ? (
+                      <>
+                        <div className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--surface-strong)]" />
+                          <div className="h-2.5 w-1/3 animate-pulse rounded bg-[var(--surface-strong)]" />
                         </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(link.video.title)}</p>
-                        <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-45)]">
-                          <Clock className="w-3 h-3" />
-                          {link.video.channel || 'YouTube'} · {link.video.durationString}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => removeLink(link.url)}
-                        className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-rose-400/25 bg-rose-400/5">
-                        <Play className="w-5 h-5 text-rose-300" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs text-[var(--text-60)]">{link.url}</p>
-                        <p className="mt-0.5 text-xs text-rose-300">{link.error}</p>
-                      </div>
-                      <button
-                        onClick={() => retryLink(link.url)}
-                        className="shrink-0 text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
-                      >
-                        Coba lagi
-                      </button>
-                      <button
-                        onClick={() => removeLink(link.url)}
-                        className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              ))}
+                        <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[var(--accent-soft)]" />
+                      </>
+                    ) : link.video ? (
+                      <>
+                        {link.video.thumbnail ? (
+                          <img
+                            src={link.video.thumbnail}
+                            alt=""
+                            referrerPolicy="no-referrer"
+                            className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 rounded-lg object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-10 w-14 sm:h-12 sm:w-20 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
+                            <Music className="w-5 h-5 text-[var(--text-40)]" />
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(link.video.title)}</p>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-45)]">
+                            <Clock className="w-3 h-3" />
+                            {link.video.channel || 'YouTube'} · {link.video.durationString}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => removeLink(link.url)}
+                          className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-rose-400/25 bg-rose-400/5">
+                          <Play className="w-5 h-5 text-rose-300" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-xs text-[var(--text-60)]">{link.url}</p>
+                          <p className="mt-0.5 text-xs text-rose-300">{link.error}</p>
+                        </div>
+                        <button
+                          onClick={() => retryLink(link.url)}
+                          className="shrink-0 text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
+                        >
+                          Coba lagi
+                        </button>
+                        <button
+                          onClick={() => removeLink(link.url)}
+                          className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
 

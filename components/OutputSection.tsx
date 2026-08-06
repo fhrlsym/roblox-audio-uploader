@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { CloudUpload, Copy, Download, Loader2, Music, RotateCcw, Trash2 } from 'lucide-react';
 import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
@@ -180,19 +181,24 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         </div>
       ) : (
         <div className="space-y-3">
-          {tunedFiles.map((file) => {
-            const result = uploadResults[file.id];
+          <AnimatePresence>
+            {tunedFiles.map((file) => {
+              const result = uploadResults[file.id];
 
-            return (
-              <div
-                key={file.id}
-                className={`stagger-enter rounded-xl border p-4 transition ${result?.success
-                    ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
-                    : result
-                      ? 'border-rose-400/15 bg-rose-400/[0.04]'
-                      : 'border-[var(--line)] bg-[var(--surface)]'
-                  }`}
-              >
+              return (
+                <motion.div
+                  key={file.id}
+                  initial={{ opacity: 0, height: 0, y: 6 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -6 }}
+                  transition={{ duration: 0.2 }}
+                  className={`rounded-xl border p-4 transition ${result?.success
+                      ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
+                      : result
+                        ? 'border-rose-400/15 bg-rose-400/[0.04]'
+                        : 'border-[var(--line)] bg-[var(--surface)]'
+                    }`}
+                >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(file.tunedName)}</p>
@@ -260,9 +266,10 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                     )}
                   </div>
                 )}
-              </div>
-            );
-          })}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         </div>
       )}
 

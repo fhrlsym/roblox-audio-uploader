@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, ChevronRight, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
@@ -123,56 +124,62 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
           </div>
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {rawFiles.map((file) => {
-              const overLimit = file.video?.duration
-                ? file.video.duration / speed >= 420
-                : false;
-              return (
-                <div
-                  key={file.id}
-                  className={`flex items-center gap-3 rounded-xl border bg-[var(--surface)] p-2.5 transition ${
-                    overLimit ? 'border-amber-400/25' : 'border-[var(--line)]'
-                  }`}
-                >
-                  {file.video?.thumbnail ? (
-                    <img
-                      src={file.video.thumbnail}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      className="h-10 w-16 shrink-0 rounded-lg object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
-                      <Music className="w-4 h-4 text-[var(--text-40)]" />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-[var(--text-90)]">
-                      {cleanSongTitle(file.video?.title || file.name)}
-                    </p>
-                    <p className="truncate text-xs text-[var(--text-45)]">
-                      {file.video
-                        ? `${file.video.channel} · ${file.video.durationString}`
-                        : file.file
-                          ? `${(file.size || 0) / (1024 * 1024) > 1 ? ((file.size || 0) / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round((file.size || 0) / 1024)) + ' KB'}`
-                          : ''}
-                    </p>
-                    {overLimit && (
-                      <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300/90">
-                        <AlertTriangle className="w-3 h-3 shrink-0" />
-                        Setelah speed {speed}x jadi ~{fmtDuration(file.video!.duration! / speed)} — lebih dari 7 menit, ditolak Roblox.
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => onRemoveRaw(file.id)}
-                    className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+            <AnimatePresence>
+              {rawFiles.map((file) => {
+                const overLimit = file.video?.duration
+                  ? file.video.duration / speed >= 420
+                  : false;
+                return (
+                  <motion.div
+                    key={file.id}
+                    initial={{ opacity: 0, height: 0, y: 6 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -6 }}
+                    transition={{ duration: 0.2 }}
+                    className={`flex items-center gap-3 rounded-xl border bg-[var(--surface)] p-2.5 transition ${
+                      overLimit ? 'border-amber-400/25' : 'border-[var(--line)]'
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              );
-            })}
+                    {file.video?.thumbnail ? (
+                      <img
+                        src={file.video.thumbnail}
+                        alt=""
+                        referrerPolicy="no-referrer"
+                        className="h-10 w-16 shrink-0 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
+                        <Music className="w-4 h-4 text-[var(--text-40)]" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm text-[var(--text-90)]">
+                        {cleanSongTitle(file.video?.title || file.name)}
+                      </p>
+                      <p className="truncate text-xs text-[var(--text-45)]">
+                        {file.video
+                          ? `${file.video.channel} · ${file.video.durationString}`
+                          : file.file
+                            ? `${(file.size || 0) / (1024 * 1024) > 1 ? ((file.size || 0) / (1024 * 1024)).toFixed(1) + ' MB' : Math.max(1, Math.round((file.size || 0) / 1024)) + ' KB'}`
+                            : ''}
+                      </p>
+                      {overLimit && (
+                        <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300/90">
+                          <AlertTriangle className="w-3 h-3 shrink-0" />
+                          Setelah speed {speed}x jadi ~{fmtDuration(file.video!.duration! / speed)} — lebih dari 7 menit, ditolak Roblox.
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => onRemoveRaw(file.id)}
+                      className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
           </div>
         )}
       </div>

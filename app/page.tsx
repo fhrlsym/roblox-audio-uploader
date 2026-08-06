@@ -285,40 +285,18 @@ export default function Home() {
       <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         {/* Header Navigation */}
         <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-90">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
-            <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
-              <div className="flex items-center gap-2.5">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
+            <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
                   <Music className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <h1 className="font-bold text-xs sm:text-sm leading-none text-[var(--text)]">S2 Studio</h1>
-                  <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[110px] sm:w-[150px] truncate">
+                  <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[100px] sm:w-[150px] truncate">
                     {activeTool === 'audio-master' ? 'Audio Master' : 'Spoofer'}
                   </p>
                 </div>
-              </div>
-
-              {/* Mobile Tool Switcher Bar */}
-              <div className="flex sm:hidden items-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)]">
-                <button
-                  onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)]'
-                  }`}
-                >
-                  <Music className="w-3 h-3 shrink-0" />
-                  <span>Audio Master</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)]'
-                  }`}
-                >
-                  <Sparkles className="w-3 h-3 shrink-0" />
-                  <span>Spoofer</span>
-                </button>
               </div>
 
               {/* Desktop Tool Switcher */}
@@ -344,188 +322,205 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Account Dropdown */}
-              <div className="relative">
-                <button
-                  onClick={toggleAccountMenu}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] text-xs transition"
-                >
-                  {selectedAccount ? (
-                    <>
-                      {selectedAccount.thumbnail ? (
-                        <img
-                          src={selectedAccount.thumbnail}
-                          alt={selectedAccount.name}
-                          referrerPolicy="no-referrer"
-                          className="h-5 w-5 rounded-md object-cover border border-[var(--line)]"
-                        />
-                      ) : selectedAccount.type === 'group' ? (
-                        <Building2 className="w-3.5 h-3.5 text-[var(--accent)]" />
-                      ) : (
-                        <User className="w-3.5 h-3.5 text-[var(--accent)]" />
-                      )}
-                      <span className="font-medium max-w-[120px] truncate">{selectedAccount.name}</span>
-                    </>
-                  ) : (
-                    <span className="text-[var(--text-45)]">Pilih Akun</span>
-                  )}
-                  <ChevronDown className="w-3.5 h-3.5 text-[var(--text-45)]" />
-                </button>
+            {/* Header Right Actions (Account Dropdown + Theme Picker) */}
+            <div className="flex items-center gap-2">
+                {/* Account Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={toggleAccountMenu}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] text-xs transition max-w-[170px] sm:max-w-none"
+                  >
+                    {selectedAccount ? (
+                      <>
+                        {selectedAccount.thumbnail ? (
+                          <img
+                            src={selectedAccount.thumbnail}
+                            alt={selectedAccount.name}
+                            referrerPolicy="no-referrer"
+                            className="h-4.5 w-4.5 sm:h-5 sm:w-5 rounded-md object-cover border border-[var(--line)] shrink-0"
+                          />
+                        ) : selectedAccount.type === 'group' ? (
+                          <Building2 className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                        ) : (
+                          <User className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" />
+                        )}
+                        <span className="font-semibold text-[11px] sm:text-xs truncate">{selectedAccount.name}</span>
+                      </>
+                    ) : (
+                      <span className="text-[var(--text-45)] text-[11px] sm:text-xs">Pilih Akun</span>
+                    )}
+                    <ChevronDown className="w-3 h-3 text-[var(--text-45)] shrink-0 ml-0.5" />
+                  </button>
 
-                {accountMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl z-50 space-y-2 max-h-[75vh] overflow-y-auto">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] px-1">
-                      Pilih Akun Roblox Target
-                    </p>
-                    {savedAccounts.map((acc) => {
-                      const hasQuota = acc.quota != null && acc.quota.capacity > 0;
-                      const qUsage = acc.quota?.usage ?? 0;
-                      const qCap = acc.quota?.capacity ?? 1;
-                      const qPct = Math.min(100, (qUsage / qCap) * 100);
-                      const qColor = qPct >= 90 ? 'bg-rose-400' : qPct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
+                  <AnimatePresence>
+                    {accountMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-[320px] sm:w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl z-50 space-y-2 max-h-[75vh] overflow-y-auto"
+                      >
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] px-1">
+                          Pilih Akun Roblox Target
+                        </p>
+                        {savedAccounts.map((acc) => {
+                          const hasQuota = acc.quota != null && acc.quota.capacity > 0;
+                          const qUsage = acc.quota?.usage ?? 0;
+                          const qCap = acc.quota?.capacity ?? 1;
+                          const qPct = Math.min(100, (qUsage / qCap) * 100);
+                          const qColor = qPct >= 90 ? 'bg-rose-400' : qPct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
 
-                      return (
-                        <div
-                          key={acc.id}
-                          onClick={() => selectAccount(acc)}
-                          className={`group flex w-full flex-col rounded-xl border p-2.5 transition cursor-pointer ${
-                            selectedAccount?.id === acc.id
-                              ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
-                              : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)] hover:bg-[var(--surface)]'
-                          }`}
-                        >
-                          <div className="flex items-start gap-2.5">
-                            {acc.thumbnail ? (
-                              <img
-                                src={acc.thumbnail}
-                                alt={acc.name}
-                                className="h-10 w-10 rounded-lg object-cover border border-[var(--line)] shrink-0"
-                              />
-                            ) : (
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
-                                {acc.type === 'group' ? <Building2 className="w-5 h-5" /> : <User className="w-5 h-5" />}
-                              </div>
-                            )}
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-1.5">
-                                <p className="min-w-0 flex-1 text-xs font-semibold text-[var(--text-90)] leading-snug break-words">
-                                  {acc.name}
-                                </p>
-                                {acc.type === 'group' ? (
-                                  <Building2 className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                          return (
+                            <div
+                              key={acc.id}
+                              onClick={() => selectAccount(acc)}
+                              className={`group flex w-full flex-col rounded-xl border p-2.5 transition cursor-pointer ${
+                                selectedAccount?.id === acc.id
+                                  ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
+                                  : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)] hover:bg-[var(--surface)]'
+                              }`}
+                            >
+                              <div className="flex items-start gap-2.5">
+                                {acc.thumbnail ? (
+                                  <img
+                                    src={acc.thumbnail}
+                                    alt={acc.name}
+                                    className="h-10 w-10 rounded-lg object-cover border border-[var(--line)] shrink-0"
+                                  />
                                 ) : (
-                                  <User className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]">
+                                    {acc.type === 'group' ? <Building2 className="w-5 h-5" /> : <User className="w-5 h-5" />}
+                                  </div>
                                 )}
-                              </div>
-                              {acc.type === 'group' ? (
-                                <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
-                                  Komunitas · {acc.memberCount != null ? acc.memberCount.toLocaleString() + ' member' : 'Group Roblox'}
-                                </p>
-                              ) : (
-                                <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
-                                  Akun User
-                                </p>
-                              )}
-                              {acc.type === 'group' && (
-                                <p className="text-[10px] text-[var(--accent-soft)]">Upload masuk ke komunitas ini</p>
-                              )}
-                              {hasQuota && (
-                                <div className="mt-2">
-                                  <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
-                                    <span>Kuota key owner</span>
-                                    <span className="font-medium text-[var(--text-60)]">
-                                      {acc.quota!.usage.toLocaleString()} / {acc.quota!.capacity.toLocaleString()}
-                                    </span>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-1.5">
+                                    <p className="min-w-0 flex-1 text-xs font-semibold text-[var(--text-90)] leading-snug break-words">
+                                      {acc.name}
+                                    </p>
+                                    {acc.type === 'group' ? (
+                                      <Building2 className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                                    ) : (
+                                      <User className="w-3 h-3 shrink-0 text-[var(--accent-soft)]" />
+                                    )}
                                   </div>
-                                  <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--surface-strong)] overflow-hidden">
-                                    <div className={`h-full ${qColor} transition-all duration-300`} style={{ width: `${qPct}%` }} />
-                                  </div>
+                                  {acc.type === 'group' ? (
+                                    <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
+                                      Komunitas · {acc.memberCount != null ? acc.memberCount.toLocaleString() + ' member' : 'Group Roblox'}
+                                    </p>
+                                  ) : (
+                                    <p className="mt-0.5 text-[10px] text-[var(--text-40)] font-normal break-words">
+                                      Akun User
+                                    </p>
+                                  )}
+                                  {acc.type === 'group' && (
+                                    <p className="text-[10px] text-[var(--accent-soft)]">Upload masuk ke komunitas ini</p>
+                                  )}
+                                  {hasQuota && (
+                                    <div className="mt-2">
+                                      <div className="flex items-center justify-between text-[10px] text-[var(--text-40)]">
+                                        <span>Kuota key owner</span>
+                                        <span className="font-medium text-[var(--text-60)]">
+                                          {acc.quota!.usage.toLocaleString()} / {acc.quota!.capacity.toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <div className="mt-1 h-1.5 w-full rounded-full bg-[var(--surface-strong)] overflow-hidden">
+                                        <div className={`h-full ${qColor} transition-all duration-300`} style={{ width: `${qPct}%` }} />
+                                      </div>
+                                    </div>
+                                  )}
+                                  {acc.ownerName && (
+                                    <p className="mt-1.5 text-[10px] text-[var(--text-35)] break-words">
+                                      Ditambahkan melalui akun @{acc.ownerName}
+                                    </p>
+                                  )}
                                 </div>
-                              )}
-                              {acc.ownerName && (
-                                <p className="mt-1.5 text-[10px] text-[var(--text-35)] break-words">
-                                  Ditambahkan melalui akun @{acc.ownerName}
-                                </p>
-                              )}
+                              </div>
+                              <div className="flex items-center justify-between mt-2">
+                                <div>
+                                  {acc.createdAt != null && (
+                                    <span className="text-[10px] text-[var(--text-35)]">
+                                      {new Date(acc.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                  {selectedAccount?.id === acc.id && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--emerald)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#000000]">
+                                      <span className="w-1 h-1 rounded-full bg-[#000000]" />
+                                      Active
+                                    </span>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDeleteAccount(acc.id);
+                                    }}
+                                    className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex items-center justify-between mt-2">
-                            <div>
-                              {acc.createdAt != null && (
-                                <span className="text-[10px] text-[var(--text-35)]">
-                                  {new Date(acc.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              {selectedAccount?.id === acc.id && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-[var(--emerald)] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#000000]">
-                                  <span className="w-1 h-1 rounded-full bg-[#000000]" />
-                                  Active
-                                </span>
-                              )}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteAccount(acc.id);
-                                }}
-                                className="p-1 hover:text-[var(--danger)] text-[var(--text-30)] transition"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
+                          );
+                        })}
+
+                        <div className="pt-2 border-t border-[var(--line)] space-y-1">
+                          <button
+                            onClick={() => {
+                              setAccountMenuOpen(false);
+                              setShowAccountModal(true);
+                            }}
+                            className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--accent-soft)] hover:bg-[var(--accent-10)] transition"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            Tambah Akun Baru
+                          </button>
                         </div>
-                      );
-                    })}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-                    <div className="pt-2 border-t border-[var(--line)] space-y-1">
-                      <button
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          setShowAccountModal(true);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-xl px-2.5 py-1.5 text-xs font-medium text-[var(--accent-soft)] hover:bg-[var(--accent-10)] transition"
+                {/* Theme Picker */}
+                <div className="relative">
+                  <button
+                    onClick={toggleThemeMenu}
+                    className="w-8 h-8 rounded-xl border border-[var(--line)] flex items-center justify-center hover:bg-[var(--surface-50)] transition"
+                  >
+                    <div
+                      className="w-4 h-4 rounded-full border border-[var(--line)]"
+                      style={{ background: THEMES.find((t) => t.id === theme)?.swatch }}
+                    />
+                  </button>
+
+                  <AnimatePresence>
+                    {themeOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95, y: -6 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -6 }}
+                        transition={{ duration: 0.15, ease: 'easeOut' }}
+                        className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5 max-h-[70vh] overflow-y-auto"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        Tambah Akun Baru
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Theme Picker */}
-              <div className="relative">
-                <button
-                  onClick={toggleThemeMenu}
-                  className="w-8 h-8 rounded-xl border border-[var(--line)] flex items-center justify-center hover:bg-[var(--surface-50)] transition"
-                >
-                  <div
-                    className="w-4 h-4 rounded-full border border-[var(--line)]"
-                    style={{ background: THEMES.find((t) => t.id === theme)?.swatch }}
-                  />
-                </button>
-
-                {themeOpen && (
-                  <div className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5 max-h-[70vh] overflow-y-auto">
-                    {THEMES.map((t) => (
-                      <button
-                        key={t.id}
-                        onClick={() => changeTheme(t.id)}
-                        className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[11px] font-medium transition ${
-                          theme === t.id ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'hover:bg-[var(--surface)] text-[var(--text-70)]'
-                        }`}
-                      >
-                        <span className="h-3.5 w-3.5 rounded-full shrink-0 border border-[var(--line)]" style={{ background: t.swatch }} />
-                        <span className="whitespace-nowrap">{t.label}</span>
-                        {theme === t.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        {THEMES.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => changeTheme(t.id)}
+                            className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[11px] font-medium transition ${
+                              theme === t.id ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'hover:bg-[var(--surface)] text-[var(--text-70)]'
+                            }`}
+                          >
+                            <span className="h-3.5 w-3.5 rounded-full shrink-0 border border-[var(--line)]" style={{ background: t.swatch }} />
+                            <span className="whitespace-nowrap">{t.label}</span>
+                            {theme === t.id && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
             </div>
           </div>
         </header>

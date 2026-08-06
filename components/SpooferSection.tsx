@@ -247,18 +247,30 @@ const stopPolling = () => {
   return (
     <div className="space-y-6">
       {/* Spoofer Stats Bar */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div className={`${CARD} p-4 text-center`}>
-          <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Total Spoof</p>
-          <p className="text-2xl font-bold text-[var(--text)] mt-1">{stats.total}</p>
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
+          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
+            Total Spoof
+          </p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--text)] mt-1">{stats.total}</p>
         </div>
-        <div className={`${CARD} p-4 text-center`}>
-          <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Success</p>
-          <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{stats.active}</p>
+        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+            <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
+            Success
+          </p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--emerald)] mt-1">{stats.active}</p>
         </div>
-        <div className={`${CARD} p-4 text-center`}>
-          <p className="text-[11px] font-medium text-[var(--text-45)] uppercase tracking-wider">Failed</p>
-          <p className="text-2xl font-bold text-[var(--danger)] mt-1">{stats.failed}</p>
+        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
+          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
+            <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
+            Failed
+          </p>
+          <p className="text-xl sm:text-2xl font-bold text-[var(--danger)] mt-1">{stats.failed}</p>
         </div>
       </div>
 
@@ -311,22 +323,28 @@ const stopPolling = () => {
               </button>
             </div>
             <div className="space-y-1.5 max-h-56 overflow-y-auto">
-              {queue.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent-25)]"
-                >
-                  <Film className="w-4 h-4 shrink-0 text-[var(--accent-soft)]" />
-                  <code className="min-w-0 flex-1 text-sm font-mono text-[var(--text-80)]">{item.originalAssetId}</code>
-                  <button
-                    onClick={() => removeFromQueue(item.id)}
-                    disabled={polling || uploading}
-                    className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+              <AnimatePresence>
+                {queue.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, height: 0, y: 6 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -6 }}
+                    transition={{ duration: 0.18 }}
+                    className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent-25)]"
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              ))}
+                    <Film className="w-4 h-4 shrink-0 text-[var(--accent-soft)]" />
+                    <code className="min-w-0 flex-1 text-sm font-mono text-[var(--text-80)]">{item.originalAssetId}</code>
+                    <button
+                      onClick={() => removeFromQueue(item.id)}
+                      disabled={polling || uploading}
+                      className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         )}
