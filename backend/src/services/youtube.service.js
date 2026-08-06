@@ -59,14 +59,14 @@ async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) 
 }
 
 export async function runYtCommand(args, cookiesFile) {
-  try {
-    return await runYtdlWithClients(args, null);
-  } catch (err) {
-    if (cookiesFile && isBotError(err.message)) {
+  if (cookiesFile) {
+    try {
       return await runYtdlWithClients(args, cookiesFile);
+    } catch (err) {
+      return await runYtdlWithClients(args, null);
     }
-    throw err;
   }
+  return await runYtdlWithClients(args, null);
 }
 
 export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {

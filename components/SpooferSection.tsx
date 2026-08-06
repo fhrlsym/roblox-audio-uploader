@@ -174,21 +174,32 @@ const j = data.job as unknown as SpoofJob;
   const pollSpoofJobLoop = (jobId: string) => {
     stopPolling();
     setPolling(true);
+    let consecutiveErrors = 0;
+
     pollTimerRef.current = setInterval(async () => {
       try {
         const res = await fetch(`${backendUrl}/api/spoof-job/${jobId}`, { cache: 'no-store' });
+        if (res.status === 404) {
+          stopPolling();
+          toast('Job spoof telah selesai atau kedaluwarsa.', 'info');
+          return;
+        }
         const data = await parseJsonResponse(res);
         if (!data?.job) {
           stopPolling();
           return;
         }
+        consecutiveErrors = 0;
         const j = data.job as unknown as SpoofJob;
         setJob(j);
         if (j.status === 'completed' || j.status === 'failed' || j.status === 'partially') {
           stopPolling();
         }
       } catch {
-        // biarkan polling lanjut
+        consecutiveErrors++;
+        if (consecutiveErrors >= 5) {
+          stopPolling();
+        }
       }
     }, 1300);
   };
