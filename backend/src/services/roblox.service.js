@@ -562,3 +562,102 @@ export function clearSpoofJob(jobId) {
   }
   spoofJobs.delete(jobId);
 }
+
+// ============================================================
+// SPOOFER DIRECT: Eksekusi unduh & upload langsung tanpa async job cache
+// ============================================================
+export async function runSpoofDirect({ assetIds, creatorType = 'user', creatorId, apiKey }) {
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    throw new Error('Asset IDs tidak boleh kosong');
+  }
+
+  const items = [];
+  const CONCURRENCY = 2;
+  const uniqueIds = Array.from(new Set(assetIds.map(sanitizeAssetId).filter(Boolean)));
+
+  if (uniqueIds.length === 0) {
+    throw new Error('Tidak ada Asset ID valid untuk diproses');
+  }
+
+  let nextIndex = 0;
+  const worker = async () => {
+    while (nextIndex < uniqueIds.length) {
+      const originalAssetId = uniqueIds[nextIndex++];
+      const item = {
+        key: `item_${originalAssetId}`,
+        originalAssetId,
+        name: `Asset_${originalAssetId}`,
+        assetType: 'Audio',
+        fileName: `Asset_${originalAssetId}`,
+        status: 'downloading',
+        error: null,
+        newAssetId: null,
+        uploadStatus: null,
+        uploadError: null,
+      };
+
+      try {
+        const detected = await detectAsset(originalAssetId).catch(() => null);
+        if (detected?.name) item.name = detected.name;
+        if (detected?.assetType) item.assetType = detected.assetType;
+
+        const { buffer, fileName } = await downloadOriginalAssetAPI(originalAssetId);
+        item.fileName = fileName || `Asset_${originalAssetId}`;
+        item.status = 'downloaded';
+
+        // Jika apiKey & creatorId diberikan, langsung upload ke Roblox!
+        if (apiKey && creatorId) {
+          const ext = SPOOF_FILE_EXT[item.assetType] || 'bin';
+          const tempFile = join(BACKEND_ROOT, `spoof_direct_${Date.now()}_${originalAssetId}.${ext}`);
+          try {
+            writeFileSync(tempFile, buffer);
+            const operationId = await uploadToRoblox(tempFile, {
+              assetType: item.assetType,
+              displayName: item.name,
+              description: `Spoofed from ${originalAssetId}`,
+              creatorType,
+              creatorId,
+              apiKey,
+            });
+
+            let newId = null;
+            for (let i = 0; i < 30; i++) {
+              await sleep(2000);
+              const opData = await checkOperationStatus(operationId, apiKey);
+              if (opData.done) {
+                newId = opData.assetId || null;
+                break;
+              }
+            }
+
+            if (newId) {
+              item.newAssetId = String(newId);
+              item.uploadStatus = 'done';
+            } else {
+              item.uploadStatus = 'failed';
+              item.uploadError = 'Upload ditolak Roblox (moderasi/copyright).';
+            }
+          } catch (upErr) {
+            item.uploadStatus = 'failed';
+            item.uploadError = upErr.message || 'Gagal upload ke Roblox';
+          } finally {
+            if (existsSync(tempFile)) {
+              try { unlinkSync(tempFile); } catch {}
+            }
+          }
+        }
+      } catch (err) {
+        item.status = 'failed';
+        item.error = err.message || 'Gagal mengunduh aset';
+      }
+
+      items.push(item);
+      await sleep(300);
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, uniqueIds.length) }, worker));
+
+  const successCount = items.filter((it) => it.newAssetId || it.status === 'downloaded').length;
+  return { success: successCount > 0, items };
+}

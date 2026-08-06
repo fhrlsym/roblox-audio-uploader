@@ -14,10 +14,29 @@ import {
   getSpoofJobPublic,
   runSpoofUpload,
   clearSpoofJob,
+  runSpoofDirect,
 } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = Router();
+
+// ============================================================
+// SPOOFER DIRECT: Eksekusi unduh & upload langsung tanpa cache/job
+// ============================================================
+router.post('/spoof-direct', async (req, res) => {
+  const { assetIds, creatorType, creatorId, apiKey } = req.body;
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    return res.status(400).json({ error: 'assetIds array wajib diisi' });
+  }
+
+  try {
+    const result = await runSpoofDirect({ assetIds, creatorType, creatorId, apiKey });
+    res.json(result);
+  } catch (error) {
+    console.error('Spoof direct error:', error);
+    res.status(500).json({ error: error.message || 'Gagal memproses spoof' });
+  }
+});
 
 // ============================================================
 // SPOOFER: Deteksi nama & tipe aset tanpa upload

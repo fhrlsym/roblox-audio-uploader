@@ -146,117 +146,56 @@ const stopPolling = () => {
       toast('Tambahkan Asset ID terlebih dahulu', 'error');
       return;
     }
-    if (polling || uploading) return;
+    if (uploading) return;
 
     const assetIds = queue.map((q) => q.originalAssetId);
-    setJob(null);
-    setJobOpen(true);
-    toast(`Memulai spoof ${assetIds.length} asset...`, 'info');
-
-    try {
-      const res = await fetch(`${backendUrl}/api/spoof-job`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ assetIds }),
-      });
-      const data = await parseJsonResponse(res);
-      if (!res.ok) throw new Error(str(data?.error) || 'Gagal membuat job');
-const j = data.job as unknown as SpoofJob;
-      setJob(j);
-      pollSpoofJobLoop(j.jobId);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Gagal membuat job';
-      toast(msg, 'error');
-      setJobOpen(false);
-    }
-  };
-
-  const pollSpoofJobLoop = (jobId: string) => {
-    stopPolling();
-    setPolling(true);
-    let consecutiveErrors = 0;
-
-    pollTimerRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`${backendUrl}/api/spoof-job/${jobId}`, { cache: 'no-store' });
-        if (res.status === 404) {
-          stopPolling();
-          toast('Job spoof kedaluwarsa (server restart). Silakan klik "Spoof Asset" kembali.', 'info');
-          setJob((prev) => (prev ? { ...prev, status: 'failed', error: 'Job kedaluwarsa. Silakan klik "Spoof Asset" kembali.' } : null));
-          return;
-        }
-        const data = await parseJsonResponse(res);
-        if (!data?.job) {
-          stopPolling();
-          return;
-        }
-        consecutiveErrors = 0;
-        const j = data.job as unknown as SpoofJob;
-        setJob(j);
-        if (j.status === 'completed' || j.status === 'failed' || j.status === 'partially') {
-          stopPolling();
-        }
-      } catch {
-        consecutiveErrors++;
-        if (consecutiveErrors >= 5) {
-          stopPolling();
-        }
-      }
-    }, 1300);
-  };
-
-  const handleUpload = async () => {
-    if (!selectedAccount || !selectedAccount.apiKey) {
-      toast('Pilih Akun Roblox terlebih dahulu di bagian Header', 'error');
-      return;
-    }
-    if (!job || uploading) return;
-
     setUploading(true);
+    setJobOpen(true);
+    toast(`Memproses ${assetIds.length} asset...`, 'info');
+
     try {
-      const res = await fetch(`${backendUrl}/api/spoof-job/${job.jobId}/upload`, {
+      const res = await fetch(`${backendUrl}/api/spoof-direct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          creatorType: selectedAccount.type,
-          creatorId: selectedAccount.id,
-          apiKey: selectedAccount.apiKey,
+          assetIds,
+          creatorType: selectedAccount?.type,
+          creatorId: selectedAccount?.id,
+          apiKey: selectedAccount?.apiKey,
         }),
       });
       const data = await parseJsonResponse(res);
-      if (!res.ok) throw new Error(str(data?.error) || 'Gagal upload ke Roblox');
-      const j = data.job as unknown as SpoofJob;
-      setJob(j);
+      if (!res.ok) throw new Error(str(data?.error) || 'Gagal memproses spoof');
 
-      // Persis ke riwayat (Supabase)
-      const doneItems = j.items.filter((it) => it.uploadStatus === 'done' && it.newAssetId);
-      for (const it of doneItems) {
+      const items = (Array.isArray(data.items) ? data.items : []) as unknown as SpoofJobItem[];
+      const completedJob: SpoofJob = {
+        jobId: `direct_${Date.now()}`,
+        status: 'completed',
+        logs: [`[${new Date().toLocaleTimeString()}] Spoof selesai.`],
+        items,
+      };
+      setJob(completedJob);
+
+      // Persis ke Supabase riwayat
+      const doneItems = items.filter((it) => (it.uploadStatus === 'done' || it.newAssetId));
+      for (const item of doneItems) {
         await upsertRecord({
-          id: it.key,
-          originalAssetId: it.originalAssetId,
-          newAssetId: it.newAssetId,
-          assetType: it.assetType || 'Audio',
-          title: it.name || `Asset_${it.originalAssetId}`,
+          id: `sp_${item.newAssetId || Date.now()}_${Math.random().toString(36).slice(2)}`,
+          originalAssetId: item.originalAssetId,
+          newAssetId: item.newAssetId,
+          title: item.name || `Asset_${item.originalAssetId}`,
+          assetType: item.assetType || 'Audio',
           status: 'Active',
           createdAt: Date.now(),
         });
       }
-      const failItems = j.items.filter((it) => it.uploadStatus === 'failed' || it.status === 'failed');
-      for (const it of failItems) {
-        await upsertRecord({
-          id: it.key,
-          originalAssetId: it.originalAssetId,
-          assetType: it.assetType || 'Audio',
-          title: it.name || `Asset_${it.originalAssetId}`,
-          status: 'Failed',
-          error: it.uploadError || it.error || 'Gagal',
-          createdAt: Date.now(),
-        });
+      if (doneItems.length > 0) {
+        toast(`Spoof berhasil! ${doneItems.length} Asset Baru Roblox berhasil dibuat.`, 'success');
+      } else {
+        toast(`Berhasil mengunduh ${items.length} file aset asli.`, 'success');
       }
-
-      toast(`Upload selesai. ${doneItems.length} sukses.`, doneItems.length > 0 ? 'success' : 'error');
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Gagal upload ke Roblox';
+      const msg = error instanceof Error ? error.message : 'Gagal memproses spoof';
       toast(msg, 'error');
     } finally {
       setUploading(false);
@@ -524,39 +463,21 @@ const j = data.job as unknown as SpoofJob;
               </div>
 
               <div className="flex gap-3 p-5 border-t border-[var(--line)]">
-                {polling ? (
+                {uploading ? (
                   <button
                     disabled
-                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60`}
+                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60 flex items-center justify-center gap-2`}
                   >
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Menunggu proses selesai...
-                  </button>
-                ) : uploading ? (
-                  <button
-                    disabled
-                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60`}
-                  >
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Mengupload {readyItems.length} asset ke Roblox...
+                    Memproses &amp; Mengunggah Asset ke Roblox...
                   </button>
                 ) : (
-                  <>
-                    <button
-                      onClick={() => setJobOpen(false)}
-                      className={`${BTN_GHOST} flex-1 py-3 text-xs font-bold`}
-                    >
-                      Tutup
-                    </button>
-                    <button
-                      onClick={handleUpload}
-                      disabled={!selectedAccount?.apiKey || readyItems.length === 0 || newIdCount === readyItems.length}
-                      className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold`}
-                    >
-                      <UploadCloud className="w-4 h-4" />
-                      Upload {readyItems.length} Asset ke Roblox
-                    </button>
-                  </>
+                  <button
+                    onClick={() => setJobOpen(false)}
+                    className={`${BTN_PRIMARY} w-full py-3 text-xs font-bold`}
+                  >
+                    Tutup Modal
+                  </button>
                 )}
               </div>
             </motion.div>
