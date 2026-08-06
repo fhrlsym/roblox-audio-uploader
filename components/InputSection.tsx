@@ -31,6 +31,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
   const [youtubeLinks, setYoutubeLinks] = useState<YoutubeLinkEntry[]>([]);
   const [converting, setConverting] = useState(false);
   const [cookieHelpUrl, setCookieHelpUrl] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isBotError = (message: string) =>
@@ -215,16 +216,44 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
 
       {activeTab === 'file' ? (
         <div>
-          <button
+          <div
             onClick={() => fileInputRef.current?.click()}
-            className="w-full border-2 border-dashed border-[var(--line)] rounded-xl p-6 text-center transition hover:border-[var(--accent-30)] hover:bg-[var(--accent-06)]"
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDragging(false);
+              const files = e.dataTransfer.files;
+              if (!files || files.length === 0) return;
+
+              const dropped: RawAudioFile[] = Array.from(files).map((file) => ({
+                id: `file_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+                name: file.name,
+                file,
+                size: file.size,
+              }));
+
+              onFilesAdded(dropped);
+              toast(`Berhasil menambahkan ${dropped.length} file audio`, 'success');
+              onNext?.();
+            }}
+            className={`cursor-pointer w-full border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+              isDragging
+                ? 'border-[var(--accent)] bg-[var(--accent-15)] scale-[1.01] shadow-xl'
+                : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-30)] hover:bg-[var(--surface)]'
+            }`}
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)]">
-              <Upload className="w-5 h-5 text-[var(--text-50)]" />
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] shadow-sm">
+              <Upload className="w-6 h-6" />
             </div>
-            <p className="text-sm font-medium text-[var(--text-80)]">Klik untuk pilih audio</p>
-            <p className="text-xs text-[var(--text-40)] mt-1">MP3 · WAV · OGG · M4A — multi file didukung</p>
-          </button>
+            <p className="text-sm font-semibold text-[var(--text-90)]">
+              {isDragging ? 'Lepaskan file di sini' : 'Klik atau tarik (drag & drop) file audio ke sini'}
+            </p>
+            <p className="text-xs text-[var(--text-40)] mt-1.5 font-medium">MP3 · WAV · OGG · M4A — multi file didukung</p>
+          </div>
           <input
             ref={fileInputRef}
             type="file"

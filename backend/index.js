@@ -16,12 +16,20 @@ app.use(express.json());
 app.use('/api', audioRoutes);
 app.use('/api', robloxRoutes);
 
-// Version endpoint
+// Health & Version endpoints
 process.env.STARTED_AT = process.env.STARTED_AT || new Date().toISOString();
 app.get('/api/version', (req, res) => {
   res.json({
     commit: process.env.RAILWAY_GIT_COMMIT_SHA || process.env.VERCEL_GIT_COMMIT_SHA || null,
     startedAt: process.env.STARTED_AT || null,
+  });
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
   });
 });
 
@@ -45,6 +53,8 @@ function sweepOldFiles() {
   };
   check(BACKEND_ROOT, 'output_');
   check(BACKEND_ROOT, 'temp_');
+  check(BACKEND_ROOT, 'spoof_');
+  check(BACKEND_ROOT, 'cookies_');
   check(join(BACKEND_ROOT, 'uploads'), '');
 }
 setInterval(sweepOldFiles, 10 * 60 * 1000);

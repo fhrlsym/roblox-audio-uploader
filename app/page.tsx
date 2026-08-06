@@ -158,6 +158,32 @@ export default function Home() {
     }
   };
 
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.relative')) {
+        setAccountMenuOpen(false);
+        setThemeOpen(false);
+      }
+    };
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, [setAccountMenuOpen]);
+
+  const toggleAccountMenu = () => {
+    setAccountMenuOpen((prev) => {
+      if (!prev) setThemeOpen(false);
+      return !prev;
+    });
+  };
+
+  const toggleThemeMenu = () => {
+    setThemeOpen((prev) => {
+      if (!prev) setAccountMenuOpen(false);
+      return !prev;
+    });
+  };
+
   if (!unlocked) {
     return (
       <ToastProvider>
@@ -167,7 +193,8 @@ export default function Home() {
             className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-[120px]"
             style={{ background: 'var(--accent-soft)' }}
           />
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
+          <div
+            className="absolute inset-0 opacity-[0.03] pointer-events-none"
             style={{
               backgroundImage: 'radial-gradient(circle at 1px 1px, var(--text) 1px, transparent 0)',
               backgroundSize: '28px 28px',
@@ -180,28 +207,30 @@ export default function Home() {
             transition={{ duration: 0.4, ease: 'easeOut' }}
             className="relative w-full max-w-sm"
           >
-            <div className={`${CARD} p-7 space-y-6 text-center`}>
-              {/* Logo — pakai thumbnail tab/chrome (icon.svg) */}
+            <div className={`${CARD} p-7 space-y-6 text-center shadow-2xl border border-[var(--line)] bg-[var(--panel)] backdrop-blur-xl`}>
+              {/* Logo — centered container */}
               <motion.div
                 initial={{ scale: 0.7, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 16 }}
-                className="relative mx-auto"
+                className="flex flex-col items-center justify-center"
               >
-                <img
-                  src="/icon.svg"
-                  alt="S2 Studio"
-                  className="h-16 w-16 rounded-2xl shadow-lg border border-[var(--line)]"
-                />
-                <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--bg)] bg-[var(--emerald)]">
-                  <Check className="w-3.5 h-3.5 text-[#000000]" />
-                </span>
+                <div className="relative inline-block">
+                  <img
+                    src="/icon.svg"
+                    alt="S2 Studio"
+                    className="h-16 w-16 rounded-2xl shadow-xl border border-[var(--line)] object-cover"
+                  />
+                  <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--bg)] bg-[var(--emerald)] shadow-md">
+                    <Check className="w-3.5 h-3.5 text-[#000000] stroke-[3]" />
+                  </span>
+                </div>
               </motion.div>
 
               <div>
                 <h1 className="font-serif text-2xl font-bold tracking-tight text-[var(--text)]">S2 Studio</h1>
-                <p className="text-sm text-[var(--text-50)] mt-1">Audio Master & Asset Spoofer</p>
-                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[11px] font-medium text-[var(--accent-strong)]">
+                <p className="text-xs font-medium text-[var(--text-50)] mt-1">Audio Master &amp; Asset Spoofer</p>
+                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[11px] font-semibold text-[var(--accent-strong)] shadow-sm">
                   <Sparkles className="w-3 h-3" />
                   Akses Terproteksi
                 </span>
@@ -209,7 +238,7 @@ export default function Home() {
 
               <form onSubmit={handlePinSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <p className={`text-xs transition ${pinError ? 'text-[var(--danger)]' : 'text-[var(--text-40)]'}`}>
+                  <p className={`text-xs font-medium transition ${pinError ? 'text-[var(--danger)]' : 'text-[var(--text-40)]'}`}>
                     {pinError ? 'PIN salah, coba lagi.' : 'Masukkan PIN untuk melanjutkan'}
                   </p>
                   <input
@@ -233,7 +262,7 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={pin.length < 1}
-                  className={`${BTN_PRIMARY} w-full py-3 text-sm`}
+                  className={`${BTN_PRIMARY} w-full py-3 text-sm font-semibold`}
                 >
                   <Lock className="w-4 h-4" />
                   Buka Akses
@@ -295,7 +324,7 @@ export default function Home() {
               {/* Account Dropdown */}
               <div className="relative">
                 <button
-                  onClick={() => setAccountMenuOpen(!accountMenuOpen)}
+                  onClick={toggleAccountMenu}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] text-xs transition"
                 >
                   {selectedAccount ? (
@@ -444,7 +473,7 @@ export default function Home() {
               {/* Theme Picker */}
               <div className="relative">
                 <button
-                  onClick={() => setThemeOpen(!themeOpen)}
+                  onClick={toggleThemeMenu}
                   className="w-8 h-8 rounded-xl border border-[var(--line)] flex items-center justify-center hover:bg-[var(--surface-50)] transition"
                 >
                   <div
@@ -507,129 +536,168 @@ export default function Home() {
               </div>
             </div>
 
-              {/* Stepper Navigation */}
-              <div className="max-w-2xl mx-auto">
-                <div className="relative flex items-center justify-between">
-                  {/* Connector line */}
-                  <div className="absolute left-[18%] right-[18%] top-[17px] h-0.5 rounded-full bg-[var(--surface-strong)] -translate-y-1/2" />
-                  <div
-                    className="absolute top-[17px] h-0.5 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] -translate-y-1/2 transition-all duration-500"
-                    style={{ left: '18%', width: `${Math.min(64, (activeStep - 1) * 32)}%` }}
-                  />
-                  {[
-                    { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
-                    { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
-                    { id: 3, label: 'Output & Upload', icon: CloudUpload, badge: 0 },
-                  ].map((step) => {
-                    const Icon = step.icon;
-                    const isActive = activeStep === step.id;
-                    const isDone = step.id < activeStep;
-                    return (
-                      <button
-                        key={step.id}
-                        onClick={() => goToStep(step.id)}
-                        className="relative flex-1 flex flex-col items-center gap-2 py-1 select-none"
+            {/* Stepper Navigation */}
+            <div className="max-w-2xl mx-auto py-2">
+              <div className="relative flex items-center justify-between">
+                {/* Precise Connector line anchored between step 1 and step 3 */}
+                <div className="absolute left-[16.66%] right-[16.66%] top-[17px] h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)] z-0 pointer-events-none" />
+                <div
+                  className="absolute top-[17px] h-[2px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] transition-all duration-500 z-0 pointer-events-none"
+                  style={{
+                    left: '16.66%',
+                    width: `${(activeStep - 1) * 33.33}%`,
+                  }}
+                />
+                {[
+                  { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
+                  { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
+                  { id: 3, label: 'Output & Upload', icon: CloudUpload, badge: 0 },
+                ].map((step) => {
+                  const Icon = step.icon;
+                  const isActive = activeStep === step.id;
+                  const isDone = step.id < activeStep;
+                  return (
+                    <button
+                      key={step.id}
+                      onClick={() => goToStep(step.id)}
+                      className="relative z-10 flex-1 flex flex-col items-center gap-2 py-1 select-none focus:outline-none"
+                    >
+                      <span
+                        className={`relative z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
+                          isActive
+                            ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
+                            : isDone
+                              ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                              : 'border-[var(--line)] bg-[var(--surface)] text-[var(--text-40)]'
+                        }`}
                       >
-                        <span
-                          className={`relative flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
-                            isActive
-                              ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
-                              : isDone
-                                ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                                : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-40)]'
-                          }`}
-                        >
-                          {isDone ? <Check className="w-3.5 h-3.5" /> : isActive ? <Icon className="w-4 h-4" /> : step.id}
-                        </span>
-                        <span className={`flex items-center gap-1 text-[11px] font-semibold transition ${isActive ? 'text-[var(--accent-strong)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'}`}>
+                        {isDone ? <Check className="w-3.5 h-3.5" /> : isActive ? <Icon className="w-4 h-4" /> : step.id}
+                      </span>
+                      <span
+                        className={`flex items-center gap-1 text-[11px] font-semibold transition ${
+                          isActive ? 'text-[var(--accent-strong)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'
+                        }`}
+                      >
                         <span>{step.label}</span>
                         {step.badge > 0 && (
-                          <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${isActive || isDone ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'bg-[var(--surface-strong)] text-[var(--text-40)]'}`}>
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${
+                              isActive || isDone
+                                ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                                : 'bg-[var(--surface-strong)] text-[var(--text-40)]'
+                            }`}
+                          >
                             {step.badge}
                           </span>
                         )}
                       </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Animated Step Workstation Panels */}
+            <AnimatePresence mode="wait">
+              {activeStep === 1 && (
+                <motion.div
+                  key="step1"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <InputSection
+                    onFilesAdded={addRawFiles}
+                    rawFilesCount={rawFiles.length}
+                    backendUrl={BACKEND_URL}
+                    youtubeCookies={youtubeCookies}
+                    onYoutubeCookiesChange={handleYoutubeCookiesChange}
+                    onNext={() => goToStep(2)}
+                  />
+                </motion.div>
+              )}
+
+              {activeStep === 2 && (
+                <motion.div
+                  key="step2"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TuningSection
+                    rawFiles={rawFiles}
+                    onTuningComplete={(results) => {
+                      addTunedFiles(results);
+                    }}
+                    onRemoveRaw={removeRawFile}
+                    onNext={() => goToStep(3)}
+                    backendUrl={BACKEND_URL}
+                  />
+                </motion.div>
+              )}
+
+              {activeStep === 3 && (
+                <motion.div
+                  key="step3"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <OutputSection
+                    tunedFiles={tunedFiles}
+                    selectedAccount={selectedAccount}
+                    onRemoveTuned={removeTunedFile}
+                    onUploadSuccess={handleUploadSuccess}
+                    backendUrl={BACKEND_URL}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Inline Collapsible Upload History Drawer */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-center">
+                <button
+                  onClick={() => setHistoryOpen(!historyOpen)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2.5 text-xs font-semibold text-[var(--text-80)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] hover:bg-[var(--surface)]"
+                >
+                  <HistoryIcon className="w-4 h-4 text-[var(--accent-soft)]" />
+                  <span>Riwayat Upload</span>
+                  {uploadHistory.length > 0 && (
+                    <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+                      {uploadHistory.length}
+                    </span>
+                  )}
+                  <ChevronDown
+                    className={`w-4 h-4 text-[var(--text-45)] transition-transform duration-300 ${
+                      historyOpen ? 'rotate-180 text-[var(--accent)]' : ''
+                    }`}
+                  />
+                </button>
               </div>
 
-              {/* Animated Step Workstation Panels */}
-              <AnimatePresence mode="wait">
-                {activeStep === 1 && (
+              <AnimatePresence>
+                {historyOpen && (
                   <motion.div
-                    key="step1"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="overflow-hidden"
                   >
-                    <InputSection
-                      onFilesAdded={addRawFiles}
-                      rawFilesCount={rawFiles.length}
-                      backendUrl={BACKEND_URL}
-                      youtubeCookies={youtubeCookies}
-                      onYoutubeCookiesChange={handleYoutubeCookiesChange}
-                      onNext={() => goToStep(2)}
-                    />
-                  </motion.div>
-                )}
-
-                {activeStep === 2 && (
-                  <motion.div
-                    key="step2"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <TuningSection
-                      rawFiles={rawFiles}
-                      onTuningComplete={(results) => {
-                        addTunedFiles(results);
-                      }}
-                      onRemoveRaw={removeRawFile}
-                      onNext={() => goToStep(3)}
-                      backendUrl={BACKEND_URL}
-                    />
-                  </motion.div>
-                )}
-
-                {activeStep === 3 && (
-                  <motion.div
-                    key="step3"
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <OutputSection
-                      tunedFiles={tunedFiles}
-                      selectedAccount={selectedAccount}
-                      onRemoveTuned={removeTunedFile}
-                      onUploadSuccess={handleUploadSuccess}
-                      backendUrl={BACKEND_URL}
+                    <UploadHistory
+                      history={uploadHistory}
+                      onClose={() => setHistoryOpen(false)}
+                      onRefresh={handleRefreshStatus}
+                      refreshingIds={refreshingIds}
                     />
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {/* Global Upload History Trigger */}
-              <div className="flex items-center justify-center">
-                <button
-                  onClick={() => setHistoryOpen(true)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2 text-xs font-semibold text-[var(--text-70)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)]"
-                >
-                  <HistoryIcon className="w-4 h-4" />
-                  Riwayat Upload
-                  {uploadHistory.length > 0 && (
-                    <span className="rounded-full bg-[var(--accent-15)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
-                      {uploadHistory.length}
-                    </span>
-                  )}
-                </button>
-              </div>
+            </div>
           </div>
 
           {/* Spoofer Tool (selalu ter-mount agar state tidak reset) */}
@@ -642,7 +710,7 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-[var(--line)] py-4">
+        <footer className="border-t border-[var(--line)] py-4 mt-8">
           <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--emerald)]" />
@@ -653,16 +721,6 @@ export default function Home() {
             )}
           </div>
         </footer>
-
-        {/* Upload History Modal */}
-        {historyOpen && (
-          <UploadHistory
-            history={uploadHistory}
-            onClose={() => setHistoryOpen(false)}
-            onRefresh={handleRefreshStatus}
-            refreshingIds={refreshingIds}
-          />
-        )}
 
         {/* Account Modal Component */}
         <AccountModal

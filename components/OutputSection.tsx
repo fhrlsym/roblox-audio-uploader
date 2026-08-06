@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CloudUpload, Copy, Download, Loader2, Music, Trash2 } from 'lucide-react';
+import { CloudUpload, Copy, Download, Loader2, Music, RotateCcw, Trash2 } from 'lucide-react';
 import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
@@ -331,7 +331,23 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       )}
 
       {tunedFiles.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-2">
+          {tunedFiles.some((f) => uploadResults[f.id] && !uploadResults[f.id].success) && (
+            <button
+              onClick={() => {
+                const failedTargets = tunedFiles.filter(
+                  (f) => uploadResults[f.id] && !uploadResults[f.id].success && !uploading[f.id]
+                );
+                failedTargets.forEach((file) => handleUploadToRoblox(file));
+              }}
+              disabled={uploadingAny}
+              className="w-full py-2 text-xs font-semibold rounded-xl border border-rose-400/30 bg-rose-400/10 text-rose-300 hover:bg-rose-400/20 transition flex items-center justify-center gap-2"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Coba Ulang File yang Gagal ({tunedFiles.filter((f) => uploadResults[f.id] && !uploadResults[f.id].success).length})
+            </button>
+          )}
+
           <button
             onClick={handleUploadAll}
             disabled={uploadingAny || pendingCount === 0}

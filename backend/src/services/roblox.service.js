@@ -309,44 +309,254 @@ const SPOOF_FILE_EXT = {
   Video: 'mp4',
 };
 
-export async function performSpoof({ assetId, assetType, displayName, creatorType = 'user', creatorId, apiKey }) {
-  const cleanAssetId = String(assetId).replace(/\D/g, '');
-  let detected = null;
-  try {
-    detected = await detectAsset(cleanAssetId);
-  } catch {
-    // detectAsset tidak boleh menggagalkan proses; lanjut dengan nilai default
-  }
-  const assetName = displayName || detected?.name || `Spoofed_${cleanAssetId}`;
-  const finalType = assetType || detected?.assetType || 'Audio';
+// ============================================================
+// SPOOFER TWO-PHASE (job cache):
+//  Fase 1 — download original bytes (Blokmarket) & tangkap metadata,
+//           simpan sementara per job untuk terminal progress.
+//  Fase 2 — upload file yang sudah diunduh ke Roblox, balikin ID baru.
+// ============================================================
+const spoofJobs = new Map();
+let spoofJobSeq = 0;
 
-  const ext = SPOOF_FILE_EXT[finalType] || 'bin';
-  const tempFile = join(BACKEND_ROOT, `spoof_${Date.now()}_${cleanAssetId}.${ext}`);
-  try {
-    const { buffer } = await downloadOriginalAssetAPI(cleanAssetId);
-    writeFileSync(tempFile, buffer);
-
-    const operationId = await uploadToRoblox(tempFile, {
-      assetType: finalType,
-      displayName: assetName,
-      description: `Spoofed from ${cleanAssetId}`,
-      creatorType,
-      creatorId,
-      apiKey,
-    });
-
-    return {
-      success: true,
-      operationId,
-      originalAssetId: cleanAssetId,
-      name: assetName,
-      assetType: finalType,
-    };
-  } catch (e) {
-    return { success: false, asset: null, error: (e && e.message) || String(e) };
-  } finally {
-    if (existsSync(tempFile)) {
-      try { unlinkSync(tempFile); } catch {}
+// Periodic cleanup for stale spoofJobs (> 30 mins) to prevent Node.js RAM memory leaks
+setInterval(() => {
+  const cutoff = Date.now() - 30 * 60 * 1000;
+  for (const [id, job] of spoofJobs.entries()) {
+    if (job.createdAt && job.createdAt < cutoff) {
+      if (job.items) {
+        for (const item of job.items) {
+          item.bytes = null;
+        }
+      }
+      spoofJobs.delete(id);
     }
   }
+}, 5 * 60 * 1000);
+
+function sanitizeAssetId(value) {
+  return String(value == null ? '' : value).replace(/\D/g, '');
+}
+
+function spoofJobPublic(job) {
+  return {
+    jobId: job.id,
+    status: job.status,
+    error: job.error || null,
+    logs: job.logs || [],
+    items: job.items.map((it) => ({
+      key: it.key,
+      originalAssetId: it.originalAssetId,
+      name: it.name,
+      assetType: it.assetType,
+      fileName: it.fileName,
+      status: it.status,
+      error: it.error || null,
+      newAssetId: it.newAssetId || null,
+      uploadStatus: it.uploadStatus || null,
+      uploadError: it.uploadError || null,
+    })),
+  };
+}
+
+function pushLog(job, message) {
+  job.logs = job.logs || [];
+  job.logs.push(`[${new Date().toLocaleTimeString()}] ${message}`);
+  if (job.logs.length > 200) job.logs = job.logs.slice(-200);
+}
+
+// Fase 1: buat job, unduh semua byte asli (sementara disimpan di memory).
+export function startSpoofDownload(assetIds) {
+  const jobId = `sjob_${Date.now()}_${++spoofJobSeq}`;
+  const job = {
+    id: jobId,
+    createdAt: Date.now(),
+    status: 'running', // running | completed | partially | failed
+    error: null,
+    logs: [],
+    items: [],
+  };
+
+  const seen = new Set();
+  for (const raw of assetIds || []) {
+    const originalAssetId = sanitizeAssetId(raw);
+    if (!originalAssetId || seen.has(originalAssetId)) continue;
+    seen.add(originalAssetId);
+    job.items.push({
+      key: `item_${originalAssetId}`,
+      originalAssetId,
+      name: null,
+      assetType: null,
+      fileName: null,
+      bytes: null,
+      status: 'queued', // queued -> downloading -> downloaded | failed
+      error: null,
+      newAssetId: null,
+      uploadStatus: null,
+      uploadError: null,
+    });
+  }
+
+  if (job.items.length === 0) {
+    job.status = 'failed';
+    job.error = 'Tidak ada Asset ID valid untuk diproses.';
+    spoofJobs.set(jobId, job);
+    return job;
+  }
+
+  spoofJobs.set(jobId, job);
+  pushLog(job, `Job dimulai: ${job.items.length} asset.`);
+  runDownloadPhase(job).catch((e) => {
+    job.status = 'failed';
+    job.error = (e && e.message) || String(e);
+    pushLog(job, `Job gagal: ${job.error}`);
+  });
+  return job;
+}
+
+async function runDownloadPhase(job) {
+  const CONCURRENCY = 3;
+  let nextIndex = 0;
+
+  const worker = async () => {
+    while (nextIndex < job.items.length) {
+      const item = job.items[nextIndex++];
+      item.status = 'downloading';
+      pushLog(job, `[${item.originalAssetId}] Mengunduh file asli...`);
+
+      let detected = null;
+      try {
+        detected = await detectAsset(item.originalAssetId);
+      } catch {
+        // biarkan null
+      }
+
+      try {
+        const { buffer, fileName } = await downloadOriginalAssetAPI(item.originalAssetId);
+        item.bytes = buffer;
+        item.fileName = fileName || `Asset_${item.originalAssetId}`;
+        item.name = detected?.name || `Asset_${item.originalAssetId}`;
+        item.assetType = detected?.assetType || item.assetType || 'Audio';
+        item.status = 'downloaded';
+        pushLog(job, `[${item.originalAssetId}] Didownload ${(buffer.length / 1024).toFixed(1)} KB -> ${item.fileName}`);
+      } catch (e) {
+        item.status = 'failed';
+        item.error = (e && e.message) || 'Gagal mengunduh';
+        pushLog(job, `[${item.originalAssetId}] GAGAL unduh: ${item.error}`);
+      }
+      // jeda ringan antar download
+      await sleep(400);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.max(1, Math.min(CONCURRENCY, job.items.length)) }, worker)
+  );
+
+  const ok = job.items.filter((i) => i.status === 'downloaded').length;
+  const failed = job.items.length - ok;
+  pushLog(job, `Download selesai: ${ok} sukses, ${failed} gagal.`);
+  job.status = ok > 0 ? 'completed' : 'failed';
+  if (job.status === 'failed' && ok === 0) job.error = 'Semua asset gagal diunduh.';
+}
+
+export function getSpoofJob(jobId) {
+  return spoofJobs.get(jobId) || null;
+}
+
+export function getSpoofJobPublic(jobId) {
+  const job = spoofJobs.get(jobId);
+  return job ? spoofJobPublic(job) : null;
+}
+
+// Fase 2: upload item yang sudah diund ke Roblox (bisa dipilih per item).
+export async function runSpoofUpload({ jobId, creatorType = 'user', creatorId, apiKey, keys = null }) {
+  const job = spoofJobs.get(jobId);
+  if (!job) throw new Error('Job spoof tidak ditemukan (mungkin sudah kadaluarsa).');
+
+  const targets = job.items.filter(
+    (it) =>
+      it.status === 'downloaded' &&
+      (keys == null || (Array.isArray(keys) && keys.includes(it.key)))
+  );
+
+  if (targets.length === 0) {
+    throw new Error('Tidak ada file siap upload dari job ini.');
+  }
+  if (!creatorId || !apiKey) {
+    throw new Error('creatorId dan apiKey wajib diisi.');
+  }
+
+  pushLog(job, `Mulai upload ${targets.length} asset ke Roblox...`);
+
+  const CONCURRENCY = 2;
+  let nextIndex = 0;
+  const items = targets;
+
+  const worker = async () => {
+    while (nextIndex < items.length) {
+      const item = items[nextIndex++];
+      item.uploadStatus = 'uploading';
+      pushLog(job, `Upload [${item.originalAssetId}] ke Roblox...`);
+
+      const ext = SPOOF_FILE_EXT[item.assetType] || 'bin';
+      const tempFile = join(BACKEND_ROOT, `spoof_${job.id}_${item.originalAssetId}.${ext}`);
+      try {
+        writeFileSync(tempFile, item.bytes);
+
+        const operationId = await uploadToRoblox(tempFile, {
+          assetType: item.assetType,
+          displayName: item.name || `Spoofed_${item.originalAssetId}`,
+          description: `Awaited from ${item.originalAssetId} (${job.id})`,
+          creatorType,
+          creatorId,
+          apiKey,
+        });
+
+        let newId = null;
+        for (let i = 0; i < 30; i++) {
+          await sleep(2000);
+          const opData = await checkOperationStatus(operationId, apiKey);
+          if (opData.done) {
+            newId = opData.assetId || null;
+            break;
+          }
+        }
+
+        if (newId) {
+          item.newAssetId = String(newId);
+          item.uploadStatus = 'done';
+          pushLog(job, `[${item.originalAssetId}] Upload sukses -> ID ${newId}`);
+        } else {
+          item.uploadStatus = 'failed';
+          item.uploadError = 'Upload selesai tapi tak ada ID baru (kemungkinan ditolak moderasi).';
+          pushLog(job, `[${item.originalAssetId}] ${item.uploadError}`);
+        }
+      } catch (e) {
+        item.uploadStatus = 'failed';
+        item.uploadError = (e && e.message) || String(e);
+        pushLog(job, `[${item.originalAssetId}] Gagal upload: ${item.uploadError}`);
+      } finally {
+        if (existsSync(tempFile)) {
+          try { unlinkSync(tempFile); } catch {}
+        }
+      }
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(CONCURRENCY, items.length)) }, worker));
+
+  const okCount = items.filter((i) => i.uploadStatus === 'done').length;
+  pushLog(job, `Upload selesai: ${okCount} sukses, ${items.length - okCount} gagal.`);
+
+  return { success: okCount > 0, job: spoofJobPublic(job) };
+}
+
+export function clearSpoofJob(jobId) {
+  const job = spoofJobs.get(jobId);
+  if (job) {
+    for (const item of job.items) {
+      item.bytes = null;
+    }
+  }
+  spoofJobs.delete(jobId);
 }

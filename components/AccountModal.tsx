@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Loader2, Building2, Check, Sparkles, User } from 'lucide-react';
+import { X, Loader2, Building2, Check, Sparkles, User, Eye, EyeOff } from 'lucide-react';
 import { INPUT, LABEL } from '../lib/ui';
 import { SavedAccount } from '../types/audio';
 
@@ -64,6 +64,7 @@ function QuotaBar({ usage, capacity }: { usage?: number; capacity?: number }) {
 
 export default function AccountModal({ isOpen, onClose, onAccountAdded, backendUrl }: AccountModalProps) {
   const [apiKey, setApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
   const [checking, setChecking] = useState(false);
   const [keyInfo, setKeyInfo] = useState<KeyInfoResult | null>(null);
   const [error, setError] = useState('');
@@ -167,19 +168,38 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
         <div className="p-6 space-y-4">
           {/* API Key Input */}
           <div>
-            <label className={LABEL + ' mb-2 block'}>API Key</label>
-            <input
-              type="password"
-              value={apiKey}
-              onChange={(e) => {
-                setApiKey(e.target.value);
-                setKeyInfo(null);
-                setError('');
-              }}
-              onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
-              placeholder="Paste your Roblox API key here"
-              className={INPUT}
-            />
+            <label className={LABEL + ' mb-2 block flex items-center justify-between'}>
+              <span>API Key</span>
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition inline-flex items-center gap-1"
+              >
+                {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showApiKey ? 'Sembunyikan' : 'Tampilkan'}</span>
+              </button>
+            </label>
+            <div className="relative">
+              <input
+                type={showApiKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => {
+                  setApiKey(e.target.value);
+                  setKeyInfo(null);
+                  setError('');
+                }}
+                onKeyDown={(e) => e.key === 'Enter' && handleCheck()}
+                placeholder="Paste your Roblox API key here"
+                className={INPUT + ' pr-10 font-mono text-xs'}
+              />
+              <button
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-40)] hover:text-[var(--text)] transition"
+              >
+                {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           {/* Cookie Input */}

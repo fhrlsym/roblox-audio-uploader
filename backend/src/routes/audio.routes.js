@@ -99,8 +99,8 @@ router.post('/convert-file', upload.single('file'), async (req, res) => {
 router.get('/download-file/:fileId', (req, res) => {
   const { fileId } = req.params;
 
-  if (!fileId) {
-    return res.status(400).json({ error: 'Missing fileId' });
+  if (!fileId || typeof fileId !== 'string' || !/^[a-zA-Z0-9_\-]+$/.test(fileId)) {
+    return res.status(400).json({ error: 'Invalid fileId' });
   }
 
   const match = readdirSync(BACKEND_ROOT).find((f) => f.startsWith(`${fileId}.`) || f.startsWith(`${fileId}`));

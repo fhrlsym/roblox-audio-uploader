@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, Copy, Film, History, Loader2, Plus, RefreshCw, Sparkles, Trash2, Wand2, X } from 'lucide-react';
-import { SavedAccount, SpoofRecord } from '../types/audio';
+import { Check, CloudUpload, Copy, Film, History, Loader2, Plus, Sparkles, Trash2, UploadCloud, Wand2, X } from 'lucide-react';
+import { SavedAccount } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
@@ -14,11 +14,25 @@ interface QueueItem {
   originalAssetId: string;
 }
 
-interface VerifiedAsset extends QueueItem {
+interface SpoofJobItem {
+  key: string;
+  originalAssetId: string;
   name: string;
   assetType: string;
-  status: 'ok' | 'error';
+  fileName?: string;
+  status: 'queued' | 'downloading' | 'downloaded' | 'failed';
   error?: string;
+  newAssetId?: string;
+  uploadStatus?: string;
+  uploadError?: string;
+}
+
+interface SpoofJob {
+  jobId: string;
+  status: 'running' | 'completed' | 'partially' | 'failed';
+  error?: string;
+  logs: string[];
+  items: SpoofJobItem[];
 }
 
 interface SpooferSectionProps {
@@ -48,14 +62,16 @@ async function parseJsonResponse(res: Response): Promise<JsonRecord> {
 
 export default function SpooferSection({ selectedAccount, backendUrl }: SpooferSectionProps) {
   const { toast } = useToast();
-  const { records, setRecords, upsertRecord, updateRecordStatus, clearHistory } = useSpoofHistory();
+  const { records, upsertRecord, clearHistory } = useSpoofHistory();
   const [assetInput, setAssetInput] = useState('');
-  const [displayNameInput, setDisplayNameInput] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [detecting, setDetecting] = useState(false);
-  const [verifyList, setVerifyList] = useState<VerifiedAsset[]>([]);
-  const [verifyOpen, setVerifyOpen] = useState(false);
-  const [uploading, setUploading] = useState(false);
+
+  // Job state (download terminal + upload)
+  const [job, setJob] = useState<SpoofJob | null>(null);
+  const [jobOpen, setJobOpen] = useState(false);
+  const [polling, setPolling] = useState(false);
+const [uploading, setUploading] = useState(false);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Restore antrian spoof dari localStorage
   useEffect(() => {
@@ -82,6 +98,16 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
       // ignore
     }
   }, [queue]);
+
+const stopPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+    setPolling(false);
+  };
+
+  useEffect(() => () => stopPolling(), []);
 
   const parseAssetId = (input: string): string | null => {
     const clean = String(input).replace(/\D/g, '');
@@ -115,179 +141,111 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
 
   const clearQueue = () => setQueue([]);
 
-  const handleVerify = async () => {
+  const handleStartJob = async () => {
     if (queue.length === 0) {
       toast('Tambahkan Asset ID terlebih dahulu', 'error');
       return;
     }
+    if (polling || uploading) return;
+
+    const assetIds = queue.map((q) => q.originalAssetId);
+    setJob(null);
+    setJobOpen(true);
+    toast(`Memulai spoof ${assetIds.length} asset...`, 'info');
+
+    try {
+      const res = await fetch(`${backendUrl}/api/spoof-job`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ assetIds }),
+      });
+      const data = await parseJsonResponse(res);
+      if (!res.ok) throw new Error(str(data?.error) || 'Gagal membuat job');
+const j = data.job as unknown as SpoofJob;
+      setJob(j);
+      pollSpoofJobLoop(j.jobId);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Gagal membuat job';
+      toast(msg, 'error');
+      setJobOpen(false);
+    }
+  };
+
+  const pollSpoofJobLoop = (jobId: string) => {
+    stopPolling();
+    setPolling(true);
+    pollTimerRef.current = setInterval(async () => {
+      try {
+        const res = await fetch(`${backendUrl}/api/spoof-job/${jobId}`, { cache: 'no-store' });
+        const data = await parseJsonResponse(res);
+        if (!data?.job) {
+          stopPolling();
+          return;
+        }
+        const j = data.job as unknown as SpoofJob;
+        setJob(j);
+        if (j.status === 'completed' || j.status === 'failed' || j.status === 'partially') {
+          stopPolling();
+        }
+      } catch {
+        // biarkan polling lanjut
+      }
+    }, 1300);
+  };
+
+  const handleUpload = async () => {
     if (!selectedAccount || !selectedAccount.apiKey) {
       toast('Pilih Akun Roblox terlebih dahulu di bagian Header', 'error');
       return;
     }
-
-    setDetecting(true);
-    setVerifyList([]);
-    toast(`Memeriksa ${queue.length} asset...`, 'info');
-
-    const verified: VerifiedAsset[] = [];
-    const CONCURRENCY = 3;
-    let nextIndex = 0;
-
-    const worker = async () => {
-      while (nextIndex < queue.length) {
-        const item = queue[nextIndex++];
-        try {
-          const response = await fetch(`${backendUrl}/api/spoof-detect`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ assetId: item.originalAssetId }),
-          });
-          const data = await parseJsonResponse(response);
-          if (!response.ok || !data?.success) {
-            throw new Error(str(data?.error) || 'Gagal memeriksa asset');
-          }
-          const type = String((data.assetType as string) || 'Audio');
-          verified.push({
-            id: item.id,
-            originalAssetId: item.originalAssetId,
-            name: str(data.name) || `Asset_${item.originalAssetId}`,
-            assetType: type,
-            status: 'ok',
-          });
-        } catch (error) {
-          verified.push({
-            id: item.id,
-            originalAssetId: item.originalAssetId,
-            name: `Asset_${item.originalAssetId}`,
-            assetType: 'Audio',
-            status: 'error',
-            error: error instanceof Error ? error.message : 'Gagal memeriksa',
-          });
-        }
-      }
-    };
-
-    await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
-    setVerifyList(verified);
-    setVerifyOpen(true);
-    setDetecting(false);
-
-    const okCount = verified.filter((v) => v.status === 'ok').length;
-    if (okCount === verified.length) {
-      toast(`Semua ${verified.length} asset berhasil diverifikasi`, 'success');
-    }
-  };
-
-  const handleBatchUpload = async () => {
-    if (!selectedAccount || !selectedAccount.apiKey) return;
-
-    const targets = verifyList.filter((v) => v.status === 'ok');
-    if (targets.length === 0) {
-      toast('Tidak ada asset yang valid untuk di-upload', 'error');
-      return;
-    }
+    if (!job || uploading) return;
 
     setUploading(true);
-    toast(`Memulai spoof batch ${targets.length} asset...`, 'info');
-
-    // Tambahkan semua record Pending terlebih dahulu dengan key unik (per item antrian)
-    const recordIds = targets.map((t) => `spoof_${Date.now()}_${t.id}`);
-    const pendingRecords: SpoofRecord[] = targets.map((t, idx) => ({
-      id: recordIds[idx],
-      originalAssetId: t.originalAssetId,
-      assetType: t.assetType,
-      title: displayNameInput.trim() || t.name,
-      status: 'Pending',
-      createdAt: Date.now(),
-    }));
-    setRecords((prev) => [...pendingRecords, ...prev]);
-
     try {
-      const response = await fetch(`${backendUrl}/api/spoof-batch`, {
+      const res = await fetch(`${backendUrl}/api/spoof-job/${job.jobId}/upload`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assets: targets.map((t, idx) => ({
-            key: recordIds[idx],
-            assetId: t.originalAssetId,
-            assetType: t.assetType,
-            displayName: displayNameInput.trim() || t.name,
-          })),
           creatorType: selectedAccount.type,
           creatorId: selectedAccount.id,
           apiKey: selectedAccount.apiKey,
-          cookie: selectedAccount.cookie || undefined,
         }),
       });
+      const data = await parseJsonResponse(res);
+      if (!res.ok) throw new Error(str(data?.error) || 'Gagal upload ke Roblox');
+      const j = data.job as unknown as SpoofJob;
+      setJob(j);
 
-      const data = await parseJsonResponse(response);
-      if (!response.ok) {
-        throw new Error(str(data?.error) || 'Gagal memproses batch');
+      // Persis ke riwayat (Supabase)
+      const doneItems = j.items.filter((it) => it.uploadStatus === 'done' && it.newAssetId);
+      for (const it of doneItems) {
+        await upsertRecord({
+          id: it.key,
+          originalAssetId: it.originalAssetId,
+          newAssetId: it.newAssetId,
+          assetType: it.assetType || 'Audio',
+          title: it.name || `Asset_${it.originalAssetId}`,
+          status: 'Active',
+          createdAt: Date.now(),
+        });
+      }
+      const failItems = j.items.filter((it) => it.uploadStatus === 'failed' || it.status === 'failed');
+      for (const it of failItems) {
+        await upsertRecord({
+          id: it.key,
+          originalAssetId: it.originalAssetId,
+          assetType: it.assetType || 'Audio',
+          title: it.name || `Asset_${it.originalAssetId}`,
+          status: 'Failed',
+          error: it.uploadError || it.error || 'Gagal',
+          createdAt: Date.now(),
+        });
       }
 
-      const results = (data.results as JsonRecord[]) || [];
-      const resultByKey: Record<string, JsonRecord> = {};
-      for (const r of results) {
-        resultByKey[str(r.key)] = r;
-      }
-
-      // Update setiap record berdasarkan key unik
-      for (const recId of recordIds) {
-        const res = resultByKey[recId];
-        if (!res) continue;
-        if (res.success && res.newAssetId) {
-          updateRecordStatus(recId, { newAssetId: str(res.newAssetId), status: 'Active' });
-        } else {
-          updateRecordStatus(recId, {
-            status: 'Failed',
-            error: str(res.error) || 'Gagal generate ID',
-          });
-        }
-      }
-      // Persist semua record ke Supabase sekaligus
-      const current = [...pendingRecords];
-      setRecords((prev) => {
-        for (const recId of recordIds) {
-          const res = resultByKey[recId];
-          const existing = prev.find((p) => p.id === recId);
-          if (existing && res) {
-            existing.newAssetId = res.success && res.newAssetId ? str(res.newAssetId) : undefined;
-            existing.status = res.success && res.newAssetId ? 'Active' : 'Failed';
-            existing.error = res.success ? undefined : str(res.error) || 'Gagal generate ID';
-          }
-        }
-        return prev;
-      });
-      for (const recId of recordIds) {
-        const res = resultByKey[recId];
-        if (res) {
-          const found = current.find((c) => c.id === recId);
-          if (found) {
-            await upsertRecord({
-              ...found,
-              newAssetId: res.success && res.newAssetId ? str(res.newAssetId) : undefined,
-              status: res.success && res.newAssetId ? 'Active' : 'Failed',
-              error: res.success ? undefined : str(res.error) || 'Gagal generate ID',
-            });
-          }
-        }
-      }
-
-      const successCount = Object.values(resultByKey).filter((r) => r.success && r.newAssetId).length;
-      toast(`Selesai memproses batch. ${successCount} sukses.`, successCount > 0 ? 'success' : 'error');
-      setQueue([]);
-      setVerifyOpen(false);
-      setVerifyList([]);
-      setDisplayNameInput('');
+      toast(`Upload selesai. ${doneItems.length} sukses.`, doneItems.length > 0 ? 'success' : 'error');
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Gagal memproses batch';
-      setRecords((prev) =>
-        prev.map((r) =>
-          recordIds.includes(r.id) && r.status === 'Pending' ? { ...r, status: 'Failed', error: msg } : r
-        )
-      );
+      const msg = error instanceof Error ? error.message : 'Gagal upload ke Roblox';
       toast(msg, 'error');
-      setVerifyOpen(false);
     } finally {
       setUploading(false);
     }
@@ -298,13 +256,6 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
     toast(`Berhasil menyalin ${label}!`, 'success');
   };
 
-  const generateLuauScript = (record: SpoofRecord) => {
-    if (record.assetType === 'Animation') {
-      return `local animation = Instance.new("Animation")\nanimation.Name = "${record.title}"\nanimation.AnimationId = "rbxassetid://${record.newAssetId}"\nlocal track = workspace.CurrentCamera:FindFirstChildOfClass("Humanoid"):LoadAnimation(animation)\ntrack:Play()`;
-    }
-    return `local sound = Instance.new("Sound")\nsound.Name = "${record.title}"\nsound.SoundId = "rbxassetid://${record.newAssetId}"\nsound.Parent = workspace\nsound:Play()`;
-  };
-
   const doneCount = records.filter((r) => r.status === 'Active').length;
   const stats = {
     total: records.length,
@@ -312,6 +263,9 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
     pending: records.filter((r) => r.status === 'Pending').length,
     failed: records.filter((r) => r.status === 'Failed').length,
   };
+
+  const readyItems = (job?.items || []).filter((it) => it.status === 'downloaded');
+  const newIdCount = (job?.items || []).filter((it) => it.uploadStatus === 'done').length;
 
   return (
     <div className="space-y-6">
@@ -341,7 +295,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
             <div>
               <h2 className="text-base font-bold text-[var(--text)] tracking-tight">Asset Spoofer</h2>
               <p className="text-xs text-[var(--text-45)]">
-                Ubah ID Animation & Sound publik menjadi ID Baru milik Anda sendiri — dukungan batch
+                Ubah ID Animation, Sound, Decal &amp; lainnya menjadi milik Anda â€” dukungan batch
               </p>
             </div>
           </div>
@@ -354,13 +308,13 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
             value={assetInput}
             onChange={(e) => setAssetInput(e.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Masukkan Asset ID Roblox lalu Enter… (Contoh: 86280001082394)"
+            placeholder="Masukkan Asset ID Roblox lalu Enterâ€¦ (Contoh: 86280001082394)"
             className={INPUT}
-            disabled={uploading}
+            disabled={polling || uploading}
           />
           <button
             onClick={addToQueue}
-            disabled={uploading || !assetInput.trim()}
+            disabled={polling || uploading || !assetInput.trim()}
             className={`${BTN_GHOST} shrink-0 px-3`}
             title="Tambah Asset ID"
           >
@@ -375,7 +329,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
               <p className="text-xs text-[var(--text-60)] font-medium">
                 Antrian Asset ({queue.length})
               </p>
-              <button onClick={clearQueue} disabled={uploading} className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition">
+              <button onClick={clearQueue} disabled={polling || uploading} className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition">
                 Hapus semua
               </button>
             </div>
@@ -389,7 +343,7 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
                   <code className="min-w-0 flex-1 text-sm font-mono text-[var(--text-80)]">{item.originalAssetId}</code>
                   <button
                     onClick={() => removeFromQueue(item.id)}
-                    disabled={uploading}
+                    disabled={polling || uploading}
                     className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -401,19 +355,19 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
         )}
 
         <button
-          onClick={handleVerify}
-          disabled={detecting || uploading || queue.length === 0 || !selectedAccount?.apiKey}
+          onClick={handleStartJob}
+          disabled={polling || uploading || queue.length === 0}
           className={`${BTN_PRIMARY} w-full py-3 text-xs font-bold flex items-center justify-center gap-2`}
         >
-          {detecting ? (
+          {polling ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              Memeriksa ({queue.length}) Asset...
+              Memproses ({queue.length}) Asset...
             </>
           ) : (
             <>
-              <RefreshCw className="w-4 h-4" />
-              Periksa {queue.length > 0 ? `& Verifikasi (${queue.length})` : 'Asset'}
+              <Wand2 className="w-4 h-4" />
+              Spoof {queue.length > 0 ? `(${queue.length})` : 'Asset'}
             </>
           )}
         </button>
@@ -433,111 +387,165 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
         </div>
       </div>
 
-      {/* Verify & Upload Modal */}
+      {/* Job Progress / Terminal & Results Modal */}
       <AnimatePresence>
-        {verifyOpen && (
+        {jobOpen && job && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => !uploading && !detecting && setVerifyOpen(false)}
+            onClick={() => !polling && !uploading && setJobOpen(false)}
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 10 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden"
+              className="w-full max-w-2xl rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden"
             >
               <div className="flex items-center justify-between p-5 border-b border-[var(--line)]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-9 h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
-                    <Check className="w-4 h-4" />
+                    {uploading || polling ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CloudUpload className="w-4 h-4" />
+                    )}
                   </div>
                   <div>
-                    <h3 className="font-serif text-lg font-semibold text-[var(--text)]">Verifikasi & Upload</h3>
+                    <h3 className="font-serif text-lg font-semibold text-[var(--text)]">
+                      {uploading ? 'Uploading ke Roblox' : polling ? 'Memproses Spoof' : 'Hasil Spoof'}
+                    </h3>
                     <p className="text-[11px] text-[var(--text-40)]">
-                      {verifyList.length} asset siap di-spoof ke {selectedAccount?.name}
+                      Job {job.jobId} Â· {job.items.length} asset
                     </p>
                   </div>
                 </div>
                 <button
-                  onClick={() => !uploading && !detecting && setVerifyOpen(false)}
+                  onClick={() => !polling && !uploading && setJobOpen(false)}
                   className="p-1.5 text-[var(--text-40)] transition hover:text-[var(--text)]"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
-                {/* Optional Display Name */}
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-60)] mb-1.5">
-                    Judul Baru (Opsional, berlaku untuk semua)
-                  </label>
-                  <input
-                    type="text"
-                    value={displayNameInput}
-                    onChange={(e) => setDisplayNameInput(e.target.value)}
-                    placeholder="Kosongkan untuk menggunakan nama asli"
-                    className={INPUT}
-                  />
+              {/* Terminal â€” hanya saat running */}
+              {polling && (
+                <div className="mx-5 mt-5 rounded-xl bg-black/70 border border-[var(--line)] overflow-hidden">
+                  <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/10">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    <span className="ml-2 text-[10px] text-white/50 font-mono">spoofer-job.sh</span>
+                  </div>
+                  <div className="p-3 max-h-56 overflow-y-auto font-mono text-[11px] leading-relaxed">
+                    {(job.logs || []).slice(-40).map((line, i) => (
+                      <p key={i} className={line.includes('GAGAL') || line.includes('gagal') ? 'text-rose-300' : 'text-[var(--text-80)]'}>
+                        {line}
+                      </p>
+                    ))}
+                    {job.logs.length === 0 && (
+                      <p className="text-[var(--text-40)]">Menyiapkan...</p>
+                    )}
+                    <span className="inline-block w-2 h-3.5 bg-[var(--accent)] animate-pulse align-middle" />
+                  </div>
                 </div>
+              )}
 
-                {/* Verified List */}
+              <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
+                {/* Results list */}
                 <div className="space-y-2">
-                  {verifyList.map((v) => (
+                  {(job.items || []).map((item) => (
                     <div
-                      key={v.id}
+                      key={item.key}
                       className={`flex items-center gap-3 rounded-xl border p-3 text-xs ${
-                        v.status === 'error'
+                        item.status === 'failed'
                           ? 'border-rose-400/25 bg-rose-400/[0.04]'
-                          : 'border-[var(--line)] bg-[var(--surface-50)]'
+                          : item.newAssetId
+                            ? 'border-[var(--emerald-25)] bg-[var(--emerald-10)]'
+                            : 'border-[var(--line)] bg-[var(--surface-50)]'
                       }`}
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-[var(--text-90)]">{v.name}</p>
-                        <p className="truncate text-[11px] text-[var(--text-45)] font-mono">ID: {v.originalAssetId}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-semibold text-[var(--text-90)]">
+                            {item.name || `Asset_${item.originalAssetId}`}
+                          </p>
+                          <span className="shrink-0 rounded-md bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-strong)]">
+                            {item.assetType || 'Audio'}
+                          </span>
+                        </div>
+                        <p className="truncate text-[11px] text-[var(--text-45)] font-mono">
+                          ID Asli: {item.originalAssetId}
+                        </p>
+                        {item.fileName && (
+                          <p className="truncate text-[10px] text-[var(--text-35)] font-mono">{item.fileName}</p>
+                        )}
+                        {item.newAssetId && (
+                          <p className="truncate text-[11px] font-mono mt-0.5">
+                            ID Baru: <code className="font-bold text-[var(--emerald)]">{item.newAssetId}</code>
+                          </p>
+                        )}
+                        {item.status === 'failed' && (
+                          <p className="text-[11px] text-rose-300">{item.error}</p>
+                        )}
+                        {item.uploadStatus === 'failed' && (
+                          <p className="text-[11px] text-rose-300">{item.uploadError}</p>
+                        )}
+                        {item.uploadStatus === 'done' && item.newAssetId && (
+                          <button
+                            onClick={() => copyToClipboard(item.newAssetId!, 'ID Baru')}
+                            className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent-strong)] hover:underline"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Salin ID Baru
+                          </button>
+                        )}
                       </div>
-                      {v.status === 'error' ? (
-                        <span className="shrink-0 text-[11px] text-rose-300">{v.error}</span>
-                      ) : (
-                        <span className="flex shrink-0 items-center gap-1.5 rounded-md bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-strong)]">
-                          {v.assetType === 'Animation' ? <Film className="w-3 h-3" /> : null}
-                          {v.assetType}
-                        </span>
-                      )}
                     </div>
                   ))}
+                  {(!job.items || job.items.length === 0) && (
+                    <p className="text-[var(--text-40)] text-xs">Tidak ada item.</p>
+                  )}
                 </div>
               </div>
 
               <div className="flex gap-3 p-5 border-t border-[var(--line)]">
-                <button
-                  onClick={() => setVerifyOpen(false)}
-                  disabled={uploading || detecting}
-                  className={`${BTN_GHOST} flex-1 py-3 text-xs font-bold`}
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleBatchUpload}
-                  disabled={uploading || detecting || verifyList.every((v) => v.status === 'error')}
-                  className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold`}
-                >
-                  {uploading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Mengupload batch...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 className="w-4 h-4" />
-                      Upload {verifyList.filter((v) => v.status === 'ok').length} Asset
-                    </>
-                  )}
-                </button>
+                {polling ? (
+                  <button
+                    disabled
+                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60`}
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Menunggu proses selesai...
+                  </button>
+                ) : uploading ? (
+                  <button
+                    disabled
+                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60`}
+                  >
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Mengupload {readyItems.length} asset ke Roblox...
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setJobOpen(false)}
+                      className={`${BTN_GHOST} flex-1 py-3 text-xs font-bold`}
+                    >
+                      Tutup
+                    </button>
+                    <button
+                      onClick={handleUpload}
+                      disabled={!selectedAccount?.apiKey || readyItems.length === 0 || newIdCount === readyItems.length}
+                      className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold`}
+                    >
+                      <UploadCloud className="w-4 h-4" />
+                      Upload {readyItems.length} Asset ke Roblox
+                    </button>
+                  </>
+                )}
               </div>
             </motion.div>
           </motion.div>
@@ -587,11 +595,14 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
                       </span>
                       <StatusBadge status={rec.status} />
                     </div>
-                    <div className="text-[11px] text-[var(--text-45)]">
-                      ID Asli: <code className="text-[var(--text-60)]">{rec.originalAssetId}</code>
+                    <div className="text-[11px] text-[var(--text-45)] font-mono flex items-center gap-1.5 flex-wrap mt-0.5">
+                      <span>ID Asli:</span>
+                      <code className="text-[var(--text-70)] bg-[var(--surface-strong)] px-1.5 py-0.5 rounded">{rec.originalAssetId}</code>
                       {rec.newAssetId && (
                         <>
-                          {' → '}ID Baru: <code className="font-bold text-[var(--emerald)]">{rec.newAssetId}</code>
+                          <span className="text-[var(--accent-soft)]">→</span>
+                          <span>ID Baru:</span>
+                          <code className="font-bold text-[var(--emerald)] bg-[var(--surface-strong)] px-1.5 py-0.5 rounded">{rec.newAssetId}</code>
                         </>
                       )}
                     </div>
@@ -605,22 +616,13 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
 
                   <div className="flex items-center gap-2 shrink-0">
                     {rec.newAssetId && (
-                      <>
-                        <button
-                          onClick={() => copyToClipboard(rec.newAssetId!, 'Asset ID Baru')}
-                          className={`${BTN_GHOST} text-[11px] px-2.5 py-1 flex items-center gap-1.5`}
-                        >
-                          <Copy className="w-3 h-3" />
-                          Copy ID
-                        </button>
-                        <button
-                          onClick={() => copyToClipboard(generateLuauScript(rec), 'Kode Script Luau')}
-                          className={`${BTN_PRIMARY} text-[11px] px-2.5 py-1 flex items-center gap-1.5`}
-                        >
-                          <Sparkles className="w-3 h-3" />
-                          Copy Script
-                        </button>
-                      </>
+                      <button
+                        onClick={() => copyToClipboard(rec.newAssetId!, 'Asset ID Baru')}
+                        className={`${BTN_GHOST} text-[11px] px-2.5 py-1.5 flex items-center gap-1.5 border border-[var(--line)] rounded-xl hover:border-[var(--accent-30)] transition`}
+                      >
+                        <Copy className="w-3 h-3 text-[var(--accent-soft)]" />
+                        Copy ID
+                      </button>
                     )}
                   </div>
                 </div>
@@ -629,6 +631,6 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
           </div>
         </div>
       )}
-    </div>
+</div>
   );
 }

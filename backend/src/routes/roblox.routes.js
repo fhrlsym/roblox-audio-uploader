@@ -10,7 +10,10 @@ import {
   checkAssetStatus,
   fetchWithRetry,
   detectAsset,
-  performSpoof,
+  startSpoofDownload,
+  getSpoofJobPublic,
+  runSpoofUpload,
+  clearSpoofJob,
 } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
@@ -41,128 +44,59 @@ router.post('/spoof-detect', async (req, res) => {
 });
 
 // ============================================================
-// SPOOFER: Generate Blank Asset + Return ID Baru
+// SPOOFER: Fase 1 — Buat job unduh (Blokmarket), jalankan di background
 // ============================================================
-router.post('/spoof', async (req, res) => {
-  const {
-    assetId,
-    assetType,
-    displayName,
-    creatorType = 'user',
-    creatorId,
-    apiKey,
-    cookie,
-  } = req.body;
-
-  if (!assetId || !creatorId || !apiKey) {
-    return res.status(400).json({ error: 'assetId, creatorId, dan apiKey wajib diisi' });
+router.post('/spoof-job', async (req, res) => {
+  const { assetIds } = req.body;
+  if (!Array.isArray(assetIds) || assetIds.length === 0) {
+    return res.status(400).json({ error: 'assetIds array wajib diisi' });
   }
 
-  const cleanAssetId = String(assetId).replace(/\D/g, '');
-
   try {
-    const result = await performSpoof({ assetId: cleanAssetId, assetType, displayName, creatorType, creatorId, apiKey, cookie });
-
-    if (!result.success) {
-      return res.status(400).json({ success: false, error: result.error || 'Gagal membuat asset spoof' });
-    }
-    return res.json({
-      success: true,
-      operationId: result.operationId,
-      originalAssetId: result.originalAssetId,
-      name: result.name,
-      assetType: result.assetType,
-    });
+    const job = startSpoofDownload(assetIds);
+    res.json({ success: true, job });
   } catch (error) {
-    console.error('Spoof error:', error);
-    res.status(500).json({ error: error.message });
+    console.error('Spoof job error:', error);
+    res.status(500).json({ error: error.message || 'Gagal membuat job spoof' });
   }
 });
 
 // ============================================================
-// SPOOFER BATCH: Banyak asset sekaligus
+// SPOOFER: Cek status job unduh (untuk terminal progress)
 // ============================================================
-router.post('/spoof-batch', async (req, res) => {
-  const {
-    assets, // [{ assetId, assetType }]
-    creatorType = 'user',
-    creatorId,
-    apiKey,
-    cookie,
-  } = req.body;
+router.get('/spoof-job/:jobId', (req, res) => {
+  const job = getSpoofJobPublic(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'Job spoof tidak ditemukan (mungkin sudah kadaluarsa).' });
+  res.json({ success: true, job });
+});
 
-  if (!assets || !Array.isArray(assets) || assets.length === 0) {
-    return res.status(400).json({ error: 'assets array wajib diisi' });
-  }
+// ============================================================
+// SPOOFER: Fase 2 — Upload file hasil unduh ke Roblox
+// ============================================================
+router.post('/spoof-job/:jobId/upload', async (req, res) => {
+  const { creatorType = 'user', creatorId, apiKey, keys } = req.body;
+  const jobId = req.params.jobId;
+
+  if (!jobId) return res.status(400).json({ error: 'jobId wajib diisi' });
   if (!creatorId || !apiKey) {
     return res.status(400).json({ error: 'creatorId dan apiKey wajib diisi' });
   }
 
-  const results = [];
-  const replacements = {};
-
-  for (const asset of assets) {
-    const cleanId = String(asset.assetId).replace(/\D/g, '');
-    const key = asset.key ? String(asset.key) : cleanId;
-    try {
-      const spoofResult = await performSpoof({
-        assetId: cleanId,
-        assetType: asset.assetType,
-        displayName: asset.displayName,
-        creatorType: asset.creatorType || creatorType,
-        creatorId,
-        apiKey,
-        cookie,
-      });
-
-      let newId = spoofResult.newAssetId;
-
-      if (spoofResult.operationId && !newId) {
-        for (let i = 0; i < 30; i++) {
-          await new Promise((r) => setTimeout(r, 2000));
-          const opData = await checkOperationStatus(spoofResult.operationId, apiKey);
-          if (opData.done) {
-            newId = opData.assetId || null;
-            break;
-          }
-        }
-      }
-
-      if (newId) {
-        replacements[cleanId] = String(newId);
-        results.push({
-          key,
-          oldId: cleanId,
-          newAssetId: String(newId),
-          newId: String(newId),
-          name: spoofResult.name,
-          assetType: spoofResult.assetType,
-          success: true,
-          status: 'Active',
-        });
-      } else {
-        results.push({
-          key,
-          oldId: cleanId,
-          name: spoofResult.name,
-          assetType: spoofResult.assetType,
-          success: false,
-          error: spoofResult.error || 'Gagal generate ID',
-        });
-      }
-    } catch (e) {
-      results.push({ key, oldId: cleanId, success: false, error: e.message || 'Gagal' });
-    }
-    await new Promise((r) => setTimeout(r, 300));
+  try {
+    const result = await runSpoofUpload({ jobId, creatorType, creatorId, apiKey, keys });
+    return res.json({ success: result.success, job: result.job });
+  } catch (error) {
+    console.error('Spoof upload error:', error);
+    return res.status(400).json({ error: error.message || 'Gagal upload ke Roblox' });
   }
+});
 
-  res.json({
-    success: results.some(r => r.success),
-    total: assets.length,
-    successCount: results.filter(r => r.success).length,
-    results,
-    replacements,
-  });
+// ============================================================
+// SPOOFER: Hapus job dari memori
+// ============================================================
+router.delete('/spoof-job/:jobId', (req, res) => {
+  clearSpoofJob(req.params.jobId);
+  res.json({ success: true });
 });
 
 // ============================================================
