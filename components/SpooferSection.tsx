@@ -53,9 +53,9 @@ async function parseJsonResponse(res: Response): Promise<JsonRecord> {
   try {
     return raw ? (JSON.parse(raw) as JsonRecord) : {};
   } catch {
-    if (res.status === 404 || res.status === 502 || res.status === 503) {
+    if (res.status === 404) {
       throw new Error(
-        `Server backend Railway sedang restart / deploy ulang (status ${res.status}). Silakan coba lagi dalam beberapa detik.`
+        `Backend mengembalikan 404 (Not Found). Pastikan variabel NEXT_PUBLIC_BACKEND_URL di Vercel Environment Variables sudah diisi dengan URL Railway Backend Anda (contoh: https://xxx.up.railway.app).`
       );
     }
     throw new Error(
@@ -69,6 +69,8 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
   const { records, upsertRecord, clearHistory, loadSpoofHistory } = useSpoofHistory();
   const [assetInput, setAssetInput] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
+
+  const effectiveBackendUrl = (backendUrl || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001').replace(/\/+$/, '');
 
   // Job state (download terminal + upload)
   const [job, setJob] = useState<SpoofJob | null>(null);
@@ -92,25 +94,22 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
       const saved = localStorage.getItem(QUEUE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as QueueItem[];
-        if (Array.isArray(parsed)) setQueue(parsed);
+        setQueue(parsed);
       }
     } catch {
       // ignore
     }
   }, []);
 
-  // Persist antrian spoof ke localStorage
-  useEffect(() => {
+  // Simpan antrian spoof ke localStorage
+  const saveQueue = (newQueue: QueueItem[]) => {
+    setQueue(newQueue);
     try {
-      if (queue.length > 0) {
-        localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-      } else {
-        localStorage.removeItem(QUEUE_KEY);
-      }
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(newQueue));
     } catch {
       // ignore
     }
-  }, [queue]);
+  };
 
 const stopPolling = () => {
     if (pollTimerRef.current) {
@@ -122,23 +121,36 @@ const stopPolling = () => {
 
   useEffect(() => () => stopPolling(), []);
 
-  const parseAssetId = (input: string): string | null => {
-    const clean = String(input).replace(/\D/g, '');
-    return clean || null;
-  };
-
   const addToQueue = () => {
-    const id = parseAssetId(assetInput);
-    if (!id) {
-      toast('Masukkan Asset ID Roblox yang valid', 'error');
+    const raw = assetInput.trim();
+    if (!raw) return;
+
+    const ids = raw.split(/[\n,; ]+/).map((s) => s.replace(/\D/g, '')).filter(Boolean);
+    if (ids.length === 0) {
+      toast('Asset ID Roblox tidak valid', 'error');
       return;
     }
-    if (queue.some((q) => q.originalAssetId === id)) {
+
+    const existingIds = new Set(queue.map((q) => q.originalAssetId));
+    const newItems: QueueItem[] = [];
+
+    for (const cleanId of ids) {
+      if (!existingIds.has(cleanId)) {
+        newItems.push({
+          id: `item_${cleanId}_${Date.now()}`,
+          originalAssetId: cleanId,
+        });
+        existingIds.add(cleanId);
+      }
+    }
+
+    if (newItems.length > 0) {
+      saveQueue([...queue, ...newItems]);
+      toast(`Berhasil menambahkan ${newItems.length} asset ke antrian`, 'success');
+      setAssetInput('');
+    } else {
       toast('Asset ID sudah ada di antrian', 'error');
-      return;
     }
-    setQueue((prev) => [{ id: `q_${Date.now()}_${Math.random().toString(36).slice(2)}`, originalAssetId: id }, ...prev]);
-    setAssetInput('');
   };
 
   const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -149,10 +161,11 @@ const stopPolling = () => {
   };
 
   const removeFromQueue = (id: string) => {
-    setQueue((prev) => prev.filter((q) => q.id !== id));
+    const next = queue.filter((q) => q.id !== id);
+    saveQueue(next);
   };
 
-  const clearQueue = () => setQueue([]);
+  const clearQueue = () => saveQueue([]);
 
   const handleStartJob = async () => {
     if (queue.length === 0) {
@@ -167,7 +180,7 @@ const stopPolling = () => {
     toast(`Memproses ${assetIds.length} asset...`, 'info');
 
     try {
-      const res = await fetch(`${backendUrl}/api/spoof-direct`, {
+      const res = await fetch(`${effectiveBackendUrl}/api/spoof-direct`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
