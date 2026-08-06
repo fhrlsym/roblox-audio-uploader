@@ -14,29 +14,10 @@ import {
   getSpoofJobPublic,
   runSpoofUpload,
   clearSpoofJob,
-  runSpoofDirect,
 } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = Router();
-
-// ============================================================
-// SPOOFER DIRECT: Eksekusi unduh & upload langsung tanpa cache/job
-// ============================================================
-router.post('/spoof-direct', async (req, res) => {
-  const { assetIds, creatorType, creatorId, apiKey } = req.body;
-  if (!Array.isArray(assetIds) || assetIds.length === 0) {
-    return res.status(400).json({ error: 'assetIds array wajib diisi' });
-  }
-
-  try {
-    const result = await runSpoofDirect({ assetIds, creatorType, creatorId, apiKey });
-    res.json(result);
-  } catch (error) {
-    console.error('Spoof direct error:', error);
-    res.status(500).json({ error: error.message || 'Gagal memproses spoof' });
-  }
-});
 
 // ============================================================
 // SPOOFER: Deteksi nama & tipe aset tanpa upload
@@ -166,7 +147,7 @@ router.post('/upload-to-roblox', upload.single('file'), async (req, res) => {
     });
   } finally {
     if (req.file && existsSync(req.file.path)) {
-      try { unlinkSync(req.file.path); } catch {}
+      try { unlinkSync(req.file.path); } catch { }
     }
   }
 });
@@ -207,7 +188,7 @@ router.post('/upload-converted', async (req, res) => {
     res.status(error.status || 500).json({ error: error.message || 'Upload failed' });
   } finally {
     if (existsSync(filePath)) {
-      try { unlinkSync(filePath); } catch {}
+      try { unlinkSync(filePath); } catch { }
     }
   }
 });
@@ -251,7 +232,7 @@ router.get('/roblox/lookup', async (req, res) => {
       try {
         const icons = await fetchWithRetry(`https://thumbnails.roblox.com/v1/groups/icons?groupIds=${id}&size=420x420&format=Png`);
         if (icons.data?.[0]) thumbnail = icons.data[0].imageUrl;
-      } catch {}
+      } catch { }
       return res.json({
         result: {
           id: String(info.id),
@@ -270,7 +251,7 @@ router.get('/roblox/lookup', async (req, res) => {
     try {
       const avatars = await fetchWithRetry(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${id}&size=150x150&format=Png&isCircular=false`);
       if (avatars.data?.[0]) thumbnail = avatars.data[0].imageUrl;
-    } catch {}
+    } catch { }
     res.json({
       result: {
         id: String(info.id),
@@ -321,7 +302,7 @@ router.get('/roblox/key-info', async (req, res) => {
     try {
       const avatars = await fetchWithRetry(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${ownerId}&size=150x150&format=Png&isCircular=false`);
       if (avatars.data?.[0]) ownerThumbnail = avatars.data[0].imageUrl;
-    } catch {}
+    } catch { }
 
     let audioQuota = null;
     try {
@@ -337,7 +318,7 @@ router.get('/roblox/key-info', async (req, res) => {
           usageResetTime: audioEntry.usageResetTime || null,
         };
       }
-    } catch {}
+    } catch { }
 
     const groups = [];
     for (const gid of scopeGroupIds) {
@@ -348,7 +329,7 @@ router.get('/roblox/key-info', async (req, res) => {
         try {
           const icons = await fetchWithRetry(`https://thumbnails.roblox.com/v1/groups/icons?groupIds=${gid}&size=420x420&format=Png`);
           if (icons.data?.[0]) thumb = icons.data[0].imageUrl;
-        } catch {}
+        } catch { }
         groups.push({
           id: String(info.id),
           name: info.name,
@@ -356,7 +337,7 @@ router.get('/roblox/key-info', async (req, res) => {
           hasVerifiedBadge: !!info.hasVerifiedBadge,
           thumbnail: thumb,
         });
-      } catch {}
+      } catch { }
     }
 
     res.json({
@@ -393,7 +374,7 @@ router.get('/roblox-quota', async (req, res) => {
       });
       const d = await r.json().catch(() => ({}));
       if (d.authorizedUserId) effectiveUserId = String(d.authorizedUserId);
-    } catch {}
+    } catch { }
   }
 
   try {

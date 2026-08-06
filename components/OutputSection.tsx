@@ -74,9 +74,9 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       let status = 'Pending';
       let opError: string | null = null;
 
-      // Poll status every 400ms directly via backend
-      for (let attempt = 0; attempt < 80; attempt++) {
-        await new Promise((r) => setTimeout(r, 400));
+      // Poll status every 1000ms directly via backend
+      for (let attempt = 0; attempt < 60; attempt++) {
+        await new Promise((r) => setTimeout(r, 1000));
 
         const opResponse = await fetch(
           `${backendUrl}/api/operation-status/${operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
@@ -97,39 +97,39 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         }
       }
 
-        if (assetId) {
-          setUploadResults((prev) => ({
-            ...prev,
-            [file.id]: { filename: file.tunedName, assetId, status, success: true },
-          }));
+      if (assetId) {
+        setUploadResults((prev) => ({
+          ...prev,
+          [file.id]: { filename: file.tunedName, assetId, status, success: true },
+        }));
 
-          if (onUploadSuccess) {
-            onUploadSuccess({
-              id: `${Date.now()}-${file.id}`,
-              fileName: displayName,
-              displayName,
-              assetId,
-              accountName: selectedAccount.name,
-              uploadedAt: Date.now(),
-              fileSize: file.blob.size,
-              robloxPlaybackSpeed: (1 / file.speed).toFixed(4),
-              originalSpeed: file.speed,
-              amplify: file.amplify,
-              status,
-            });
-          }
-          toast(`Berhasil mengunggah "${displayName}" ke Roblox!`, 'success');
-          // Auto remove tuned file from queue so step counts stay accurate
-          setTimeout(() => {
-            onRemoveTuned(file.id);
-          }, 1500);
-        } else {
-          setUploadResults((prev) => ({
-            ...prev,
-            [file.id]: { filename: file.tunedName, error: opError || 'Upload timeout', success: false },
-          }));
-          toast(`Gagal upload ${displayName}: ${opError || 'Upload timeout'}`, 'error');
+        if (onUploadSuccess) {
+          onUploadSuccess({
+            id: `${Date.now()}-${file.id}`,
+            fileName: displayName,
+            displayName,
+            assetId,
+            accountName: selectedAccount.name,
+            uploadedAt: Date.now(),
+            fileSize: file.blob.size,
+            robloxPlaybackSpeed: (1 / file.speed).toFixed(4),
+            originalSpeed: file.speed,
+            amplify: file.amplify,
+            status,
+          });
         }
+        toast(`Berhasil mengunggah "${displayName}" ke Roblox!`, 'success');
+        // Auto remove tuned file from queue so step counts stay accurate
+        setTimeout(() => {
+          onRemoveTuned(file.id);
+        }, 1500);
+      } else {
+        setUploadResults((prev) => ({
+          ...prev,
+          [file.id]: { filename: file.tunedName, error: opError || 'Upload timeout', success: false },
+        }));
+        toast(`Gagal upload ${displayName}: ${opError || 'Upload timeout'}`, 'error');
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Upload failed';
       setUploadResults((prev) => ({
@@ -186,13 +186,12 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             return (
               <div
                 key={file.id}
-                className={`stagger-enter rounded-xl border p-4 transition ${
-                  result?.success
+                className={`stagger-enter rounded-xl border p-4 transition ${result?.success
                     ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
                     : result
                       ? 'border-rose-400/15 bg-rose-400/[0.04]'
                       : 'border-[var(--line)] bg-[var(--surface)]'
-                }`}
+                  }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
