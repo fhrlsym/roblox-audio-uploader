@@ -33,6 +33,18 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Fallback JSON for unmatched /api routes
+app.use('/api/*', (req, res) => {
+  res.status(404).json({ error: `Endpoint '${req.originalUrl}' tidak ditemukan pada backend.` });
+});
+
+// Express global JSON error handler
+app.use((err, req, res, next) => {
+  console.error('[Express Error]', err);
+  const status = err.status || err.statusCode || 500;
+  res.status(status).json({ error: err.message || 'Internal Server Error' });
+});
+
 // Periodic temp file cleanup
 function sweepOldFiles() {
   const cutoff = Date.now() - 45 * 60 * 1000;
