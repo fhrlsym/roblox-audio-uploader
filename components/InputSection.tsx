@@ -463,6 +463,9 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                   youtubeLinks.forEach((l) => {
                     if (l.error && l.url !== targetUrl) retryLink(l.url);
                   });
+                  setTimeout(() => {
+                    handleYoutubeConvert();
+                  }, 600);
                 }}
                 className={BTN_PRIMARY + ' flex-1'}
               >
