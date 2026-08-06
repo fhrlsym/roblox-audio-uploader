@@ -181,7 +181,8 @@ const j = data.job as unknown as SpoofJob;
         const res = await fetch(`${backendUrl}/api/spoof-job/${jobId}`, { cache: 'no-store' });
         if (res.status === 404) {
           stopPolling();
-          toast('Job spoof telah selesai atau kedaluwarsa.', 'info');
+          toast('Job spoof kedaluwarsa (server restart). Silakan klik "Spoof Asset" kembali.', 'info');
+          setJob((prev) => (prev ? { ...prev, status: 'failed', error: 'Job kedaluwarsa. Silakan klik "Spoof Asset" kembali.' } : null));
           return;
         }
         const data = await parseJsonResponse(res);
