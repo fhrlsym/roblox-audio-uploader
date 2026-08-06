@@ -62,7 +62,7 @@ async function parseJsonResponse(res: Response): Promise<JsonRecord> {
 
 export default function SpooferSection({ selectedAccount, backendUrl }: SpooferSectionProps) {
   const { toast } = useToast();
-  const { records, upsertRecord, clearHistory } = useSpoofHistory();
+  const { records, upsertRecord, clearHistory, loadSpoofHistory } = useSpoofHistory();
   const [assetInput, setAssetInput] = useState('');
   const [queue, setQueue] = useState<QueueItem[]>([]);
 
@@ -70,8 +70,17 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
   const [job, setJob] = useState<SpoofJob | null>(null);
   const [jobOpen, setJobOpen] = useState(false);
   const [polling, setPolling] = useState(false);
-const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleCloseModal = () => {
+    setJobOpen(false);
+    setQueue([]);
+    try {
+      localStorage.removeItem(QUEUE_KEY);
+    } catch {}
+    loadSpoofHistory();
+  };
 
   // Restore antrian spoof dari localStorage
   useEffect(() => {
@@ -346,7 +355,7 @@ const stopPolling = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-            onClick={() => !polling && !uploading && setJobOpen(false)}
+            onClick={() => !uploading && handleCloseModal()}
           >
             <motion.div
               initial={{ scale: 0.95, y: 10 }}
@@ -374,14 +383,14 @@ const stopPolling = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => !polling && !uploading && setJobOpen(false)}
+                  onClick={() => !uploading && handleCloseModal()}
                   className="p-1.5 text-[var(--text-40)] transition hover:text-[var(--text)]"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Terminal â€” hanya saat running */}
+              {/* Terminal — hanya saat running */}
               {polling && (
                 <div className="mx-5 mt-5 rounded-xl bg-black/70 border border-[var(--line)] overflow-hidden">
                   <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/10">
@@ -473,7 +482,7 @@ const stopPolling = () => {
                   </button>
                 ) : (
                   <button
-                    onClick={() => setJobOpen(false)}
+                    onClick={handleCloseModal}
                     className={`${BTN_PRIMARY} w-full py-3 text-xs font-bold`}
                   >
                     Tutup Modal
