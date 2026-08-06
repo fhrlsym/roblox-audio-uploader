@@ -286,14 +286,14 @@ export default function Home() {
         {/* Header Navigation */}
         <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-90">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-            <div className="flex items-center justify-between gap-3 w-full sm:w-auto">
+            <div className="flex items-center justify-between gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
                   <Music className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
                   <h1 className="font-bold text-xs sm:text-sm leading-none text-[var(--text)]">S2 Studio</h1>
-                  <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[100px] sm:w-[150px] truncate">
+                  <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[90px] sm:w-[150px] truncate">
                     {activeTool === 'audio-master' ? 'Audio Master' : 'Spoofer'}
                   </p>
                 </div>
@@ -320,15 +320,14 @@ export default function Home() {
                   <span className="whitespace-nowrap">Spoofer</span>
                 </button>
               </div>
-            </div>
 
-            {/* Header Right Actions (Account Dropdown + Theme Picker) */}
-            <div className="flex items-center gap-2">
+              {/* Header Right Actions (Account Dropdown + Theme Picker) */}
+              <div className="flex items-center gap-2">
                 {/* Account Dropdown */}
                 <div className="relative">
                   <button
                     onClick={toggleAccountMenu}
-                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] text-xs transition max-w-[170px] sm:max-w-none"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] text-xs transition max-w-[130px] sm:max-w-none"
                   >
                     {selectedAccount ? (
                       <>
@@ -359,7 +358,7 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -6 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-[320px] sm:w-72 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl z-50 space-y-2 max-h-[75vh] overflow-y-auto"
+                        className="fixed left-3 right-3 top-14 sm:absolute sm:left-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-72 max-w-[320px] mx-auto sm:mx-0 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3 shadow-2xl z-50 space-y-2 max-h-[75vh] overflow-y-auto"
                       >
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] px-1">
                           Pilih Akun Roblox Target
@@ -502,7 +501,7 @@ export default function Home() {
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: -6 }}
                         transition={{ duration: 0.15, ease: 'easeOut' }}
-                        className="absolute right-0 mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5 max-h-[70vh] overflow-y-auto"
+                        className="fixed right-3 top-14 sm:absolute sm:right-0 sm:top-full sm:mt-2 w-44 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2 shadow-2xl z-50 space-y-0.5 max-h-[70vh] overflow-y-auto"
                       >
                         {THEMES.map((t) => (
                           <button
@@ -521,6 +520,29 @@ export default function Home() {
                     )}
                   </AnimatePresence>
                 </div>
+              </div>
+            </div>
+
+            {/* Mobile Tool Switcher Bar */}
+            <div className="flex sm:hidden items-center justify-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] w-full mb-1">
+              <button
+                onClick={() => setActiveTool('audio-master')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Music className="w-3.5 h-3.5 shrink-0" />
+                <span>Audio Master</span>
+              </button>
+              <button
+                onClick={() => setActiveTool('spoofer')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                <span>Spoofer</span>
+              </button>
             </div>
           </div>
         </header>
