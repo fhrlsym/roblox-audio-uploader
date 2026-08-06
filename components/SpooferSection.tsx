@@ -53,9 +53,13 @@ async function parseJsonResponse(res: Response): Promise<JsonRecord> {
   try {
     return raw ? (JSON.parse(raw) as JsonRecord) : {};
   } catch {
+    if (res.status === 404 || res.status === 502 || res.status === 503) {
+      throw new Error(
+        `Server backend Railway sedang restart / deploy ulang (status ${res.status}). Silakan coba lagi dalam beberapa detik.`
+      );
+    }
     throw new Error(
-      `Backend mengembalikan HTML, bukan JSON (status ${res.status}). ` +
-        `Cek apakah backend berjalan dan NEXT_PUBLIC_BACKEND_URL sudah benar.`
+      `Backend mengembalikan respons tidak valid (status ${res.status}). Cek koneksi backend Anda.`
     );
   }
 }
