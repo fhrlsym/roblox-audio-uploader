@@ -260,15 +260,22 @@ export async function downloadOriginalAssetAPI(assetId) {
   if (!downloadUrl) throw new Error('Tidak ada download_url pada hasil task.');
 
   // 3) Unduh file (format sesuai aset asli, tidak wajib OGG)
-  const fileUrl = /^https?:\/\//.test(downloadUrl)
-    ? downloadUrl
-    : `${SPOOFER_API_BASE}/api/files/download/${encodeURIComponent(String(downloadUrl).replace(/^\/+/, ''))}`;
+  // download_url bisa berupa: URL penuh, path "/api/files/download/xxx", atau nama file.
+  const rawPath = String(downloadUrl).replace(/^\/+/, '');
+  let fileUrl;
+  if (/^https?:\/\//i.test(downloadUrl)) {
+    fileUrl = downloadUrl;
+  } else if (rawPath.startsWith('api/files/download/')) {
+    fileUrl = `${SPOOFER_API_BASE}/${rawPath}`;
+  } else {
+    fileUrl = `${SPOOFER_API_BASE}/api/files/download/${encodeURIComponent(rawPath)}`;
+  }
   const fileRes = await fetch(fileUrl, { headers: spoofHeaders() });
   if (!fileRes.ok) throw new Error(`Gagal mengunduh file (${fileRes.status})`);
   const buffer = Buffer.from(await fileRes.arrayBuffer());
   if (!buffer.length) throw new Error('File hasil download kosong.');
 
-  return { buffer, fileName: String(downloadUrl).split('/').pop() || `Asset_${cleanId}` };
+  return { buffer, fileName: rawPath.split('/').pop() || `Asset_${cleanId}` };
 }
 
 // Wrapper kompat: tulis hasil API ke outputPath.

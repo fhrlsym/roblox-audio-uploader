@@ -2,12 +2,11 @@
 
 import { useState, useEffect, Fragment } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, MessageSquare, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
+import { Building2, Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import SpooferSection from '../components/SpooferSection';
-import DiscordBridgeSection from '../components/DiscordBridgeSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
@@ -39,7 +38,7 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
 ];
 
 export default function Home() {
-  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'bridge'>('audio-master');
+  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -265,7 +264,7 @@ export default function Home() {
               <div>
                 <h1 className="font-bold text-sm leading-none text-[var(--text)]">S2 Studio</h1>
                 <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5 w-[150px] truncate">
-                  {activeTool === 'audio-master' ? 'Audio Master to Roblox' : activeTool === 'spoofer' ? 'Animation & Sound Spoofer' : 'Discord Bridge Bot'}
+                  {activeTool === 'audio-master' ? 'Audio Master to Roblox' : 'Animation & Sound Spoofer'}
                 </p>
               </div>
 
@@ -288,15 +287,6 @@ export default function Home() {
                 >
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span className="whitespace-nowrap">Spoofer</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('bridge')}
-                  className={`flex items-center justify-center gap-1.5 w-[92px] px-2 py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition ${
-                    activeTool === 'bridge' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <MessageSquare className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Bridge</span>
                 </button>
               </div>
             </div>
@@ -648,11 +638,6 @@ export default function Home() {
               selectedAccount={selectedAccount}
               backendUrl={BACKEND_URL}
             />
-          </div>
-
-          {/* Discord Bridge Tool */}
-          <div className={activeTool === 'bridge' ? 'space-y-6' : 'hidden'}>
-            <DiscordBridgeSection backendUrl={BACKEND_URL} />
           </div>
         </main>
 
