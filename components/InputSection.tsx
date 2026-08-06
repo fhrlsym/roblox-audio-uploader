@@ -240,19 +240,19 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
               toast(`Berhasil menambahkan ${dropped.length} file audio`, 'success');
               onNext?.();
             }}
-            className={`cursor-pointer w-full border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+            className={`cursor-pointer w-full border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center transition-all ${
               isDragging
                 ? 'border-[var(--accent)] bg-[var(--accent-15)] scale-[1.01] shadow-xl'
                 : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-30)] hover:bg-[var(--surface)]'
             }`}
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] shadow-sm">
-              <Upload className="w-6 h-6" />
+            <div className="mx-auto mb-3 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] shadow-sm">
+              <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <p className="text-sm font-semibold text-[var(--text-90)]">
+            <p className="text-xs sm:text-sm font-semibold text-[var(--text-90)]">
               {isDragging ? 'Lepaskan file di sini' : 'Klik atau tarik (drag & drop) file audio ke sini'}
             </p>
-            <p className="text-xs text-[var(--text-40)] mt-1.5 font-medium">MP3 · WAV · OGG · M4A — multi file didukung</p>
+            <p className="text-[11px] sm:text-xs text-[var(--text-40)] mt-1.5 font-medium">MP3 · WAV · OGG · M4A — multi file didukung</p>
           </div>
           <input
             ref={fileInputRef}
@@ -267,11 +267,12 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
         <div className="space-y-4">
           <div className="flex gap-2">
             <input
+              type="url"
               value={youtubeInput}
               onChange={(e) => setYoutubeInput(e.target.value)}
               onKeyDown={handleInputKeyDown}
               placeholder="Tempel link YouTube lalu Enter…"
-              className={INPUT}
+              className={INPUT + ' text-xs sm:text-sm'}
             />
             <button
               onClick={() => {
@@ -296,13 +297,13 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
               {youtubeLinks.map((link) => (
                 <div
                   key={link.url}
-                  className={`flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition ${
+                  className={`flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 transition ${
                     link.error ? 'border-rose-400/25' : 'hover:border-[var(--accent-25)]'
                   }`}
                 >
                   {link.loading ? (
                     <>
-                      <div className="h-12 w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
+                      <div className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
                       <div className="flex-1 space-y-2">
                         <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--surface-strong)]" />
                         <div className="h-2.5 w-1/3 animate-pulse rounded bg-[var(--surface-strong)]" />
@@ -316,10 +317,10 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                           src={link.video.thumbnail}
                           alt=""
                           referrerPolicy="no-referrer"
-                          className="h-12 w-20 shrink-0 rounded-lg object-cover"
+                          className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 rounded-lg object-cover"
                         />
                       ) : (
-                        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
+                        <div className="flex h-10 w-14 sm:h-12 sm:w-20 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
                           <Music className="w-5 h-5 text-[var(--text-40)]" />
                         </div>
                       )}

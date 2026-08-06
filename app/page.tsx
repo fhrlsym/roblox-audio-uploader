@@ -284,24 +284,48 @@ export default function Home() {
       <VersionChecker />
       <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         {/* Header Navigation */}
-        <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-80">
-          <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
-                <Music className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="font-bold text-sm leading-none text-[var(--text)]">S2 Studio</h1>
-                <p className="text-[11px] text-[var(--text-45)] font-medium mt-0.5 w-[150px] truncate">
-                  {activeTool === 'audio-master' ? 'Audio Master to Roblox' : 'Animation & Sound Spoofer'}
-                </p>
+        <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-90">
+          <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 sm:gap-4">
+            <div className="flex items-center justify-between sm:justify-start gap-3 w-full sm:w-auto">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
+                  <Music className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-xs sm:text-sm leading-none text-[var(--text)]">S2 Studio</h1>
+                  <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[110px] sm:w-[150px] truncate">
+                    {activeTool === 'audio-master' ? 'Audio Master' : 'Spoofer'}
+                  </p>
+                </div>
               </div>
 
-              {/* Tool Switcher */}
-              <div className="flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-2xl border border-[var(--line)] ml-4 shrink-0">
+              {/* Mobile Tool Switcher Bar */}
+              <div className="flex sm:hidden items-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)]">
                 <button
                   onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+                  className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)]'
+                  }`}
+                >
+                  <Music className="w-3 h-3 shrink-0" />
+                  <span>Audio Master</span>
+                </button>
+                <button
+                  onClick={() => setActiveTool('spoofer')}
+                  className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${
+                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000]' : 'text-[var(--text-60)]'
+                  }`}
+                >
+                  <Sparkles className="w-3 h-3 shrink-0" />
+                  <span>Spoofer</span>
+                </button>
+              </div>
+
+              {/* Desktop Tool Switcher */}
+              <div className="hidden sm:flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-2xl border border-[var(--line)] ml-4 shrink-0">
+                <button
+                  onClick={() => setActiveTool('audio-master')}
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
@@ -310,7 +334,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-bold transition-all ${
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
                     activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                   }`}
                 >
