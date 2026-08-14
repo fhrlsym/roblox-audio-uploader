@@ -12,11 +12,22 @@ import { staticAnalyze } from './static-decode.js';
 
 const ENGINES_DIR = join(BACKEND_ROOT, 'engines');
 const TMP_DIR = join(BACKEND_ROOT, 'temp_dump');
+const TOOLS_DIR = join(BACKEND_ROOT, 'tools');
 const MAX_INPUT_BYTES = 2 * 1024 * 1024; // 2MB
 const ENGINE_TIMEOUT_MS = 90_000;
 
+function resolveLocalTool(name) {
+  for (const exe of [name, `${name}.exe`, `${name}.cmd`, `${name}.bat`]) {
+    const p = join(TOOLS_DIR, exe);
+    if (existsSync(p)) return p;
+  }
+  return null;
+}
+
 function resolveBinary(name, envVar) {
   if (envVar && existsSync(envVar)) return envVar;
+  const local = resolveLocalTool(name);
+  if (local) return local;
   try {
     const res = spawnSync(name, ['--version'], { timeout: 5000, stdio: 'ignore' });
     if (!res.error && res.status === 0) return name;
@@ -103,6 +114,22 @@ function readAllFromDir(dir, prefix) {
   } catch {
     return [];
   }
+}
+
+// Heuristic: is this script already human-readable Lua (not a minified blob
+// with giant hex/base64 constants)? Used to decide output ordering — for
+// readable scripts the original source is more useful than a compressed trace.
+function isLikelyReadableLua(src) {
+  const lines = src.split(/\r?\n/);
+  if (lines.length < 4) return false;
+  const longest = Math.max(...lines.map((l) => l.length));
+  if (longest > 4000) return false; // minified mega-line -> obfuscated
+  if (/["'][A-Za-z0-9+/]{300,}={0,2}["']/.test(src)) return false; // base64 blob
+  if (/["'][0-9a-fA-F]{300,}["']/.test(src)) return false; // hex blob
+  const keywordLines = lines.filter((l) =>
+    /\b(local|function|end|return|if|then|for|while|elseif)\b/.test(l)
+  ).length;
+  return keywordLines / lines.length >= 0.35;
 }
 
 function buildResult({ detection, code, deobfuscatedCode, httpLogs, constants, notes, engine }) {
@@ -211,12 +238,24 @@ export async function runDump({ code, engine }) {
     if (result) {
       result.httpLogs = staticRes.httpLogs;
       result.constants = staticRes.constants;
-      const combined =
-        `-- [Hasil dari engine proven: ${result.engine}]\n\n` +
-        result.deobfuscatedCode +
-        (staticRes.payloadExtracted
-          ? `\n\n-- [Lampiran analisis statis]\n\n${staticRes.deobfuscatedCode}`
-          : '');
+      const readable = isLikelyReadableLua(src);
+      let combined;
+      if (readable && !staticRes.payloadExtracted) {
+        // Script sudah terbaca: source asli lebih berguna daripada trace.
+        combined =
+          `-- [Script ini sudah terbaca — bukan ter-obfuscate berat.]\n` +
+          `-- Di bawah = source asli (utuh). Trace engine ${result.engine} ada di lampiran.\n\n` +
+          src +
+          `\n\n-- [Lampiran: trace engine proven ${result.engine}]\n\n` +
+          result.deobfuscatedCode;
+      } else {
+        combined =
+          `-- [Hasil dari engine proven: ${result.engine}]\n\n` +
+          result.deobfuscatedCode +
+          (staticRes.payloadExtracted
+            ? `\n\n-- [Lampiran analisis statis]\n\n${staticRes.deobfuscatedCode}`
+            : '');
+      }
       const built = buildResult({
         detection,
         code: src,
