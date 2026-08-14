@@ -42,10 +42,10 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     setYoutubeLinks((prev) =>
       prev.map((l) => (l.url === url ? { ...l, loading: true, error: undefined, video: undefined } : l))
     );
-    fetchYoutubeInfo(url);
+    return fetchYoutubeInfo(url);
   };
 
-  const fetchYoutubeInfo = async (candidate: string) => {
+  const fetchYoutubeInfo = async (candidate: string): Promise<VideoInfo | undefined> => {
     try {
       const response = await fetch(`${backendUrl}/api/youtube-info`, {
         method: 'POST',
@@ -60,6 +60,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
         prev.map((l) => (l.url === candidate ? { ...l, loading: false, video: data.video } : l))
       );
       toast(`Berhasil mengambil info: ${cleanSongTitle(data.video.title)}`, 'success');
+      return data.video as VideoInfo;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Gagal mengambil info video';
       if (isBotError(message)) {
@@ -68,6 +69,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
       setYoutubeLinks((prev) =>
         prev.map((l) => (l.url === candidate ? { ...l, loading: false, error: message } : l))
       );
+      return undefined;
     }
   };
 
@@ -121,8 +123,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     onNext?.();
   };
 
-  const handleYoutubeConvert = async () => {
-    const targets = youtubeLinks.filter((l) => l.url && !l.error && l.video);
+  const downloadTargets = async (targets: YoutubeLinkEntry[]) => {
     if (targets.length === 0) return;
 
     setConverting(true);
@@ -180,6 +181,11 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     }
 
     setConverting(false);
+  };
+
+  const handleYoutubeConvert = () => {
+    const targets = youtubeLinks.filter((l) => l.url && !l.error && l.video);
+    return downloadTargets(targets);
   };
 
   const readyCount = youtubeLinks.filter((l) => l.video).length;
@@ -464,16 +470,22 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
 
             <div className="mt-4 flex gap-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const targetUrl = cookieHelpUrl;
                   setCookieHelpUrl(null);
-                  if (targetUrl) retryLink(targetUrl);
+                  // Retry every failed link (including the one that triggered the modal)
+                  const urls: string[] = [];
+                  if (targetUrl) urls.push(targetUrl);
                   youtubeLinks.forEach((l) => {
-                    if (l.error && l.url !== targetUrl) retryLink(l.url);
+                    if (l.error && l.url !== targetUrl) urls.push(l.url);
                   });
-                  setTimeout(() => {
-                    handleYoutubeConvert();
-                  }, 600);
+                  const videos = await Promise.all(urls.map((u) => retryLink(u)));
+                  const ready = urls
+                    .map((u, i) => ({ url: u, video: videos[i] }))
+                    .filter((t): t is { url: string; video: VideoInfo } => !!t.video);
+                  if (ready.length > 0) {
+                    await downloadTargets(ready);
+                  }
                 }}
                 className={BTN_PRIMARY + ' flex-1'}
               >

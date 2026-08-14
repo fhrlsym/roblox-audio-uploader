@@ -127,11 +127,15 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
       const query = apiKey ? `?apiKey=${encodeURIComponent(apiKey)}` : '';
 
       const tasks = data.map(async (row) => {
-        const response = await fetch(`${backendUrl}/api/asset-status/${row.asset_id}${query}`);
-        const result = await response.json();
-        const status = result.status;
-        if (status !== 'Pending' && status !== row.status) {
-          await updateAssetStatus(row.asset_id, status);
+        try {
+          const response = await fetch(`${backendUrl}/api/asset-status/${row.asset_id}${query}`);
+          const result = await response.json();
+          const status = result.status;
+          if (status !== 'Pending' && status !== row.status) {
+            await updateAssetStatus(row.asset_id, status);
+          }
+        } catch {
+          // A single failed row must not abort the sweep (or produce unhandled rejections)
         }
       });
 
@@ -143,6 +147,8 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
         }
       };
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, worker));
+    } catch {
+      // ignore network/Supabase failures; the next 5s sweep will retry
     } finally {
       statusRefreshLockRef.current = false;
     }

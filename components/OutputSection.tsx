@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CloudUpload, Copy, Download, Loader2, Music, RotateCcw, Trash2 } from 'lucide-react';
@@ -7,6 +5,7 @@ import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../typ
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
 import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
+import GitHubExportModal, { ExportableSong, GitHubIcon } from './GitHubExportModal';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -20,6 +19,8 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const { toast } = useToast();
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
+  const [showGitHubModal, setShowGitHubModal] = useState(false);
+  const [exportSongs, setExportSongs] = useState<ExportableSong[]>([]);
 
   const handleDownload = (file: TunedAudioFile) => {
     const url = URL.createObjectURL(file.blob);
@@ -40,6 +41,35 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const copySongInfo = (name: string, assetId: string, playbackSpeed: string) => {
     navigator.clipboard.writeText(`${name}\n${assetId}\n${playbackSpeed}`);
     toast('Nama lagu, asset ID & playback speed disalin', 'success');
+  };
+
+  const openGitHubSyncForAll = () => {
+    const songs: ExportableSong[] = tunedFiles
+      .filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId)
+      .map((f) => ({
+        assetId: uploadResults[f.id]!.assetId!,
+        name: cleanSongTitle(f.tunedName),
+        playbackSpeed: (1 / f.speed).toFixed(4),
+        originalSpeed: f.speed,
+      }));
+    if (songs.length === 0) {
+      toast('Belum ada lagu yang berhasil di-upload ke Roblox', 'error');
+      return;
+    }
+    setExportSongs(songs);
+    setShowGitHubModal(true);
+  };
+
+  const openGitHubSyncForSingle = (file: TunedAudioFile, assetId: string) => {
+    setExportSongs([
+      {
+        assetId,
+        name: cleanSongTitle(file.tunedName),
+        playbackSpeed: (1 / file.speed).toFixed(4),
+        originalSpeed: file.speed,
+      },
+    ]);
+    setShowGitHubModal(true);
   };
 
   const handleUploadToRoblox = async (file: TunedAudioFile) => {
@@ -230,13 +260,24 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                       <div className="rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-4">
                         <div className="flex items-center gap-2">
                           <StatusBadge status={result.status || 'Pending'} />
-                          <button
-                            onClick={() => copySongInfo(file.tunedName, result.assetId!, (1 / file.speed).toFixed(4))}
-                            className="ml-auto inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
-                          >
-                            <Copy className="w-3 h-3" />
-                            Salin 3 info
-                          </button>
+                          <div className="ml-auto flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => openGitHubSyncForSingle(file, result.assetId!)}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--accent-strong)] hover:bg-[var(--surface)] transition"
+                            >
+                              <GitHubIcon className="w-3 h-3" />
+                              Sync GitHub
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copySongInfo(file.tunedName, result.assetId!, (1 / file.speed).toFixed(4))}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+                            >
+                              <Copy className="w-3 h-3" />
+                              Salin 3 info
+                            </button>
+                          </div>
                         </div>
                         <div className="mt-3 space-y-2">
                           <div className="flex items-start justify-between gap-2">
@@ -291,6 +332,17 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             </button>
           )}
 
+          {tunedFiles.some((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId) && (
+            <button
+              type="button"
+              onClick={openGitHubSyncForAll}
+              className="w-full py-2.5 text-xs font-semibold rounded-xl border border-[var(--accent-30)] bg-[var(--accent-10)] text-[var(--accent-strong)] hover:bg-[var(--accent-15)] transition flex items-center justify-center gap-2"
+            >
+              <GitHubIcon className="w-4 h-4" />
+              Sync Semua ke GitHub ({tunedFiles.filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId).length})
+            </button>
+          )}
+
           <button
             onClick={handleUploadAll}
             disabled={uploadingAny || pendingCount === 0}
@@ -310,6 +362,13 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           </button>
         </div>
       )}
+
+      {/* GitHub Export Modal */}
+      <GitHubExportModal
+        isOpen={showGitHubModal}
+        onClose={() => setShowGitHubModal(false)}
+        songs={exportSongs}
+      />
     </div>
   );
 }

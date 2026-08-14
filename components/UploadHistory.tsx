@@ -7,6 +7,7 @@ import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
 import { UploadRecord } from '../types/audio';
 import { CARD, INPUT, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
+import GitHubExportModal, { GitHubIcon } from './GitHubExportModal';
 
 interface UploadHistoryProps {
   history: UploadRecord[];
@@ -25,6 +26,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Failed' | 'Copyright'>('All');
+  const [showGitHubModal, setShowGitHubModal] = useState(false);
 
   const copyAssetId = (assetId: string) => {
     navigator.clipboard.writeText(assetId);
@@ -69,20 +71,33 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {activeCount > 0 && (
-            <button
-              onClick={copyAllActiveIds}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-15)] px-2.5 py-1 text-[11px] font-semibold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
-            >
-              <Copy className="w-3 h-3" />
-              Copy All Active ({activeCount})
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowGitHubModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+              >
+                <GitHubIcon className="w-3 h-3" />
+                Sync ke GitHub ({activeCount})
+              </button>
+
+              <button
+                type="button"
+                onClick={copyAllActiveIds}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--accent-15)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
+              >
+                <Copy className="w-3 h-3" />
+                Copy ID
+              </button>
+            </>
           )}
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
-              className="p-1 text-[var(--text-40)] hover:text-[var(--text)] transition"
+              className="p-1.5 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-lg hover:bg-[var(--surface)]"
               title="Tutup Riwayat"
             >
               <X className="w-4 h-4" />
@@ -192,6 +207,20 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
           })}
         </div>
       )}
+
+      {/* GitHub Export & Sync Modal */}
+      <GitHubExportModal
+        isOpen={showGitHubModal}
+        onClose={() => setShowGitHubModal(false)}
+        songs={history
+          .filter((r) => r.status === 'Active' && r.assetId)
+          .map((r) => ({
+            assetId: r.assetId,
+            name: cleanSongTitle(r.displayName || r.fileName),
+            playbackSpeed: r.robloxPlaybackSpeed || (1 / (r.originalSpeed || 1)).toFixed(4),
+            originalSpeed: r.originalSpeed,
+          }))}
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, CloudUpload, Copy, Film, History, Loader2, Plus, Sparkles, Trash2, UploadCloud, Wand2, X } from 'lucide-react';
+import { Check, CloudUpload, Copy, Download, Film, History, Loader2, Pause, Play, Plus, Sparkles, Trash2, UploadCloud, Volume2, Wand2, X } from 'lucide-react';
 import { SavedAccount } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
@@ -79,7 +79,50 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
   const [uploading, setUploading] = useState(false);
   const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Audio Preview Player State
+  const [playingAssetId, setPlayingAssetId] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlayAudio = (assetId: string) => {
+    if (playingAssetId === assetId) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      setPlayingAssetId(null);
+    } else {
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+        audioRef.current.onended = () => setPlayingAssetId(null);
+        audioRef.current.onerror = () => {
+          toast('Gagal memutar preview audio aset.', 'error');
+          setPlayingAssetId(null);
+        };
+      }
+      audioRef.current.src = `${effectiveBackendUrl}/api/spoof-audio-stream/${assetId}`;
+      audioRef.current.play().catch(() => {
+        toast('Gagal memutar audio.', 'error');
+        setPlayingAssetId(null);
+      });
+      setPlayingAssetId(assetId);
+    }
+  };
+
+  const handleDownloadAsset = (assetId: string) => {
+    const downloadUrl = `${effectiveBackendUrl}/api/spoof-download/${assetId}`;
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast(`Mengunduh file aset (${assetId})...`, 'info');
+  };
+
   const handleCloseModal = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setPlayingAssetId(null);
+    }
     setJobOpen(false);
     setQueue([]);
     try {
@@ -87,6 +130,15 @@ export default function SpooferSection({ selectedAccount, backendUrl }: SpooferS
     } catch {}
     loadSpoofHistory();
   };
+
+  // Stop audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
 
   // Restore antrian spoof dari localStorage
   useEffect(() => {
@@ -498,6 +550,31 @@ const stopPolling = () => {
                           </button>
                         )}
                       </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {item.assetType === 'Audio' && (
+                          <button
+                            type="button"
+                            onClick={() => togglePlayAudio(item.originalAssetId)}
+                            className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
+                            title={playingAssetId === item.originalAssetId ? "Stop Audio" : "Putar Audio"}
+                          >
+                            {playingAssetId === item.originalAssetId ? (
+                              <Pause className="w-3.5 h-3.5 text-[var(--accent)]" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadAsset(item.originalAssetId)}
+                          className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
+                          title="Download File Asli ke PC"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   {(!job.items || job.items.length === 0) && (
@@ -592,12 +669,36 @@ const stopPolling = () => {
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">
+                    {rec.assetType === 'Audio' && (
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudio(rec.originalAssetId)}
+                        className="p-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
+                        title={playingAssetId === rec.originalAssetId ? "Stop Audio" : "Putar Audio"}
+                      >
+                        {playingAssetId === rec.originalAssetId ? (
+                          <Pause className="w-3.5 h-3.5 text-[var(--accent)]" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadAsset(rec.originalAssetId)}
+                      className="p-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
+                      title="Download File Asli ke PC"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+
                     {rec.newAssetId && (
                       <button
                         onClick={() => copyToClipboard(rec.newAssetId!, 'Asset ID Baru')}
-                        className={`${BTN_GHOST} text-[11px] px-2.5 py-1.5 flex items-center gap-1.5 border border-[var(--line)] rounded-xl hover:border-[var(--accent-30)] transition`}
+                        className={`${BTN_GHOST} text-[11px] px-2.5 py-2 flex items-center gap-1.5 border border-[var(--line)] rounded-xl hover:border-[var(--accent-30)] transition`}
                       >
-                        <Copy className="w-3 h-3 text-[var(--accent-soft)]" />
+                        <Copy className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
                         Copy ID
                       </button>
                     )}
@@ -608,6 +709,6 @@ const stopPolling = () => {
           </div>
         </div>
       )}
-</div>
+    </div>
   );
 }

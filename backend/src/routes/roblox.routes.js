@@ -15,10 +15,66 @@ import {
   runSpoofUpload,
   clearSpoofJob,
   runSpoofDirect,
+  downloadOriginalAssetAPI,
+  SPOOF_FILE_EXT,
 } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = Router();
+
+// ============================================================
+// SPOOFER: Unduh file asli langsung ke PC
+// ============================================================
+router.get('/spoof-download/:assetId', async (req, res) => {
+  const cleanId = String(req.params.assetId || '').replace(/\D/g, '');
+  if (!cleanId) return res.status(400).json({ error: 'Asset ID tidak valid' });
+
+  try {
+    const detected = await detectAsset(cleanId).catch(() => null);
+    const { buffer, fileName } = await downloadOriginalAssetAPI(cleanId);
+
+    const assetType = detected?.assetType || 'Audio';
+    const ext = SPOOF_FILE_EXT[assetType] || 'bin';
+    const safeName = (detected?.name || fileName || `Asset_${cleanId}`).replace(/[<>:"/\\|?*]/g, '');
+    const finalFilename = safeName.endsWith(`.${ext}`) ? safeName : `${safeName}.${ext}`;
+
+    const mimeMap = {
+      mp3: 'audio/mpeg',
+      png: 'image/png',
+      rbx: 'application/octet-stream',
+      rbxm: 'model/x-rbxm',
+      mesh: 'application/octet-stream',
+      mp4: 'video/mp4',
+    };
+
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(finalFilename)}"`);
+    res.setHeader('Content-Type', mimeMap[ext] || 'application/octet-stream');
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Spoof download error:', error);
+    res.status(500).json({ error: error.message || 'Gagal mengunduh aset asli' });
+  }
+});
+
+// ============================================================
+// SPOOFER: Stream audio untuk preview player
+// ============================================================
+router.get('/spoof-audio-stream/:assetId', async (req, res) => {
+  const cleanId = String(req.params.assetId || '').replace(/\D/g, '');
+  if (!cleanId) return res.status(400).json({ error: 'Asset ID tidak valid' });
+
+  try {
+    const { buffer } = await downloadOriginalAssetAPI(cleanId);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    res.setHeader('Content-Length', buffer.length);
+    res.setHeader('Accept-Ranges', 'bytes');
+    res.send(buffer);
+  } catch (error) {
+    console.error('Spoof audio stream error:', error);
+    res.status(500).json({ error: error.message || 'Gagal memutar audio aset' });
+  }
+});
 
 // ============================================================
 // SPOOFER DIRECT: Eksekusi unduh & upload langsung tanpa cache/job

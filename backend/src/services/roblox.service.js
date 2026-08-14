@@ -323,7 +323,7 @@ export async function detectAsset(assetId) {
   return { assetId: cleanId, name, assetType };
 }
 
-const SPOOF_FILE_EXT = {
+export const SPOOF_FILE_EXT = {
   Audio: 'mp3',
   Image: 'png',
   Decal: 'png',

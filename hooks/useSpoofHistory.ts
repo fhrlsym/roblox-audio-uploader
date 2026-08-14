@@ -58,10 +58,18 @@ export function useSpoofHistory() {
   };
 
   const updateRecordStatus = async (id: string, patch: Partial<SpoofRecord>) => {
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-    const current = records.find((r) => r.id === id);
-    if (current) {
-      await upsertRecord({ ...current, ...patch });
+    let updated: SpoofRecord | null = null;
+    setRecords((prev) =>
+      prev.map((r) => {
+        if (r.id === id) {
+          updated = { ...r, ...patch };
+          return updated;
+        }
+        return r;
+      })
+    );
+    if (updated) {
+      await upsertRecord(updated);
     }
   };
 

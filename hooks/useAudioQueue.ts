@@ -42,9 +42,10 @@ export function useAudioQueue() {
 
   const addRawFiles = (files: RawAudioFile[]) => {
     setRawFiles((prev) => {
+      // Dedup only by id: ids are always freshly generated, and name-based dedup
+      // would silently drop a *different* file that merely shares its filename.
       const existingIds = new Set(prev.map((f) => f.id));
-      const existingNames = new Set(prev.map((f) => f.name));
-      const newFiles = files.filter((f) => !existingIds.has(f.id) && !existingNames.has(f.name));
+      const newFiles = files.filter((f) => !existingIds.has(f.id));
       return [...prev, ...newFiles];
     });
   };
@@ -55,11 +56,11 @@ export function useAudioQueue() {
 
   const addTunedFiles = (tuned: TunedAudioFile[]) => {
     setTunedFiles((prev) => {
-      const incomingSourceIds = new Set(tuned.map((t) => t.sourceId).filter(Boolean));
-      const incomingNames = new Set(tuned.map((t) => t.originalName));
-      const filteredPrev = prev.filter(
-        (p) => (!p.sourceId || !incomingSourceIds.has(p.sourceId)) && !incomingNames.has(p.originalName)
-      );
+      // Dedup on (originalName, speed, amplify): only genuine duplicates — the same
+      // song re-added and re-tuned with identical settings — are replaced. Distinct
+      // files that share a filename, or re-tunes at different settings, are kept.
+      const incomingKeys = new Set(tuned.map((t) => `${t.originalName}::${t.speed}::${t.amplify}`));
+      const filteredPrev = prev.filter((p) => !incomingKeys.has(`${p.originalName}::${p.speed}::${p.amplify}`));
       return [...filteredPrev, ...tuned];
     });
   };

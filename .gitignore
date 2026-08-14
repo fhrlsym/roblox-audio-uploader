@@ -33,6 +33,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local desktop app session database (binary; would corrupt Tailwind's class scan)
+.freebuff/
+
 # vercel
 .vercel
 

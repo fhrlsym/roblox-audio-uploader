@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, ChevronRight, Loader2, Music, Trash2, Wand2 } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Loader2, Music, ShieldCheck, Sliders, Sparkles, Trash2, Wand2, Zap } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
 import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
@@ -26,8 +26,9 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
   const calculateRobloxSpeed = () => (1 / speed).toFixed(4);
 
   const fmtDuration = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = Math.round(seconds % 60);
+    const total = Math.max(1, Math.round(seconds));
+    const m = Math.floor(total / 60);
+    const s = total % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
@@ -184,6 +185,69 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         )}
       </div>
 
+      {/* One-Click Presets */}
+      <div className="mb-5 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className={LABEL}>One-Click Presets</p>
+          <span className="text-[11px] font-mono text-[var(--accent-soft)] font-semibold">
+            {speed === 2.3 && amplify === -4
+              ? 'Roblox Standard'
+              : speed === 2.75 && amplify === -6
+                ? 'Aggressive'
+                : speed === 1.8 && amplify === -2
+                  ? 'Light Bypass'
+                  : 'Custom'}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {[
+            { id: 'standard', label: 'Roblox Standard', badge: '2.3x · -4dB', icon: ShieldCheck, s: 2.3, a: -4 },
+            { id: 'aggressive', label: 'Aggressive', badge: '2.75x · -6dB', icon: Zap, s: 2.75, a: -6 },
+            { id: 'light', label: 'Light Bypass', badge: '1.8x · -2dB', icon: Sparkles, s: 1.8, a: -2 },
+            { id: 'custom', label: 'Custom', badge: 'Manual Slider', icon: Sliders, s: null, a: null },
+          ].map((preset) => {
+            const Icon = preset.icon;
+            const isMatch =
+              preset.s !== null
+                ? speed === preset.s && amplify === preset.a
+                : !(
+                    (speed === 2.3 && amplify === -4) ||
+                    (speed === 2.75 && amplify === -6) ||
+                    (speed === 1.8 && amplify === -2)
+                  );
+
+            return (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  if (preset.s !== null && preset.a !== null) {
+                    setSpeed(preset.s);
+                    setAmplify(preset.a);
+                    toast(`Preset diterapkan: ${preset.label} (${preset.badge})`, 'info');
+                  }
+                }}
+                className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all duration-150 ${
+                  isMatch
+                    ? 'border-[var(--accent-40)] bg-[var(--accent-15)] shadow-sm'
+                    : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-20)] hover:bg-[var(--surface)]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 w-full">
+                  <Icon className={`w-3.5 h-3.5 ${isMatch ? 'text-[var(--accent-strong)]' : 'text-[var(--text-60)]'}`} />
+                  <span className={`text-xs font-bold truncate ${isMatch ? 'text-[var(--accent-strong)]' : 'text-[var(--text-90)]'}`}>
+                    {preset.label}
+                  </span>
+                </div>
+                <span className={`text-[10px] mt-1 font-mono ${isMatch ? 'text-[var(--accent-soft)]' : 'text-[var(--text-45)]'}`}>
+                  {preset.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <div>
           <div className="flex items-center justify-between mb-2">
@@ -194,14 +258,14 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
             type="range"
             min="0.5"
             max="5"
-            step="0.1"
+            step="0.05"
             value={speed}
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />
           <p className="text-xs text-[var(--text-40)] mt-1.5">
             Roblox PlaybackSpeed:{' '}
-            <span className="font-mono text-[var(--accent-soft)]">{calculateRobloxSpeed()}</span>
+            <span className="font-mono text-[var(--accent-soft)] font-semibold">{calculateRobloxSpeed()}</span>
           </p>
         </div>
 

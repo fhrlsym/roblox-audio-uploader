@@ -67,7 +67,20 @@ export async function processAudio(
 
   const ctx = new (window.AudioContext ||
     (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-  const srcBuf = await ctx.decodeAudioData(ab);
+
+  let srcBuf: AudioBuffer;
+  try {
+    srcBuf = await ctx.decodeAudioData(ab);
+  } catch (err) {
+    // Browsers cap the number of live AudioContexts; close it so a corrupt file
+    // can't leak a context and eventually break all future tuning attempts.
+    try {
+      await ctx.close();
+    } catch {
+      // ignore
+    }
+    throw err;
+  }
   onProgress?.(40);
   
   // EXACT REZZZ method: playbackRate (pitch akan berubah)
