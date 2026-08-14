@@ -7,10 +7,8 @@ export async function POST(request: NextRequest) {
     const code = String(body?.code || '');
     const result = detectObfuscator(code);
     return NextResponse.json({ success: true, detection: result });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || 'Gagal menganalisa script' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : 'Gagal menganalisa script';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

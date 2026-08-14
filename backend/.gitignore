@@ -6,3 +6,5 @@ uploads/
 temp_*
 output_*
 bin/
+tools/
+temp_dump/

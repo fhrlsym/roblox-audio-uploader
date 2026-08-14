@@ -8,3 +8,5 @@ temp_*.webm
 temp_*.ogg
 output_*.ogg
 *.log
+tools/
+temp_dump/

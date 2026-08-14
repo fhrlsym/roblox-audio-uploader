@@ -1,4 +1,4 @@
-import { DetectionResult, DumperEngine } from './types';
+﻿import { DetectionResult } from './types';
 
 export function detectObfuscator(code: string): DetectionResult {
   const src = String(code || '').trim();
@@ -6,7 +6,7 @@ export function detectObfuscator(code: string): DetectionResult {
   if (!src) {
     return {
       engine: 'mimic-sandbox',
-      engineName: 'Universal Mimic Sandbox',
+      engineName: 'Universal Larry Dumper',
       obfuscator: 'Empty Script',
       confidence: 0,
       description: 'Tempelkan script Luau/Lua untuk memulai analisa signature otomatis.',
@@ -28,7 +28,7 @@ export function detectObfuscator(code: string): DetectionResult {
     const isV14 = /v14/i.test(src) || /_LPH_SRC/i.test(src) || /SCRIPT_KEY/i.test(src);
     return {
       engine: isV14 ? 'luraph-v14' : 'luraph-25ms',
-      engineName: isV14 ? 'Luraph v14.x Proto & String Dumper (2zvh/-)' : '25ms Luraph Dumper Engine',
+      engineName: isV14 ? 'Luraph Dumper (Larry dumper.luau)' : 'Luraph Dumper (Larry dumper.luau)',
       obfuscator: 'Luraph Obfuscator',
       version: isV14 ? 'v14.7.2+' : 'v11 - v13.x',
       confidence: 99,
@@ -57,7 +57,7 @@ export function detectObfuscator(code: string): DetectionResult {
     const variantName = isWeAreDevs ? 'Prometheus (WeAreDevs Web Wrapper)' : 'Prometheus Obfuscator';
     return {
       engine: 'prometheus-ast',
-      engineName: 'Prometheus AST & VM Unpacker (Larry Engine)',
+      engineName: 'Prometheus / WeAreDevs Unpacker (Larry dumper.luau)',
       obfuscator: variantName,
       version: isWeAreDevs ? 'v1.0 (WeAreDevs)' : 'AST / VM Pipeline',
       confidence: 98,
@@ -80,7 +80,7 @@ export function detectObfuscator(code: string): DetectionResult {
   if (isMoonveil) {
     return {
       engine: 'moonveil-devirt',
-      engineName: 'Moonveil VM Devirtualizer (2zvh/moonveilvro)',
+      engineName: 'Moonveil Devirtualizer (moonveil_decompile.py)',
       obfuscator: 'Moonveil Obfuscator',
       version: 'v2 / Modern',
       confidence: 98,
@@ -103,7 +103,7 @@ export function detectObfuscator(code: string): DetectionResult {
     const isIb2 = /ib2/i.test(src) || src.includes('table,string,bit');
     return {
       engine: 'ironbrew-deobf',
-      engineName: 'IronBrew 1 & 2 Deserializer (Larry Engine)',
+      engineName: 'IronBrew Deserializer (Larry dumper.luau)',
       obfuscator: 'IronBrew Obfuscator',
       version: isIb2 ? 'IB2 Fork' : 'IB1 Classic',
       confidence: 97,
@@ -122,7 +122,7 @@ export function detectObfuscator(code: string): DetectionResult {
   if (isJunkie) {
     return {
       engine: 'mimic-sandbox',
-      engineName: 'Mimic V3 Universal Sandbox',
+      engineName: 'Universal Larry Dumper',
       obfuscator: 'Junkie Obfuscator',
       version: 'v1.0 - v2.0',
       confidence: 96,
@@ -163,7 +163,7 @@ export function detectObfuscator(code: string): DetectionResult {
   if (isExternalLoader) {
     return {
       engine: 'httplog-interceptor',
-      engineName: '25ms HTTP & Webhook Interceptor',
+      engineName: 'HTTP & Webhook Scanner',
       obfuscator: 'External Loader / Script Hub',
       version: 'Network Hub',
       confidence: 92,
@@ -184,7 +184,7 @@ export function detectObfuscator(code: string): DetectionResult {
   if (isEnvLoggerTarget) {
     return {
       engine: 'revea-env',
-      engineName: 'Revea.lol & Kolenv Memory Dumper',
+      engineName: 'Environment Scanner',
       obfuscator: 'Environment Hooking Script',
       version: 'Memory Hooks',
       confidence: 88,
@@ -197,7 +197,7 @@ export function detectObfuscator(code: string): DetectionResult {
   // 9. Generic / Unknown Luau VM (Fallback to Mimic V3 Universal)
   return {
     engine: 'mimic-sandbox',
-    engineName: 'Mimic V3 Universal Sandbox',
+    engineName: 'Universal Larry Dumper',
     obfuscator: 'Generic / Custom Luau Obfuscator',
     version: 'Universal VM',
     confidence: 80,

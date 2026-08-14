@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Code,
@@ -12,8 +12,6 @@ import {
   History as HistoryIcon,
   Key,
   Loader2,
-  Play,
-  RotateCcw,
   Search,
   Shield,
   Sliders,
@@ -24,7 +22,7 @@ import {
   ChevronDown,
   ExternalLink,
 } from 'lucide-react';
-import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { CARD, INPUT, LABEL, BTN_PRIMARY } from '../lib/ui';
 import { useToast } from './Toast';
 import { detectObfuscator } from '../lib/dumper/detector';
 import { runDumperSandbox } from '../lib/dumper/sandbox';
@@ -37,7 +35,7 @@ interface DumperSectionProps {
 
 const SAMPLE_SCRIPTS: { label: string; engine: DumperEngine; code: string }[] = [
   {
-    label: 'Luraph v14 Sample',
+    label: 'Luraph v14',
     engine: 'luraph-v14',
     code: `-- Protected using Luraph Obfuscator v14.7.2
 local _LPH_SRC = "2d2d204c75726170682053616d706c65205363726970740d0a7072696e74282248656c6c6f2066726f6d204c757261706820564d2122290d0a67616d653a476574536572766963652822506c617965727322292e4c6f63616c506c617965722e4368617261637465722e48756d616e6f69642e57616c6b5370656564203d203530"
@@ -45,26 +43,31 @@ getgenv().SCRIPT_KEY="KEYLESS"
 return(function() local N,H,g,B=string.byte,5,string.sub,{} end)()`,
   },
   {
-    label: 'Moonveil Sample',
-    engine: 'moonveil-devirt',
-    code: `-- Moonveil Obfuscator v2
-local _MOONVEIL = true
-local R0 = "rbxassetid://94215284059157"
-local R1 = "https://discord.com/api/webhooks/123456789/token_sample"
-local R2 = function() print("Moonveil Protected Core Module Loaded") end
-R2()`,
-  },
-  {
-    label: 'Prometheus Sample',
+    label: 'WeAreDevs / Prometheus',
     engine: 'prometheus-ast',
-    code: `-- Prometheus Obfuscated Script
-local IllIIllI = { "https://raw.githubusercontent.com/fhrlsym/sample/main/script.lua", "Players", "LocalPlayer" }
-local lIIlIl = game:GetService(IllIIllI[2])
-local IIlllI = lIIlIl[IllIIllI[3]]
-print("Target Player:", IIlllI.Name)`,
+    code: `--[[ v1.0.0 https://wearedevs.net/obfuscator ]]
+return(function(...)
+    local M = {
+        "SGVsbG8gZnJvbSBQcm9tZXRoZXVzISBWTVIgUnVubmluZy4u",
+        "UGxheWVycw==",
+        "TG9jYWxQbGF5ZXI=",
+        "Q2hhcmFjdGVy"
+    }
+    local N = string.char
+    local table_string = table.concat(M, "")
+    local decoded = table_string:gsub(".", function(c) return string.format("%02x", string.byte(c)) end)
+    print("Payload ter-obfuscate, string asli tersembunyi di tabel Base64 di atas.")
+end)(...)`,
   },
   {
-    label: 'HTTP Loader Sample',
+    label: 'Byte Array',
+    engine: 'bytearray-unpacker',
+    code: `-- Script di-enkripsi pakai string.char (byte array)
+local payload = string.char(112, 114, 105, 110, 116, 40, 34, 72, 101, 108, 108, 111, 32, 102, 114, 111, 109, 32, 82, 111, 98, 108, 111, 120, 32, 83, 116, 117, 100, 105, 111, 34, 41)
+loadstring(payload)()`,
+  },
+  {
+    label: 'HTTP Loader',
     engine: 'httplog-interceptor',
     code: `-- External Hub Loader
 local sourceUrl = "https://raw.githubusercontent.com/fhrlsym/minang-music/main/musicsbjoi.json"
@@ -82,7 +85,6 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
   // Editor Input State
   const [inputCode, setInputCode] = useState('');
   const [selectedEngine, setSelectedEngine] = useState<DumperEngine>('auto');
-  const [autoBeautify, setAutoBeautify] = useState(true);
 
   // Execution State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -93,6 +95,42 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
   // History Drawer State
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historySearchQuery, setHistorySearchQuery] = useState('');
+
+  // Backend engine availability (full dump runs on Railway backend)
+  const [backendEngines, setBackendEngines] = useState<{
+    larry: boolean;
+    moonveil: boolean;
+    static: boolean;
+    loading: boolean;
+  }>({ larry: false, moonveil: false, static: true, loading: true });
+
+  useEffect(() => {
+    let cancelled = false;
+    const base = backendUrl || (typeof window !== 'undefined' ? window.location.origin : '');
+    (async () => {
+      try {
+        const res = await fetch(`${base}/api/dumper/status`, { signal: AbortSignal.timeout(6000) });
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) {
+            setBackendEngines({
+              larry: !!data?.engines?.larry,
+              moonveil: !!data?.engines?.moonveil,
+              static: !!data?.engines?.static,
+              loading: false,
+            });
+            return;
+          }
+        }
+      } catch {
+        // backend off / sleeping on free plan
+      }
+      if (!cancelled) setBackendEngines((p) => ({ ...p, loading: false }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [backendUrl]);
 
   // Real-time Signature Auto-Detection
   const detection: DetectionResult = useMemo(() => {
@@ -150,12 +188,13 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
     }
 
     setIsProcessing(true);
-    toast('Menjalankan sandbox deobfuscator...', 'info');
+    toast('Membongkar script...', 'info');
 
     try {
       let finalResult: DumpExecutionResult | null = null;
 
-      // 1. Try local server route /api/dumper/run
+      // 1. Next.js route (Vercel) -> proxies ke backend (engine full), 
+      //    kalau backend tidur otomatis pakai analisis statis.
       let res: Response | null = null;
       try {
         res = await fetch('/api/dumper/run', {
@@ -164,34 +203,16 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
           body: JSON.stringify({
             code: inputCode,
             engine: selectedEngine,
-            autoBeautify,
           }),
         });
       } catch {
         // fallback
       }
 
-      // 2. If Next.js route fails, try backendUrl
-      if ((!res || !res.ok) && backendUrl) {
-        try {
-          res = await fetch(`${backendUrl}/api/dumper/run`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              code: inputCode,
-              engine: selectedEngine,
-              autoBeautify,
-            }),
-          });
-        } catch {
-          // fallback
-        }
-      }
-
       if (res && res.ok) {
         finalResult = (await res.json()) as DumpExecutionResult;
       } else {
-        // 3. Fallback to client-side sandbox execution
+        // 2. Fallback langsung ke analisis statis di browser
         finalResult = runDumperSandbox(inputCode, selectedEngine);
       }
 
@@ -285,7 +306,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
     return dumpResult.constants.filter(
       (c) => c.value.toLowerCase().includes(q) || c.type.toLowerCase().includes(q)
     );
-  }, [dumpResult?.constants, constantSearchQuery]);
+  }, [dumpResult, constantSearchQuery]);
 
   // Filtered History Records
   const filteredHistory = useMemo(() => {
@@ -323,10 +344,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
-                Luau Script Dumper &amp; Deobfuscator
+                Dumper Script Roblox Studio
               </h2>
               <p className="text-xs text-[var(--text-45)]">
-                Multi-Engine Luau Virtual Sandbox (Luraph v11–v14+, Moonveil, Prometheus AST, Mimic V3, 25ms HttpLog)
+                Tempel script ter-obfuscate, kami deteksi otomatis &amp; bongkar (Luraph, Moonveil, Prometheus/WeAreDevs, IronBrew, Junkie)
               </p>
             </div>
           </div>
@@ -404,20 +425,40 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
           </div>
 
           {/* Auto-Detection Card */}
-          <div className={`${CARD} p-4 space-y-2.5 border-[var(--accent-25)] bg-[var(--accent-06)]`}>
-            <div className="flex items-center justify-between">
+          <div className={`${CARD} p-4 space-y-3 border-[var(--accent-25)] bg-[var(--accent-06)]`}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[var(--accent-soft)]" />
-                <span className="text-xs font-bold text-[var(--text)]">Auto-Detection Signature</span>
+                <span className="text-xs font-bold text-[var(--text)]">Hasil Deteksi Otomatis</span>
               </div>
-              <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--accent-strong)]">
-                Akurasi {detection.confidence}%
-              </span>
+              {!backendEngines.loading && (
+                <span
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                    backendEngines.larry || backendEngines.moonveil
+                      ? 'bg-[var(--emerald-15)] text-[var(--emerald)]'
+                      : 'bg-amber-500/15 text-amber-300'
+                  }`}
+                  title={backendEngines.larry || backendEngines.moonveil ? 'Backend aktif — engine full tersedia' : 'Backend mati/tertidur — hanya analisis statis'}
+                >
+                  {backendEngines.loading
+                    ? 'Cek backend...'
+                    : backendEngines.larry || backendEngines.moonveil
+                      ? 'Engine Full Siap'
+                      : 'Mode Analisis Statis'}
+                </span>
+              )}
             </div>
 
-            <div className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-[var(--accent-strong)]">{detection.obfuscator}</span>
+            <div className="p-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] space-y-2">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-extrabold text-[var(--accent-strong)]">
+                    {detection.obfuscator}
+                  </span>
+                  <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--accent-strong)]">
+                    Akurasi {detection.confidence}%
+                  </span>
+                </div>
                 {detection.version && (
                   <span className="font-mono text-[10px] text-[var(--text-50)]">{detection.version}</span>
                 )}
@@ -426,7 +467,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 {detection.description}
               </p>
               {detection.features.length > 0 && (
-                <div className="flex gap-1.5 flex-wrap pt-1">
+                <div className="flex gap-1.5 flex-wrap pt-0.5">
                   {detection.features.map((f) => (
                     <span key={f} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-strong)] text-[var(--text-60)]">
                       {f}
@@ -448,29 +489,17 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
               >
                 <option value="auto">Auto-Detect (Rekomendasi: {detection.engineName})</option>
-                <option value="prometheus-ast">Prometheus / WeAreDevs AST &amp; VM Unpacker</option>
-                <option value="moonveil-devirt">Moonveil VM Devirtualizer (2zvh/moonveilvro)</option>
-                <option value="luraph-v14">Luraph v14.x Proto Dumper (2zvh/-)</option>
-                <option value="luraph-25ms">25ms Luraph Dumper Engine</option>
-                <option value="ironbrew-deobf">IronBrew 1 &amp; 2 Deserializer</option>
-                <option value="bytearray-unpacker">Byte Array &amp; Char Unpacker</option>
-                <option value="httplog-interceptor">25ms HTTP &amp; Webhook Interceptor</option>
-                <option value="revea-env">Revea.lol &amp; Kolenv Memory Dumper</option>
-                <option value="mimic-sandbox">Mimic V3 Universal Sandbox</option>
+                <option value="mimic-sandbox">Universal Dumper (Larry — semua obfuscator)</option>
+                <option value="luraph-v14">Luraph Dumper (Larry dumper.luau)</option>
+                <option value="moonveil-devirt">Moonveil Devirtualizer (moonveil_decompile.py)</option>
+                <option value="prometheus-ast">Prometheus / WeAreDevs Unpacker</option>
+                <option value="ironbrew-deobf">IronBrew Deserializer</option>
+                <option value="bytearray-unpacker">Byte Array Unpacker (cepat, tanpa backend)</option>
               </select>
-            </div>
-
-            {/* Execution Options */}
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 text-[11px] text-[var(--text-70)] cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={autoBeautify}
-                  onChange={(e) => setAutoBeautify(e.target.checked)}
-                  className="rounded border-[var(--line)] accent-[var(--accent)] w-3.5 h-3.5"
-                />
-                <span>Auto Format &amp; Indentasi Kode</span>
-              </label>
+              <p className="text-[10px] text-[var(--text-40)] leading-relaxed">
+                Engine penuh (Larry/Moonveil) dijalankan di server backend. Kalau backend sedang
+                tidur (free plan), otomatis memakai analisis statis browser.
+              </p>
             </div>
 
             {/* Big Run Button */}
@@ -483,12 +512,12 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               {isProcessing ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Mengeksekusi Virtual Sandbox...
+                  Membongkar script...
                 </>
               ) : (
                 <>
                   <Zap className="w-4 h-4" />
-                  Run Dumper ({selectedEngine === 'auto' ? detection.engineName : selectedEngine})
+                  Bongkar Script ({selectedEngine === 'auto' ? detection.obfuscator : selectedEngine})
                 </>
               )}
             </button>
