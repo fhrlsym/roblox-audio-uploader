@@ -57,9 +57,7 @@ const STORAGE_KEYS = {
 };
 
 const DEFAULT_REPO = 'fhrlsym/minang-music';
-const DEFAULT_BRANCH = 'main';
 const DEFAULT_COVER = 'rbxassetid://94215284059157';
-const DEFAULT_PAT = process.env.NEXT_PUBLIC_GITHUB_TOKEN || '';
 
 // Formats file name into clean human readable Map Name (e.g. musicsbjoi.json -> SBJOI)
 export function formatMapDisplayName(filename: string): string {
@@ -79,31 +77,14 @@ export function sanitizeMapFilename(name: string): string {
 
 // Normalizes cover asset ID so user can input either raw numeric ID or rbxassetid://
 export function normalizeCoverAssetId(val: string): string {
-  const clean = String(val || '').trim();
+  let clean = String(val || '').trim();
   if (!clean) return DEFAULT_COVER;
+  clean = clean.replace(/^(rbxassetid:\/\/+|rbxassetid:\/+|https?:\/\/)/i, '');
+  clean = clean.replace(/^\/+/, '');
   if (/^\d+$/.test(clean)) {
     return `rbxassetid://${clean}`;
   }
-  return clean;
-}
-
-function encodeBase64Utf8(str: string): string {
-  const bytes = new TextEncoder().encode(str);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return btoa(binary);
-}
-
-function decodeBase64Utf8(base64: string): string {
-  const cleanBase64 = base64.replace(/\s/g, '');
-  const binary = atob(cleanBase64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new TextDecoder().decode(bytes);
+  return clean ? `rbxassetid://${clean}` : DEFAULT_COVER;
 }
 
 export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl = '' }: GitHubExportModalProps) {
@@ -183,51 +164,23 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
   const fetchMapFiles = async () => {
     setFetchingMaps(true);
     try {
-      // 1. Try backend endpoint first
-      if (backendUrl) {
-        try {
-          const bRes = await fetch(`${backendUrl}/api/github/maps`);
-          if (bRes.ok) {
-            const bData = await bRes.json();
-            if (bData.success && Array.isArray(bData.maps)) {
-              const list = bData.maps.map((m: any) => m.filename);
-              setMapFiles(list);
-              const current = list.includes(selectedMapFile) ? selectedMapFile : (list[0] || 'musicsbjoi.json');
-              setSelectedMapFile(current);
-              if (current) fetchGenresForMap(current);
-              return;
-            }
-          }
-        } catch {
-          // fallback to client-side GitHub API
-        }
+      let res = await fetch('/api/github/maps');
+      if (!res.ok && backendUrl) {
+        res = await fetch(`${backendUrl}/api/github/maps`);
       }
-
-      // 2. Direct GitHub API fallback
-      const res = await fetch(`https://api.github.com/repos/${DEFAULT_REPO}/contents/`, {
-        headers: {
-          Authorization: `Bearer ${DEFAULT_PAT}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
 
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || `Gagal membaca file dari GitHub (Status ${res.status})`);
+        throw new Error(err.error || err.message || `Gagal membaca file dari GitHub (Status ${res.status})`);
       }
 
       const data = await res.json();
-      if (Array.isArray(data)) {
-        const jsonList = data
-          .filter((f: any) => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
-          .map((f: any) => f.name);
-
-        setMapFiles(jsonList);
-        const current = jsonList.includes(selectedMapFile) ? selectedMapFile : (jsonList[0] || 'musicsbjoi.json');
+      if (data.success && Array.isArray(data.maps)) {
+        const list = data.maps.map((m: any) => m.filename);
+        setMapFiles(list);
+        const current = list.includes(selectedMapFile) ? selectedMapFile : (list[0] || 'musicsbjoi.json');
         setSelectedMapFile(current);
-        if (current) {
-          fetchGenresForMap(current);
-        }
+        if (current) fetchGenresForMap(current);
       }
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Gagal memuat daftar map dari GitHub';
@@ -242,58 +195,26 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
     if (!mapFilename.trim()) return;
     setFetchingGenres(true);
     try {
-      // 1. Try backend endpoint first
-      if (backendUrl) {
-        try {
-          const bRes = await fetch(`${backendUrl}/api/github/genres?mapFile=${encodeURIComponent(mapFilename)}`);
-          if (bRes.ok) {
-            const bData = await bRes.json();
-            if (bData.success && Array.isArray(bData.genres)) {
-              setGenres(bData.genres);
-              if (bData.genres.length > 0) {
-                setSelectedGenre(bData.genres[0]);
-                setIsNewGenre(false);
-              } else {
-                setIsNewGenre(true);
-              }
-              return;
-            }
-          }
-        } catch {
-          // fallback to direct GitHub API
-        }
+      let res = await fetch(`/api/github/genres?mapFile=${encodeURIComponent(mapFilename)}`);
+      if (!res.ok && backendUrl) {
+        res = await fetch(`${backendUrl}/api/github/genres?mapFile=${encodeURIComponent(mapFilename)}`);
       }
 
-      // 2. Direct GitHub API fallback
-      const res = await fetch(`https://api.github.com/repos/${DEFAULT_REPO}/contents/${mapFilename}?ref=${DEFAULT_BRANCH}`, {
-        headers: {
-          Authorization: `Bearer ${DEFAULT_PAT}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
-
       if (res.ok) {
-        const fileData = await res.json();
-        const contentStr = decodeBase64Utf8(fileData.content || '');
-        const parsed = JSON.parse(contentStr);
-
-        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          const list = Object.keys(parsed).filter((k) => k !== 'Cover' && k !== 'Songs');
-          setGenres(list);
-          if (list.length > 0) {
-            setSelectedGenre(list[0]);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.genres)) {
+          setGenres(data.genres);
+          if (data.genres.length > 0) {
+            setSelectedGenre(data.genres[0]);
             setIsNewGenre(false);
           } else {
             setIsNewGenre(true);
           }
-        } else {
-          setGenres([]);
-          setIsNewGenre(true);
+          return;
         }
-      } else {
-        setGenres([]);
-        setIsNewGenre(true);
       }
+      setGenres([]);
+      setIsNewGenre(true);
     } catch {
       setGenres([]);
       setIsNewGenre(true);
@@ -379,7 +300,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
     return JSON.stringify(result, null, 2);
   };
 
-  // Direct GitHub Commit
+  // Direct GitHub Commit via API
   const handleCommitToGitHub = async () => {
     const selectedItems = items.filter((i) => i.selected);
     if (selectedItems.length === 0) {
@@ -405,129 +326,36 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
     toast(`Menghubungkan ke GitHub (${targetFilename})...`, 'info');
 
     try {
-      // 1. Try backend commit endpoint first
-      if (backendUrl) {
-        try {
-          const bRes = await fetch(`${backendUrl}/api/github/commit`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              mapFilename: targetFilename,
-              genre: targetGenre,
-              songs: selectedItems.map((i) => ({
-                AssetId: i.assetId,
-                Name: i.name,
-                PlaybackSpeed: i.playbackSpeed,
-              })),
-              isNewMap,
-              newMapName,
-              coverAssetId: effectiveCover,
-            }),
-          });
-
-          if (bRes.ok) {
-            const bData = await bRes.json();
-            toast(`Berhasil commit & push ${selectedItems.length} lagu ke map "${formatMapDisplayName(targetFilename)}"!`, 'success');
-            onClose();
-            return;
-          }
-        } catch {
-          // fallback to client-side GitHub API
-        }
-      }
-
-      // 2. Direct GitHub API fallback
-      const [owner, repo] = DEFAULT_REPO.split('/');
-      const getFileRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilename}?ref=${DEFAULT_BRANCH}`,
-        {
-          headers: {
-            Authorization: `Bearer ${DEFAULT_PAT}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        }
-      );
-
-      let fileSha: string | undefined = undefined;
-      let existingData: Record<string, any> = {};
-
-      if (getFileRes.ok) {
-        const fileData = await getFileRes.json();
-        fileSha = fileData.sha;
-        try {
-          const contentStr = decodeBase64Utf8(fileData.content || '');
-          existingData = JSON.parse(contentStr);
-          if (typeof existingData !== 'object' || Array.isArray(existingData)) {
-            existingData = {};
-          }
-        } catch {
-          existingData = {};
-        }
-      }
-
-      // Merge songs into target Genre
-      if (!existingData[targetGenre]) {
-        existingData[targetGenre] = {
-          Cover: effectiveCover,
-          Songs: [],
-        };
-      }
-
-      if (!Array.isArray(existingData[targetGenre].Songs)) {
-        existingData[targetGenre].Songs = [];
-      }
-
-      const existingSongs: any[] = existingData[targetGenre].Songs;
-      let addedCount = 0;
-      let updatedCount = 0;
-
-      for (const item of selectedItems) {
-        const existingIdx = existingSongs.findIndex((s) => Number(s.AssetId) === Number(item.assetId));
-        const songData = {
-          AssetId: item.assetId,
-          Name: item.name.trim(),
-          PlaybackSpeed: item.playbackSpeed,
-        };
-
-        if (existingIdx >= 0) {
-          existingSongs[existingIdx] = songData;
-          updatedCount++;
-        } else {
-          existingSongs.push(songData);
-          addedCount++;
-        }
-      }
-
-      const updatedJsonString = JSON.stringify(existingData, null, 2);
-      const encodedContent = encodeBase64Utf8(updatedJsonString);
-
-      const commitMessage = `feat(music): update ${targetFilename} [${targetGenre}] (+${addedCount} songs, ~${updatedCount} updated)`;
-
-      const putBody: Record<string, any> = {
-        message: commitMessage,
-        content: encodedContent,
-        branch: DEFAULT_BRANCH,
+      const payload = {
+        mapFilename: targetFilename,
+        genre: targetGenre,
+        songs: selectedItems.map((i) => ({
+          AssetId: i.assetId,
+          Name: i.name,
+          PlaybackSpeed: i.playbackSpeed,
+        })),
+        isNewMap,
+        newMapName,
+        coverAssetId: effectiveCover,
       };
-      if (fileSha) {
-        putBody.sha = fileSha;
+
+      let res = await fetch('/api/github/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok && backendUrl) {
+        res = await fetch(`${backendUrl}/api/github/commit`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
       }
 
-      const putRes = await fetch(
-        `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilename}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${DEFAULT_PAT}`,
-            Accept: 'application/vnd.github.v3+json',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(putBody),
-        }
-      );
-
-      const putData = await putRes.json();
-      if (!putRes.ok) {
-        throw new Error(putData.message || `Gagal commit ke GitHub (Status ${putRes.status})`);
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.message || `Gagal commit ke GitHub (Status ${res.status})`);
       }
 
       toast(`Berhasil commit & push ${selectedItems.length} lagu ke map "${formatMapDisplayName(targetFilename)}"!`, 'success');
