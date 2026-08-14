@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     ca-certificates \
     python3 \
-    lua5.3 \
+    lua5.1 \
     && rm -rf /var/lib/apt/lists/* \
     && curl -L -o /usr/local/bin/yt-dlp https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux \
     && chmod +x /usr/local/bin/yt-dlp \

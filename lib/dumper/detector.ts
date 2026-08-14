@@ -57,15 +57,15 @@ export function detectObfuscator(code: string): DetectionResult {
     const variantName = isWeAreDevs ? 'Prometheus (WeAreDevs Web Wrapper)' : 'Prometheus Obfuscator';
     return {
       engine: 'prometheus-ast',
-      engineName: 'Prometheus / WeAreDevs Unpacker (Larry dumper.luau)',
+      engineName: 'Prometheus Deobfuscator (DeobfuscatorV2 + WAD trace)',
       obfuscator: variantName,
       version: isWeAreDevs ? 'v1.0 (WeAreDevs)' : 'AST / VM Pipeline',
       confidence: 98,
       description: isWeAreDevs
         ? 'Terdeteksi script proteksi Prometheus Obfuscator (didistribusikan melalui wrapper WeAreDevs) dengan cipher Base64 dan VM dispatcher.'
         : 'Terdeteksi script proteksi Prometheus Obfuscator dengan manipulasi AST, ConstantArray solver, dan permutation dispatcher.',
-      features: ['Permutation Array Unpacker', 'Base64 Table Decrypter', 'ConstantArray Solver', 'Scope Unfolder'],
-      suggestedAction: 'Gunakan Prometheus AST & VM Unpacker untuk membongkar tabel konstanta dan merekonstruksi kode Luau asli.',
+      features: ['AST Reconstruction', 'Constant Array Decode', 'String Decrypt', 'Trace Emulation'],
+      suggestedAction: 'Gunakan engine Prometheus Deobfuscator (DeobfuscatorV2 + WAD trace) untuk merekonstruksi source asli.',
     };
   }
 

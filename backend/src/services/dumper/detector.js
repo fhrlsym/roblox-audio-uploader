@@ -59,18 +59,19 @@ export function detectObfuscator(code) {
     /IllIIl|IIlllI|lIIlIl|IlIlIl/i.test(src) ||
     /ConstantArray/i.test(src) ||
     /ProxifyLocals/i.test(src) ||
-    (/local\s+IllI/i.test(src) && src.includes('table.concat'));
+    (/local\s+IllI/i.test(src) && src.includes('table.concat')) ||
+    (/local\s+[a-zA-Z0-9_]+\s*=\s*\{["'\\]/i.test(src) && src.includes('ipairs') && src.includes('newproxy') && src.includes('getfenv'));
 
   if (isPrometheus) {
     return {
       engine: ENGINES.PROMETHEUS,
-      engineName: 'Prometheus / WeAreDevs Unpacker (Larry dumper.luau)',
+      engineName: 'Prometheus Deobfuscator (DeobfuscatorV2 + WAD trace)',
       obfuscator: isWeAreDevs ? 'Prometheus (WeAreDevs Web Wrapper)' : 'Prometheus Obfuscator',
       version: isWeAreDevs ? 'v1.0 (WeAreDevs)' : 'AST / VM Pipeline',
       confidence: 98,
-      description: 'Ditemukan proteksi Prometheus/WeAreDevs dengan tabel Base64 dan VM dispatcher. Larry dumper.luau akan menangkap string yang didekripsi saat VM berjalan.',
-      features: ['Base64 Table Scanner', 'String Capture', 'Loadstring Hook'],
-      suggestedAction: 'Jalankan Prometheus Unpacker untuk menangkap string hasil dekripsi.',
+      description: 'Ditemukan proteksi Prometheus/WeAreDevs. Prometheus-DeobfuscatorV2 me-rekonstruksi AST statis, lalu Prometheus-WAD menangkap trace eksekusi (string, print, call).',
+      features: ['AST Reconstruction', 'Constant Array Decode', 'String Decrypt', 'Trace Emulation'],
+      suggestedAction: 'Jalankan Prometheus Deobfuscator untuk merekonstruksi source asli.',
     };
   }
 
@@ -205,7 +206,7 @@ export function detectObfuscator(code) {
 export function engineToDisplayName(engine) {
   const names = {
     'luraph-v14': 'Luraph Dumper',
-    'prometheus-ast': 'Prometheus Unpacker',
+    'prometheus-ast': 'Prometheus Deobfuscator',
     'moonveil-devirt': 'Moonveil Devirtualizer',
     'ironbrew-deobf': 'IronBrew Deserializer',
     'mimic-sandbox': 'Universal Larry Dumper',

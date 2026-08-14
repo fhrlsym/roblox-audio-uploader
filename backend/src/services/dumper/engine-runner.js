@@ -1,5 +1,5 @@
 // Orchestrates the PROVEN dump engines by spawning them as subprocesses
-// (they run on the Railway container, which has python3 / luau / lune / lua5.3).
+// (they run on the Railway container, which has python3 / luau / lune / lua5.1 / node).
 // Falls back to honest static analysis when a binary is unavailable.
 
 import { spawn, spawnSync } from 'child_process';
@@ -17,9 +17,11 @@ const MAX_INPUT_BYTES = 2 * 1024 * 1024; // 2MB
 const ENGINE_TIMEOUT_MS = 90_000;
 
 function resolveLocalTool(name) {
-  for (const exe of [name, `${name}.exe`, `${name}.cmd`, `${name}.bat`]) {
-    const p = join(TOOLS_DIR, exe);
-    if (existsSync(p)) return p;
+  for (const sub of ['', 'lua51']) {
+    for (const exe of [name, `${name}.exe`, `${name}.cmd`, `${name}.bat`]) {
+      const p = join(TOOLS_DIR, sub, exe);
+      if (existsSync(p)) return p;
+    }
   }
   return null;
 }
@@ -42,7 +44,7 @@ export function availableBinaries() {
     python3: resolveBinary('python3', process.env.PYTHON_BIN),
     luau: resolveBinary(process.env.LUAU_BIN || 'luau', process.env.LUAU_BIN),
     lune: resolveBinary(process.env.LUNE_BIN || 'lune', process.env.LUNE_BIN),
-    lua5_3: resolveBinary(process.env.LUA_BIN || 'lua5.3', process.env.LUA_BIN),
+    lua51: resolveBinary(process.env.LUA51_BIN || 'lua5.1', process.env.LUA51_BIN),
     node: resolveBinary('node', process.env.NODE_BIN),
   };
 }
@@ -228,18 +230,47 @@ async function runIronVeil(inputPath, outPath, timeout) {
   return { ok: false, reason: 'IronVeil-deobf gagal: ' + (res.stderr || res.stdout || 'no output') };
 }
 
+async function runPrometheusDeobf(inputPath, outPath, timeout) {
+  const bins = availableBinaries();
+  if (!bins.lua51) return { ok: false, reason: 'lua5.1 tidak tersedia di server' };
+  const res = await runCommand(
+    bins.lua51,
+    [join(ENGINES_DIR, 'prometheus-deobf', 'src', 'deob', 'cli.lua'), inputPath, '--static-only', '--out', outPath],
+    { timeout: timeout || 60_000 }
+  );
+  const out = readIfExists(outPath);
+  if (out && out.length > 20) return { ok: true, output: out, log: res.stdout + res.stderr };
+  return { ok: false, reason: 'Prometheus-DeobfuscatorV2 gagal: ' + (res.stderr || res.stdout || 'no output') };
+}
+
+async function runPrometheusWad(inputPath, outPath, timeout) {
+  const bins = availableBinaries();
+  if (!bins.python3 || !bins.lua51) return { ok: false, reason: 'python3 + lua5.1 diperlukan di server' };
+  const env = { LUA51_EXECUTABLE: bins.lua51 };
+  const res = await runCommand(
+    bins.python3,
+    [join(ENGINES_DIR, 'prom-wad', 'deobfuscator.py'), inputPath],
+    { env, cwd: join(ENGINES_DIR, 'prom-wad'), timeout: timeout || 90_000 }
+  );
+  const out = readIfExists(`${inputPath}.deobf.lua`);
+  if (out && out.length > 20) return { ok: true, output: out, log: res.stdout + res.stderr };
+  return { ok: false, reason: 'Prometheus-WAD gagal: ' + (res.stderr || res.stdout || 'no output') };
+}
+
 const ENGINE_LABELS = {
   larry: 'Larry dumper.luau',
   '45ms': '45ms dumper',
   unveilr: 'UnveilR v1.0.6',
   ironveil: 'IronVeil-deobf',
   moonveil: 'Moonveil Devirtualizer',
+  'prometheus-deobf': 'Prometheus-DeobfuscatorV2',
+  'prometheus-wad': 'Prometheus-WAD (trace reconstruction)',
 };
 
 const ENGINE_CASCADE = {
   'luraph-v14': ['larry', '45ms', 'unveilr'],
   'luraph-25ms': ['larry', '45ms', 'unveilr'],
-  'prometheus-ast': ['larry', '45ms', 'unveilr'],
+  'prometheus-ast': ['prometheus-deobf', 'prometheus-wad', 'larry', '45ms'],
   'ironbrew-deobf': ['larry', '45ms', 'unveilr'],
   'mimic-sandbox': ['larry', '45ms', 'unveilr'],
   'ironveil-deobf': ['ironveil', 'larry', '45ms'],
@@ -252,6 +283,8 @@ const ENGINE_RUNNERS = {
   unveilr: runUnveilr,
   ironveil: runIronVeil,
   moonveil: runMoonveil,
+  'prometheus-deobf': runPrometheusDeobf,
+  'prometheus-wad': runPrometheusWad,
 };
 
 export async function runDump({ code, engine }) {
@@ -332,7 +365,8 @@ export async function runDump({ code, engine }) {
         ...(engineOuts.length === 0
           ? [
               bins.lune ? '' : 'Engine lune tidak tersedia — memakai analisis statis.',
-              bins.python3 ? '' : 'Moonveil tidak tersedia (python3 belum terpasang).',
+              bins.python3 ? '' : 'Moonveil / Prometheus-WAD tidak tersedia (python3 belum terpasang).',
+              bins.lua51 ? '' : 'Engine Prometheus (lua5.1) tidak tersedia.',
               bins.node ? '' : 'IronVeil tidak tersedia (node belum terpasang).',
             ]
           : []),

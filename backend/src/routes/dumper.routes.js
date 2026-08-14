@@ -16,6 +16,8 @@ router.get('/dumper/status', (req, res) => {
       unveilr: !!bins.lune,
       ironveil: !!bins.node,
       moonveil: !!bins.python3 && !!bins.luau,
+      'prometheus-deobf': !!bins.lua51,
+      'prometheus-wad': !!bins.python3 && !!bins.lua51,
       static: true,
     },
   });
