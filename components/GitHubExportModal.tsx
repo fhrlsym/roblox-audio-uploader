@@ -9,12 +9,10 @@ import {
   Download,
   FileCode,
   Folder,
-  Key,
   Loader2,
   Music,
   Plus,
   RefreshCw,
-  Settings,
   Tag,
   UploadCloud,
   X,
@@ -42,6 +40,7 @@ interface GitHubExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   songs: ExportableSong[];
+  backendUrl?: string;
 }
 
 interface EditableItem {
@@ -52,116 +51,162 @@ interface EditableItem {
   selected: boolean;
 }
 
-interface GitHubFileEntry {
-  name: string;
-  path: string;
-  type: string;
-}
-
 const STORAGE_KEYS = {
-  TOKEN: 'audioUploader_githubToken',
-  REPO: 'audioUploader_githubRepo',
-  BRANCH: 'audioUploader_githubBranch',
-  LAST_FILE: 'audioUploader_lastJsonFile',
-  LAST_CATEGORY: 'audioUploader_lastCategory',
+  LAST_MAP: 'audioUploader_lastMapFile',
+  LAST_GENRE: 'audioUploader_lastGenre',
 };
 
+const DEFAULT_REPO = 'fhrlsym/minang-music';
+const DEFAULT_BRANCH = 'main';
 const DEFAULT_COVER = 'rbxassetid://94215284059157';
+const DEFAULT_PAT = process.env.NEXT_PUBLIC_GITHUB_TOKEN || '';
 
-export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExportModalProps) {
+// Formats file name into clean human readable Map Name (e.g. musicsbjoi.json -> SBJOI)
+export function formatMapDisplayName(filename: string): string {
+  let clean = filename.replace(/\.json$/i, '');
+  clean = clean.replace(/^music[_]?/i, '');
+  clean = clean.replace(/[_]/g, ' ').trim();
+  return clean ? clean.toUpperCase() : filename;
+}
+
+// Converts user friendly new map name into standardized json filename
+export function sanitizeMapFilename(name: string): string {
+  let s = String(name || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
+  s = s.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  if (!s) s = `map_${Date.now()}`;
+  return s.startsWith('music') ? `${s}.json` : `music${s}.json`;
+}
+
+// Normalizes cover asset ID so user can input either raw numeric ID or rbxassetid://
+export function normalizeCoverAssetId(val: string): string {
+  const clean = String(val || '').trim();
+  if (!clean) return DEFAULT_COVER;
+  if (/^\d+$/.test(clean)) {
+    return `rbxassetid://${clean}`;
+  }
+  return clean;
+}
+
+function encodeBase64Utf8(str: string): string {
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+function decodeBase64Utf8(base64: string): string {
+  const cleanBase64 = base64.replace(/\s/g, '');
+  const binary = atob(cleanBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new TextDecoder().decode(bytes);
+}
+
+export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl = '' }: GitHubExportModalProps) {
   const { toast } = useToast();
 
-  // Settings State
-  const [githubToken, setGithubToken] = useState('');
-  const [githubRepo, setGithubRepo] = useState('fhrlsym/minang-music');
-  const [githubBranch, setGithubBranch] = useState('main');
-  const [showConfig, setShowConfig] = useState(false);
+  // Target Map (JSON Files) State
+  const [mapFiles, setMapFiles] = useState<string[]>([]);
+  const [selectedMapFile, setSelectedMapFile] = useState('musicsbjoi.json');
+  const [isNewMap, setIsNewMap] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
 
-  // File & Category State
-  const [jsonFiles, setJsonFiles] = useState<string[]>([]);
-  const [selectedFile, setSelectedFile] = useState('musicsbjoi.json');
-  const [customFile, setCustomFile] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [isNewCategory, setIsNewCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  // Genre (Playlist Category) State
+  const [genres, setGenres] = useState<string[]>([]);
+  const [selectedGenre, setSelectedGenre] = useState('');
+  const [isNewGenre, setIsNewGenre] = useState(false);
+  const [newGenreName, setNewGenreName] = useState('');
   const [coverAssetId, setCoverAssetId] = useState(DEFAULT_COVER);
 
   // Editable Songs State
   const [items, setItems] = useState<EditableItem[]>([]);
 
   // Loading States
-  const [fetchingFiles, setFetchingFiles] = useState(false);
-  const [fetchingCategories, setFetchingCategories] = useState(false);
+  const [fetchingMaps, setFetchingMaps] = useState(false);
+  const [fetchingGenres, setFetchingGenres] = useState(false);
   const [committing, setCommitting] = useState(false);
 
   // Active Tab
   const [activeTab, setActiveTab] = useState<'commit' | 'snippet'>('commit');
 
-  // Load saved settings from localStorage on mount
+  // Load saved preferences
   useEffect(() => {
     try {
-      const savedToken = localStorage.getItem(STORAGE_KEYS.TOKEN) || '';
-      const savedRepo = localStorage.getItem(STORAGE_KEYS.REPO) || 'fhrlsym/minang-music';
-      const savedBranch = localStorage.getItem(STORAGE_KEYS.BRANCH) || 'main';
-      const savedFile = localStorage.getItem(STORAGE_KEYS.LAST_FILE) || 'musicsbjoi.json';
-      const savedCategory = localStorage.getItem(STORAGE_KEYS.LAST_CATEGORY) || '';
+      const savedMap = localStorage.getItem(STORAGE_KEYS.LAST_MAP) || 'musicsbjoi.json';
+      const savedGenre = localStorage.getItem(STORAGE_KEYS.LAST_GENRE) || '';
 
-      setGithubToken(savedToken);
-      setGithubRepo(savedRepo);
-      setGithubBranch(savedBranch);
-      setSelectedFile(savedFile);
-      if (savedCategory) setSelectedCategory(savedCategory);
-
-      if (!savedToken) {
-        setShowConfig(true);
-      }
+      setSelectedMapFile(savedMap);
+      if (savedGenre) setSelectedGenre(savedGenre);
     } catch {
       // ignore
     }
   }, []);
 
-  // Initialize editable songs whenever modal opens or songs change
+  // Initialize editable songs whenever modal opens or songs prop changes
+  // DEFAULT: selected is FALSE so user can explicitly choose
   useEffect(() => {
     if (songs && songs.length > 0) {
-      const mapped: EditableItem[] = songs.map((s, index) => {
-        const cleanId = typeof s.assetId === 'string' ? parseInt(s.assetId.replace(/\D/g, ''), 10) : Number(s.assetId);
-        let speed = Number(s.playbackSpeed);
-        if (!speed || isNaN(speed) || speed <= 0) {
-          if (s.originalSpeed && s.originalSpeed > 0) {
-            speed = parseFloat((1 / s.originalSpeed).toFixed(4));
+      const mapped: EditableItem[] = songs
+        .filter((s) => s.assetId)
+        .map((s, index) => {
+          const cleanId = typeof s.assetId === 'string' ? parseInt(s.assetId.replace(/\D/g, ''), 10) : Number(s.assetId);
+          let speed = Number(s.playbackSpeed);
+          if (!speed || isNaN(speed) || speed <= 0) {
+            if (s.originalSpeed && s.originalSpeed > 0) {
+              speed = parseFloat((1 / s.originalSpeed).toFixed(4));
+            } else {
+              speed = 0.4348;
+            }
           } else {
-            speed = 0.4348;
+            speed = parseFloat(Number(speed).toFixed(4));
           }
-        } else {
-          speed = parseFloat(Number(speed).toFixed(4));
-        }
 
-        return {
-          id: `item_${cleanId || index}_${Date.now()}_${index}`,
-          assetId: cleanId || 0,
-          name: s.name || `Song_${cleanId}`,
-          playbackSpeed: speed,
-          selected: false,
-        };
-      });
+          return {
+            id: `item_${cleanId || index}_${index}`,
+            assetId: cleanId || 0,
+            name: s.name || `Song_${cleanId}`,
+            playbackSpeed: speed,
+            selected: false, // Unchecked by default
+          };
+        });
       setItems(mapped);
     } else {
       setItems([]);
     }
   }, [songs]);
 
-  // Fetch JSON files list from GitHub repository
-  const fetchJsonFiles = async (token: string, repo: string) => {
-    if (!token.trim() || !repo.trim()) return;
-    setFetchingFiles(true);
+  // Fetch all maps (JSON files)
+  const fetchMapFiles = async () => {
+    setFetchingMaps(true);
     try {
-      const [owner, repoName] = repo.split('/');
-      if (!owner || !repoName) throw new Error('Format repository harus owner/repo');
+      // 1. Try backend endpoint first
+      if (backendUrl) {
+        try {
+          const bRes = await fetch(`${backendUrl}/api/github/maps`);
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            if (bData.success && Array.isArray(bData.maps)) {
+              const list = bData.maps.map((m: any) => m.filename);
+              setMapFiles(list);
+              const current = list.includes(selectedMapFile) ? selectedMapFile : (list[0] || 'musicsbjoi.json');
+              setSelectedMapFile(current);
+              if (current) fetchGenresForMap(current);
+              return;
+            }
+          }
+        } catch {
+          // fallback to client-side GitHub API
+        }
+      }
 
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/`, {
+      // 2. Direct GitHub API fallback
+      const res = await fetch(`https://api.github.com/repos/${DEFAULT_REPO}/contents/`, {
         headers: {
-          Authorization: `Bearer ${token.trim()}`,
+          Authorization: `Bearer ${DEFAULT_PAT}`,
           Accept: 'application/vnd.github.v3+json',
         },
       });
@@ -171,38 +216,58 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
         throw new Error(err.message || `Gagal membaca file dari GitHub (Status ${res.status})`);
       }
 
-      const data = (await res.json()) as GitHubFileEntry[];
+      const data = await res.json();
       if (Array.isArray(data)) {
         const jsonList = data
-          .filter((f) => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
-          .map((f) => f.name);
+          .filter((f: any) => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
+          .map((f: any) => f.name);
 
-        setJsonFiles(jsonList);
-
-        if (jsonList.length > 0 && !jsonList.includes(selectedFile)) {
-          setSelectedFile(jsonList[0]);
-          fetchCategoriesForFile(token, repo, jsonList[0]);
-        } else if (selectedFile) {
-          fetchCategoriesForFile(token, repo, selectedFile);
+        setMapFiles(jsonList);
+        const current = jsonList.includes(selectedMapFile) ? selectedMapFile : (jsonList[0] || 'musicsbjoi.json');
+        setSelectedMapFile(current);
+        if (current) {
+          fetchGenresForMap(current);
         }
       }
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Gagal memuat file JSON dari GitHub';
+      const msg = error instanceof Error ? error.message : 'Gagal memuat daftar map dari GitHub';
       toast(msg, 'error');
     } finally {
-      setFetchingFiles(false);
+      setFetchingMaps(false);
     }
   };
 
-  // Fetch categories inside a specific JSON file
-  const fetchCategoriesForFile = async (token: string, repo: string, filePath: string) => {
-    if (!token.trim() || !repo.trim() || !filePath.trim()) return;
-    setFetchingCategories(true);
+  // Fetch genres from the selected map file
+  const fetchGenresForMap = async (mapFilename: string) => {
+    if (!mapFilename.trim()) return;
+    setFetchingGenres(true);
     try {
-      const [owner, repoName] = repo.split('/');
-      const res = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${filePath}`, {
+      // 1. Try backend endpoint first
+      if (backendUrl) {
+        try {
+          const bRes = await fetch(`${backendUrl}/api/github/genres?mapFile=${encodeURIComponent(mapFilename)}`);
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            if (bData.success && Array.isArray(bData.genres)) {
+              setGenres(bData.genres);
+              if (bData.genres.length > 0) {
+                setSelectedGenre(bData.genres[0]);
+                setIsNewGenre(false);
+              } else {
+                setIsNewGenre(true);
+              }
+              return;
+            }
+          }
+        } catch {
+          // fallback to direct GitHub API
+        }
+      }
+
+      // 2. Direct GitHub API fallback
+      const res = await fetch(`https://api.github.com/repos/${DEFAULT_REPO}/contents/${mapFilename}?ref=${DEFAULT_BRANCH}`, {
         headers: {
-          Authorization: `Bearer ${token.trim()}`,
+          Authorization: `Bearer ${DEFAULT_PAT}`,
           Accept: 'application/vnd.github.v3+json',
         },
       });
@@ -213,57 +278,77 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
         const parsed = JSON.parse(contentStr);
 
         if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-          const cats = Object.keys(parsed).filter((k) => k !== 'Cover' && k !== 'Songs');
-          setCategories(cats);
-          if (cats.length > 0 && (!selectedCategory || !cats.includes(selectedCategory))) {
-            setSelectedCategory(cats[0]);
+          const list = Object.keys(parsed).filter((k) => k !== 'Cover' && k !== 'Songs');
+          setGenres(list);
+          if (list.length > 0) {
+            setSelectedGenre(list[0]);
+            setIsNewGenre(false);
+          } else {
+            setIsNewGenre(true);
           }
         } else {
-          setCategories([]);
+          setGenres([]);
+          setIsNewGenre(true);
         }
+      } else {
+        setGenres([]);
+        setIsNewGenre(true);
       }
     } catch {
-      setCategories([]);
+      setGenres([]);
+      setIsNewGenre(true);
     } finally {
-      setFetchingCategories(false);
+      setFetchingGenres(false);
     }
   };
 
-  // Fetch files whenever token or repo changes and modal is open
+  // Auto fetch when modal opens
   useEffect(() => {
-    if (isOpen && githubToken && githubRepo) {
-      fetchJsonFiles(githubToken, githubRepo);
+    if (isOpen) {
+      fetchMapFiles();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  const handleSaveSettings = () => {
-    try {
-      localStorage.setItem(STORAGE_KEYS.TOKEN, githubToken.trim());
-      localStorage.setItem(STORAGE_KEYS.REPO, githubRepo.trim());
-      localStorage.setItem(STORAGE_KEYS.BRANCH, githubBranch.trim());
-      toast('Pengaturan GitHub berhasil disimpan', 'success');
-      setShowConfig(false);
-      fetchJsonFiles(githubToken, githubRepo);
-    } catch {
-      toast('Gagal menyimpan ke penyimpanan lokal', 'error');
+  const handleSelectMap = (val: string) => {
+    if (val === '__new__') {
+      setIsNewMap(true);
+      setGenres([]);
+      setIsNewGenre(true);
+    } else {
+      setIsNewMap(false);
+      setSelectedMapFile(val);
+      try {
+        localStorage.setItem(STORAGE_KEYS.LAST_MAP, val);
+      } catch {
+        // ignore
+      }
+      fetchGenresForMap(val);
     }
   };
 
-  const handleSelectFile = (file: string) => {
-    setSelectedFile(file);
-    try {
-      localStorage.setItem(STORAGE_KEYS.LAST_FILE, file);
-    } catch {}
-    fetchCategoriesForFile(githubToken, githubRepo, file);
+  const handleSelectGenre = (val: string) => {
+    if (val === '__new__') {
+      setIsNewGenre(true);
+      setNewGenreName('');
+    } else {
+      setIsNewGenre(false);
+      setSelectedGenre(val);
+      try {
+        localStorage.setItem(STORAGE_KEYS.LAST_GENRE, val);
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  // Item list selection and inline name editing
+  const handleItemToggle = (id: string) => {
+    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)));
   };
 
   const handleItemNameChange = (id: string, newName: string) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, name: newName } : item)));
-  };
-
-  const handleItemToggle = (id: string) => {
-    setItems((prev) => prev.map((item) => (item.id === id ? { ...item, selected: !item.selected } : item)));
   };
 
   const handleToggleSelectAll = () => {
@@ -271,431 +356,381 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
     setItems((prev) => prev.map((i) => ({ ...i, selected: !allSelected })));
   };
 
-  const decodeBase64Utf8 = (base64: string): string => {
-    try {
-      const clean = base64.replace(/\s+/g, '');
-      const binary = atob(clean);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return new TextDecoder().decode(bytes);
-    } catch {
-      return '';
-    }
-  };
+  const selectedCount = items.filter((i) => i.selected).length;
 
-  const encodeBase64Utf8 = (str: string): string => {
-    const bytes = new TextEncoder().encode(str);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  };
+  // Generate output JSON snippet
+  const generateSnippet = (): string => {
+    const effectiveGenre = isNewGenre ? (newGenreName.trim().toUpperCase() || 'GENRE_BARU') : selectedGenre;
+    const selectedItems = items.filter((i) => i.selected);
 
-  // Generate Snippet
-  const generateSnippet = () => {
-    const selected = items.filter((i) => i.selected);
-    const snippetArray = selected.map((i) => ({
-      AssetId: i.assetId,
-      Name: i.name.trim(),
-      PlaybackSpeed: i.playbackSpeed,
+    const songsObj = selectedItems.map((item) => ({
+      AssetId: item.assetId,
+      Name: item.name,
+      PlaybackSpeed: item.playbackSpeed,
     }));
-    return JSON.stringify(snippetArray, null, 2);
+
+    const result = {
+      [effectiveGenre]: {
+        Cover: normalizeCoverAssetId(coverAssetId),
+        Songs: songsObj,
+      },
+    };
+
+    return JSON.stringify(result, null, 2);
   };
 
-  const copySnippetToClipboard = () => {
-    const text = generateSnippet();
-    navigator.clipboard.writeText(text);
-    toast('JSON Snippet disalin ke clipboard', 'success');
-  };
-
-  const downloadJsonFile = () => {
-    const text = generateSnippet();
-    const blob = new Blob([text], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${selectedFile || 'music_playlist.json'}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast('File JSON berhasil diunduh', 'success');
-  };
-
-  // Main Commit & Push Action
+  // Direct GitHub Commit
   const handleCommitToGitHub = async () => {
-    if (!githubToken.trim()) {
-      setShowConfig(true);
-      toast('Masukkan GitHub Personal Access Token terlebih dahulu', 'error');
-      return;
-    }
-
-    const selectedItems = items.filter((i) => i.selected && i.assetId > 0 && i.name.trim());
+    const selectedItems = items.filter((i) => i.selected);
     if (selectedItems.length === 0) {
-      toast('Pilih minimal satu lagu dengan nama yang valid', 'error');
+      toast('Pilih minimal 1 lagu yang ingin di-sync', 'error');
       return;
     }
 
-    const targetFileName = (customFile.trim() || selectedFile.trim()).replace(/^\/+/, '');
-    if (!targetFileName) {
-      toast('Pilih atau masukkan nama file JSON target', 'error');
+    const targetFilename = isNewMap ? sanitizeMapFilename(newMapName) : selectedMapFile;
+    if (!targetFilename) {
+      toast('Pilih atau ketik nama map tujuan', 'error');
       return;
     }
 
-    const targetCategory = (isNewCategory ? newCategoryName.trim() : selectedCategory.trim()).toUpperCase();
-    if (!targetCategory) {
-      toast('Pilih atau masukkan nama kategori lagu', 'error');
+    const targetGenre = isNewGenre ? newGenreName.trim().toUpperCase() : selectedGenre.trim().toUpperCase();
+    if (!targetGenre) {
+      toast('Pilih atau ketik nama Genre untuk lagu ini', 'error');
       return;
     }
+
+    const effectiveCover = normalizeCoverAssetId(coverAssetId);
 
     setCommitting(true);
+    toast(`Menghubungkan ke GitHub (${targetFilename})...`, 'info');
 
     try {
-      const [owner, repoName] = githubRepo.split('/');
-      if (!owner || !repoName) throw new Error('Format repository harus owner/repo (contoh: fhrlsym/minang-music)');
+      // 1. Try backend commit endpoint first
+      if (backendUrl) {
+        try {
+          const bRes = await fetch(`${backendUrl}/api/github/commit`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mapFilename: targetFilename,
+              genre: targetGenre,
+              songs: selectedItems.map((i) => ({
+                AssetId: i.assetId,
+                Name: i.name,
+                PlaybackSpeed: i.playbackSpeed,
+              })),
+              isNewMap,
+              newMapName,
+              coverAssetId: effectiveCover,
+            }),
+          });
 
-      // 1. Fetch current file content & SHA
-      const getRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${targetFileName}?ref=${githubBranch}`, {
-        headers: {
-          Authorization: `Bearer ${githubToken.trim()}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      });
-
-      let currentJson: Record<string, unknown> = {};
-      let currentSha: string | undefined = undefined;
-
-      if (getRes.ok) {
-        const fileData = await getRes.json();
-        currentSha = fileData.sha;
-        const decoded = decodeBase64Utf8(fileData.content || '');
-        if (decoded.trim()) {
-          try {
-            currentJson = JSON.parse(decoded);
-          } catch {
-            currentJson = {};
+          if (bRes.ok) {
+            const bData = await bRes.json();
+            toast(`Berhasil commit & push ${selectedItems.length} lagu ke map "${formatMapDisplayName(targetFilename)}"!`, 'success');
+            onClose();
+            return;
           }
+        } catch {
+          // fallback to client-side GitHub API
         }
-      } else if (getRes.status === 404) {
-        // File does not exist yet; will create new file
-        currentJson = {};
-      } else {
-        const err = await getRes.json().catch(() => ({}));
-        throw new Error(err.message || `Gagal membaca file dari GitHub (Status ${getRes.status})`);
       }
 
-      // 2. Merge songs into the selected category
-      let categoryObj = (currentJson[targetCategory] || {}) as Record<string, unknown>;
-      if (typeof categoryObj !== 'object' || categoryObj === null || Array.isArray(categoryObj)) {
-        categoryObj = {
-          Cover: coverAssetId.trim() || DEFAULT_COVER,
+      // 2. Direct GitHub API fallback
+      const [owner, repo] = DEFAULT_REPO.split('/');
+      const getFileRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilename}?ref=${DEFAULT_BRANCH}`,
+        {
+          headers: {
+            Authorization: `Bearer ${DEFAULT_PAT}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        }
+      );
+
+      let fileSha: string | undefined = undefined;
+      let existingData: Record<string, any> = {};
+
+      if (getFileRes.ok) {
+        const fileData = await getFileRes.json();
+        fileSha = fileData.sha;
+        try {
+          const contentStr = decodeBase64Utf8(fileData.content || '');
+          existingData = JSON.parse(contentStr);
+          if (typeof existingData !== 'object' || Array.isArray(existingData)) {
+            existingData = {};
+          }
+        } catch {
+          existingData = {};
+        }
+      }
+
+      // Merge songs into target Genre
+      if (!existingData[targetGenre]) {
+        existingData[targetGenre] = {
+          Cover: effectiveCover,
           Songs: [],
         };
       }
 
-      if (!categoryObj.Cover) {
-        categoryObj.Cover = coverAssetId.trim() || DEFAULT_COVER;
+      if (!Array.isArray(existingData[targetGenre].Songs)) {
+        existingData[targetGenre].Songs = [];
       }
 
-      let songsList = (Array.isArray(categoryObj.Songs) ? categoryObj.Songs : []) as Record<string, unknown>[];
+      const existingSongs: any[] = existingData[targetGenre].Songs;
+      let addedCount = 0;
+      let updatedCount = 0;
 
-      // Add or update selected songs
       for (const item of selectedItems) {
-        const existingIndex = songsList.findIndex((s) => Number(s.AssetId) === item.assetId);
-        const songEntry = {
+        const existingIdx = existingSongs.findIndex((s) => Number(s.AssetId) === Number(item.assetId));
+        const songData = {
           AssetId: item.assetId,
           Name: item.name.trim(),
           PlaybackSpeed: item.playbackSpeed,
         };
 
-        if (existingIndex >= 0) {
-          songsList[existingIndex] = { ...songsList[existingIndex], ...songEntry };
+        if (existingIdx >= 0) {
+          existingSongs[existingIdx] = songData;
+          updatedCount++;
         } else {
-          songsList.push(songEntry);
+          existingSongs.push(songData);
+          addedCount++;
         }
       }
 
-      categoryObj.Songs = songsList;
-      currentJson[targetCategory] = categoryObj;
-
-      // 3. Encode and commit to GitHub
-      const updatedJsonString = JSON.stringify(currentJson, null, 2);
+      const updatedJsonString = JSON.stringify(existingData, null, 2);
       const encodedContent = encodeBase64Utf8(updatedJsonString);
 
-      const songNamesPreview = selectedItems.slice(0, 2).map((s) => s.name).join(', ');
-      const moreCount = selectedItems.length > 2 ? ` (+${selectedItems.length - 2} more)` : '';
-      const commitMessage = `feat(music): add ${selectedItems.length} song(s) to ${targetCategory} [${songNamesPreview}${moreCount}]`;
+      const commitMessage = `feat(music): update ${targetFilename} [${targetGenre}] (+${addedCount} songs, ~${updatedCount} updated)`;
 
-      const putRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/contents/${targetFileName}`, {
-        method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${githubToken.trim()}`,
-          Accept: 'application/vnd.github.v3+json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: commitMessage,
-          content: encodedContent,
-          sha: currentSha,
-          branch: githubBranch,
-        }),
-      });
-
-      if (!putRes.ok) {
-        const putErr = await putRes.json().catch(() => ({}));
-        throw new Error(putErr.message || `Gagal melakukan commit ke GitHub (Status ${putRes.status})`);
+      const putBody: Record<string, any> = {
+        message: commitMessage,
+        content: encodedContent,
+        branch: DEFAULT_BRANCH,
+      };
+      if (fileSha) {
+        putBody.sha = fileSha;
       }
 
-      try {
-        localStorage.setItem(STORAGE_KEYS.LAST_CATEGORY, targetCategory);
-        localStorage.setItem(STORAGE_KEYS.LAST_FILE, targetFileName);
-      } catch {}
+      const putRes = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilename}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${DEFAULT_PAT}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(putBody),
+        }
+      );
 
-      toast(`Berhasil commit & push ${selectedItems.length} lagu ke ${targetFileName} (${targetCategory})!`, 'success');
+      const putData = await putRes.json();
+      if (!putRes.ok) {
+        throw new Error(putData.message || `Gagal commit ke GitHub (Status ${putRes.status})`);
+      }
+
+      toast(`Berhasil commit & push ${selectedItems.length} lagu ke map "${formatMapDisplayName(targetFilename)}"!`, 'success');
       onClose();
     } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Gagal melakukan commit ke GitHub';
+      const msg = error instanceof Error ? error.message : 'Terjadi kesalahan saat commit ke GitHub';
       toast(msg, 'error');
     } finally {
       setCommitting(false);
     }
   };
 
-  if (!isOpen) return null;
+  const copySnippetToClipboard = () => {
+    navigator.clipboard.writeText(generateSnippet());
+    toast('JSON berhasil disalin ke clipboard', 'success');
+  };
 
-  const selectedCount = items.filter((i) => i.selected).length;
+  const downloadJsonFile = () => {
+    const filename = isNewMap ? sanitizeMapFilename(newMapName) : selectedMapFile;
+    const blob = new Blob([generateSnippet()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`File ${filename} berhasil diunduh`, 'success');
+  };
+
+  if (!isOpen) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-3 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden my-auto"
+        className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden my-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--line)] shrink-0">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--line)] shrink-0 bg-[var(--surface-50)]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
               <GitHubIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-serif text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
                 Sync ke GitHub (S2 Music)
               </h3>
               <p className="text-xs text-[var(--text-45)]">
-                Commit langsung ke repo <code className="font-mono text-[var(--accent-soft)]">{githubRepo}</code>
+                Otomatis update list lagu ke repository <code className="font-mono text-[var(--accent-soft)]">{DEFAULT_REPO}</code>
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowConfig(!showConfig)}
-              className={`p-2 rounded-xl border transition ${
-                showConfig
-                  ? 'border-[var(--accent-40)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                  : 'border-[var(--line)] text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface)]'
-              }`}
-              title="Pengaturan GitHub Token"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-lg hover:bg-[var(--surface)]"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-xl hover:bg-[var(--surface)]"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
-
-        {/* GitHub Settings Drawer */}
-        <AnimatePresence>
-          {showConfig && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-b border-[var(--line)] bg-[var(--surface-50)] p-4 space-y-3 shrink-0"
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
-                  <Key className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Konfigurasi GitHub Personal Access Token (PAT)
-                </p>
-                <a
-                  href="https://github.com/settings/tokens/new?scopes=repo&description=S2StudioAudioUploader"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-[var(--accent-soft)] hover:underline"
-                >
-                  Buat Token Baru di GitHub
-                </a>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <div className="sm:col-span-2">
-                  <label className="text-[10px] font-semibold uppercase text-[var(--text-40)] mb-1 block">
-                    GitHub Token (repo / contents:write)
-                  </label>
-                  <input
-                    type="password"
-                    value={githubToken}
-                    onChange={(e) => setGithubToken(e.target.value)}
-                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-                    className={`${INPUT} text-xs font-mono py-2`}
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-semibold uppercase text-[var(--text-40)] mb-1 block">
-                    Repository
-                  </label>
-                  <input
-                    type="text"
-                    value={githubRepo}
-                    onChange={(e) => setGithubRepo(e.target.value)}
-                    placeholder="fhrlsym/minang-music"
-                    className={`${INPUT} text-xs font-mono py-2`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={handleSaveSettings}
-                  className={`${BTN_PRIMARY} text-xs py-1.5 px-4`}
-                >
-                  Simpan Pengaturan
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
 
         {/* Content Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* Target File and Category Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-            {/* Target JSON Map File */}
+          {/* Target Map & Genre Selection */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+            {/* Target Map Dropdown */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] flex items-center gap-1.5">
                   <Folder className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Target Map (File JSON)
+                  Pilih Map
                 </label>
-                {fetchingFiles && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
+                {fetchingMaps && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
               </div>
 
-              {jsonFiles.length > 0 ? (
-                <div className="space-y-1.5">
-                  <select
-                    value={selectedFile}
-                    onChange={(e) => handleSelectFile(e.target.value)}
-                    className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)]`}
-                  >
-                    {jsonFiles.map((f) => (
-                      <option key={f} value={f}>
-                        {f}
-                      </option>
-                    ))}
-                    <option value="__custom__">+ Ketik Nama File Lain</option>
-                  </select>
-                  {selectedFile === '__custom__' && (
-                    <input
-                      type="text"
-                      value={customFile}
-                      onChange={(e) => setCustomFile(e.target.value)}
-                      placeholder="contoh: music_padang.json"
-                      className={`${INPUT} text-xs py-2 mt-1`}
-                    />
-                  )}
+              <select
+                value={isNewMap ? '__new__' : selectedMapFile}
+                onChange={(e) => handleSelectMap(e.target.value)}
+                className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
+              >
+                {mapFiles.map((f) => (
+                  <option key={f} value={f}>
+                    Map {formatMapDisplayName(f)}
+                  </option>
+                ))}
+                <option value="__new__">+ Tambah Map Baru</option>
+              </select>
+
+              {isNewMap && (
+                <div className="mt-2 space-y-1">
+                  <input
+                    type="text"
+                    value={newMapName}
+                    onChange={(e) => setNewMapName(e.target.value)}
+                    placeholder="Ketik Nama Map Baru (misal: Padang Panjang)"
+                    className={`${INPUT} text-xs py-2`}
+                    autoFocus
+                  />
+                  <p className="text-[10px] text-[var(--text-40)]">
+                    File JSON: <span className="font-mono text-[var(--accent-soft)]">{sanitizeMapFilename(newMapName)}</span>
+                  </p>
                 </div>
-              ) : (
-                <input
-                  type="text"
-                  value={selectedFile}
-                  onChange={(e) => setSelectedFile(e.target.value)}
-                  placeholder="musicsbjoi.json"
-                  className={`${INPUT} text-xs py-2`}
-                />
               )}
             </div>
 
-            {/* Target Category */}
+            {/* Target Genre Dropdown */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Kategori Playlist
+                  Genre
                 </label>
-                {fetchingCategories && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
+                {fetchingGenres && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
               </div>
 
-              {!isNewCategory && categories.length > 0 ? (
-                <div className="space-y-1.5">
+              {!isNewMap && genres.length > 0 ? (
+                <div className="space-y-2">
                   <select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      if (e.target.value === '__new__') {
-                        setIsNewCategory(true);
-                      } else {
-                        setSelectedCategory(e.target.value);
-                      }
-                    }}
-                    className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)]`}
+                    value={isNewGenre ? '__new__' : selectedGenre}
+                    onChange={(e) => handleSelectGenre(e.target.value)}
+                    className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
                   >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                    {genres.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
                       </option>
                     ))}
-                    <option value="__new__">+ Buat Kategori Baru...</option>
+                    <option value="__new__">+ Tambah Genre Baru</option>
                   </select>
+
+                  {isNewGenre && (
+                    <div className="space-y-2 p-2.5 rounded-lg border border-[var(--accent-20)] bg-[var(--surface-50)] mt-2">
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--accent-soft)] block mb-1">
+                          Nama Genre Baru
+                        </label>
+                        <input
+                          type="text"
+                          value={newGenreName}
+                          onChange={(e) => setNewGenreName(e.target.value.toUpperCase())}
+                          placeholder="Misal: KOPLO, SLOW ROCK, DANGDUT"
+                          className={`${INPUT} text-xs py-1.5 uppercase font-bold`}
+                          autoFocus
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-[var(--text-60)] block mb-1">
+                          Cover Image Asset ID
+                        </label>
+                        <input
+                          type="text"
+                          value={coverAssetId}
+                          onChange={(e) => setCoverAssetId(e.target.value)}
+                          placeholder="rbxassetid://94215284059157"
+                          className={`${INPUT} text-xs py-1.5 font-mono`}
+                        />
+                        <p className="text-[10px] text-[var(--text-40)] mt-1">
+                          Bisa masukkan ID angka saja (misal: <code className="text-[var(--accent-soft)] font-mono">94215284059157</code>)
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="space-y-1.5">
-                  <div className="flex gap-1.5">
+                <div className="space-y-2 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)]">
+                  <div>
+                    <label className="text-[10px] font-bold text-[var(--accent-soft)] block mb-1">
+                      Nama Genre Baru
+                    </label>
                     <input
                       type="text"
-                      value={isNewCategory ? newCategoryName : selectedCategory}
-                      onChange={(e) => {
-                        if (isNewCategory) setNewCategoryName(e.target.value.toUpperCase());
-                        else setSelectedCategory(e.target.value.toUpperCase());
-                      }}
-                      placeholder="Contoh: REGGAE, HIPHOP, POP"
-                      className={`${INPUT} text-xs py-2 uppercase`}
+                      value={newGenreName}
+                      onChange={(e) => setNewGenreName(e.target.value.toUpperCase())}
+                      placeholder="Misal: REGGAE, HIPHOP, POP"
+                      className={`${INPUT} text-xs py-1.5 uppercase font-bold`}
+                      autoFocus
                     />
-                    {categories.length > 0 && isNewCategory && (
-                      <button
-                        type="button"
-                        onClick={() => setIsNewCategory(false)}
-                        className="px-2.5 text-xs text-[var(--text-50)] hover:text-[var(--text)]"
-                      >
-                        Batal
-                      </button>
-                    )}
                   </div>
-                  {isNewCategory && (
+                  <div>
+                    <label className="text-[10px] font-bold text-[var(--text-60)] block mb-1">
+                      Cover Image Asset ID
+                    </label>
                     <input
                       type="text"
                       value={coverAssetId}
                       onChange={(e) => setCoverAssetId(e.target.value)}
-                      placeholder="Cover ID: rbxassetid://..."
-                      className={`${INPUT} text-[11px] py-1.5 font-mono`}
+                      placeholder="rbxassetid://94215284059157"
+                      className={`${INPUT} text-xs py-1.5 font-mono`}
                     />
-                  )}
+                    <p className="text-[10px] text-[var(--text-40)] mt-1">
+                      Bisa masukkan ID angka saja (misal: <code className="text-[var(--accent-soft)] font-mono">94215284059157</code>)
+                    </p>
+                  </div>
                 </div>
               )}
             </div>
@@ -709,26 +744,26 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
                 <button
                   type="button"
                   onClick={handleToggleSelectAll}
-                  className="text-[11px] text-[var(--accent-soft)] hover:underline"
+                  className="text-[11px] text-[var(--accent-soft)] hover:underline font-semibold"
                 >
-                  {items.every((i) => i.selected) ? 'Hapus Centang' : 'Pilih Semua'}
+                  {items.length > 0 && items.every((i) => i.selected) ? 'Batal Pilih Semua' : 'Pilih Semua'}
                 </button>
               </div>
               <span className="text-[10px] text-[var(--text-40)]">
-                Ketik langsung pada kotak judul untuk mengubah nama in-game
+                Judul lagu dapat diedit langsung sebelum di-commit
               </span>
             </div>
 
             {items.length === 0 ? (
-              <div className="py-6 text-center rounded-xl border border-dashed border-[var(--line)] text-xs text-[var(--text-40)]">
-                Tidak ada lagu untuk di-sync.
+              <div className="py-8 text-center rounded-xl border border-dashed border-[var(--line)] text-xs text-[var(--text-40)]">
+                Belum ada audio dengan status Active yang siap di-sync.
               </div>
             ) : (
-              <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 p-2.5 rounded-xl border transition ${
+                    className={`flex items-center gap-3 p-3 rounded-xl border transition ${
                       item.selected
                         ? 'border-[var(--accent-30)] bg-[var(--accent-06)]'
                         : 'border-[var(--line)] bg-[var(--surface-50)] opacity-60'
@@ -800,7 +835,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
         </div>
 
         {/* Footer Actions */}
-        <div className="p-5 border-t border-[var(--line)] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[var(--surface-50)]">
+        <div className="p-4 sm:p-5 border-t border-[var(--line)] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[var(--surface-50)] shrink-0">
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"

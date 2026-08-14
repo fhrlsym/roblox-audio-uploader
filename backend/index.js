@@ -6,6 +6,7 @@ import { join } from 'path';
 import { BACKEND_ROOT } from './src/config.js';
 import audioRoutes from './src/routes/audio.routes.js';
 import robloxRoutes from './src/routes/roblox.routes.js';
+import githubRoutes from './src/routes/github.routes.js';
 
 const app = express();
 
@@ -15,6 +16,7 @@ app.use(express.json());
 // Routes
 app.use('/api', audioRoutes);
 app.use('/api', robloxRoutes);
+app.use('/api', githubRoutes);
 
 // Health & Version endpoints
 process.env.STARTED_AT = process.env.STARTED_AT || new Date().toISOString();

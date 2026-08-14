@@ -10,8 +10,9 @@ import SpooferSection from '../components/SpooferSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
+import GitHubExportModal, { GitHubIcon } from '../components/GitHubExportModal';
 import { ToastProvider } from '../components/Toast';
-import { CARD, BTN_PRIMARY } from '../lib/ui';
+import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
@@ -47,6 +48,7 @@ export default function Home() {
   const [youtubeCookies, setYoutubeCookies] = useState('');
   const [webVersion, setWebVersion] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [githubModalOpen, setGithubModalOpen] = useState(false);
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -552,31 +554,48 @@ export default function Home() {
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'spoofer' ? 'hidden' : 'space-y-6'}>
             {/* Top Overview & Stats Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
-                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
-                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-                  <CloudUpload className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Total Upload
-                </p>
-                <p className="text-2xl font-bold text-[var(--text)] mt-1">{uploadStats.total}</p>
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-3 flex-1">
+                <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
+                  <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
+                    <CloudUpload className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--accent-soft)]" />
+                    Total
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1">{uploadStats.total}</p>
+                </div>
+                <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                  <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
+                    <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--emerald)]" />
+                    Success
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1">{uploadStats.active}</p>
+                </div>
+                <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
+                  <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
+                    <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
+                    Copyright
+                  </p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--danger)] mt-0.5 sm:mt-1">{uploadStats.copyright}</p>
+                </div>
               </div>
-              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
-                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-                  <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
-                  Success
-                </p>
-                <p className="text-2xl font-bold text-[var(--emerald)] mt-1">{uploadStats.active}</p>
-              </div>
-              <div className={`${CARD} p-4 text-center relative overflow-hidden`}>
-                <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
-                <p className="text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
-                  Copyright
-                </p>
-                <p className="text-2xl font-bold text-[var(--danger)] mt-1">{uploadStats.copyright}</p>
-              </div>
+
+              {/* Prominent Top-Level GitHub Sync Button */}
+              <button
+                type="button"
+                onClick={() => setGithubModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-5 py-3 text-xs sm:text-sm font-bold text-[var(--on-accent)] shadow-lg transition hover:brightness-110 active:scale-[0.98] shrink-0"
+              >
+                <GitHubIcon className="w-4 h-4" />
+                <span>Sync ke GitHub</span>
+                {uploadStats.active > 0 && (
+                  <span className="rounded-full bg-black/25 px-2 py-0.5 text-[10px] sm:text-[11px] font-extrabold text-[var(--on-accent)]">
+                    {uploadStats.active}
+                  </span>
+                )}
+              </button>
             </div>
 
             {/* Stepper Navigation */}
@@ -736,6 +755,7 @@ export default function Home() {
                       onClose={() => setHistoryOpen(false)}
                       onRefresh={handleRefreshStatus}
                       refreshingIds={refreshingIds}
+                      onOpenGitHubSync={() => setGithubModalOpen(true)}
                     />
                   </motion.div>
                 )}
@@ -771,6 +791,21 @@ export default function Home() {
           onClose={() => setShowAccountModal(false)}
           onAccountAdded={handleAccountAdded}
           backendUrl={BACKEND_URL}
+        />
+
+        {/* Root-Level GitHub Sync Modal */}
+        <GitHubExportModal
+          isOpen={githubModalOpen}
+          onClose={() => setGithubModalOpen(false)}
+          backendUrl={BACKEND_URL}
+          songs={uploadHistory
+            .filter((r) => r.status === 'Active' && r.assetId)
+            .map((r) => ({
+              assetId: r.assetId,
+              name: cleanSongTitle(r.displayName || r.fileName),
+              playbackSpeed: r.robloxPlaybackSpeed || (1 / (r.originalSpeed || 1)).toFixed(4),
+              originalSpeed: r.originalSpeed,
+            }))}
         />
       </div>
     </ToastProvider>
