@@ -7,6 +7,7 @@ const ENGINES = {
   MOONVEIL: 'moonveil-devirt',
   IRONBREW: 'ironbrew-deobf',
   JUNKIE: 'mimic-sandbox',
+  IRONVEIL: 'ironveil-deobf',
   BYTEARRAY: 'bytearray-unpacker',
   HTTPLOADER: 'httplog-interceptor',
   GENERIC: 'mimic-sandbox',
@@ -132,7 +133,23 @@ export function detectObfuscator(code) {
     };
   }
 
-  // 6. Byte array / char array
+  // 6. IronVeil (older-style, signature comment from its obfuscator)
+  const isIronVeil = /Obfuscated using ironveil/i.test(src);
+
+  if (isIronVeil) {
+    return {
+      engine: ENGINES.IRONVEIL,
+      engineName: 'IronVeil Deobfuscator (ironveil-deobf)',
+      obfuscator: 'IronVeil Obfuscator',
+      version: 'v1',
+      confidence: 95,
+      description: 'Ditemukan proteksi IronVeil. IronVeil-deobf (Node.js) membongkar payload berantai base64 → xor → LZW → IR → Lua secara statis.',
+      features: ['Payload Unpack', 'XOR Decrypt', 'LZW Decompress', 'IR to Lua'],
+      suggestedAction: 'Jalankan IronVeil Deobfuscator untuk merekonstruksi source asli.',
+    };
+  }
+
+  // 7. Byte array / char array
   const isByteArray =
     (/string\.char\s*\(\s*[0-9\s,]+\s*\)/i.test(src) && src.length > 500) ||
     /loadstring\s*\(\s*table\.concat/i.test(src) ||
@@ -192,6 +209,7 @@ export function engineToDisplayName(engine) {
     'moonveil-devirt': 'Moonveil Devirtualizer',
     'ironbrew-deobf': 'IronBrew Deserializer',
     'mimic-sandbox': 'Universal Larry Dumper',
+    'ironveil-deobf': 'IronVeil Deobfuscator',
     'bytearray-unpacker': 'Byte Array Unpacker',
     'httplog-interceptor': 'HTTP Scanner',
   };

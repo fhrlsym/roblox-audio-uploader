@@ -132,7 +132,23 @@ export function detectObfuscator(code: string): DetectionResult {
     };
   }
 
-  // 6. Byte Array / String.char Array / Numeric Bytecode
+  // 6. IronVeil Obfuscator (v1)
+  const isIronVeil = /Obfuscated using ironveil/i.test(src);
+
+  if (isIronVeil) {
+    return {
+      engine: 'ironveil-deobf',
+      engineName: 'IronVeil Deobfuscator (ironveil-deobf)',
+      obfuscator: 'IronVeil Obfuscator',
+      version: 'v1',
+      confidence: 95,
+      description: 'Terdeteksi proteksi IronVeil. IronVeil-deobf (Node.js) membongkar payload berantai base64 → xor → LZW → IR → Lua secara statis.',
+      features: ['Payload Unpack', 'XOR Decrypt', 'LZW Decompress', 'IR to Lua'],
+      suggestedAction: 'Jalankan IronVeil Deobfuscator untuk merekonstruksi source asli.',
+    };
+  }
+
+  // 7. Byte Array / String.char Array / Numeric Bytecode
   const isByteArray =
     (/string\.char\s*\(\s*[0-9\s,]+\s*\)/i.test(src) && src.length > 500) ||
     (/table\.concat\s*\(\s*\{[0-9\s,"]+\}\s*\)/i.test(src)) ||

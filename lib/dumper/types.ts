@@ -7,6 +7,7 @@ export type DumperEngine =
   | 'prometheus-ast'
   | 'ironbrew-deobf'
   | 'mimic-sandbox'
+  | 'ironveil-deobf'
   | 'httplog-interceptor'
   | 'revea-env'
   | 'bytearray-unpacker'

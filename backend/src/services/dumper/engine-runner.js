@@ -43,6 +43,7 @@ export function availableBinaries() {
     luau: resolveBinary(process.env.LUAU_BIN || 'luau', process.env.LUAU_BIN),
     lune: resolveBinary(process.env.LUNE_BIN || 'lune', process.env.LUNE_BIN),
     lua5_3: resolveBinary(process.env.LUA_BIN || 'lua5.3', process.env.LUA_BIN),
+    node: resolveBinary('node', process.env.NODE_BIN),
   };
 }
 
@@ -155,7 +156,7 @@ function buildResult({ detection, code, deobfuscatedCode, httpLogs, constants, n
   };
 }
 
-async function runMoonveil(inputPath, outPath) {
+async function runMoonveil(inputPath, outPath, timeout) {
   const bins = availableBinaries();
   if (!bins.python3) return { ok: false, reason: 'python3 tidak tersedia di server' };
   const outDir = join(TMP_DIR, 'moonveil_out');
@@ -164,7 +165,7 @@ async function runMoonveil(inputPath, outPath) {
   const env = { MOONVEIL_OUT_DIR: outDir };
   if (bins.luau) env.LUAU_BIN = bins.luau;
 
-  const res = await runCommand(bins.python3, args, { env, timeout: 120_000 });
+  const res = await runCommand(bins.python3, args, { env, timeout: timeout || 120_000 });
   const out = readIfExists(outPath);
   if (out) return { ok: true, output: out, log: res.stdout + res.stderr };
 
@@ -172,7 +173,7 @@ async function runMoonveil(inputPath, outPath) {
   const auto = await runCommand(
     bins.python3,
     [join(ENGINES_DIR, 'moonveil', 'moonveil_auto.py'), inputPath],
-    { env, timeout: 90_000 }
+    { env, timeout: timeout || 90_000 }
   );
   const stringsPath = inputPath.replace(/\.lua$/, '_strings.txt');
   const strings = readIfExists(stringsPath);
@@ -186,14 +187,72 @@ async function runMoonveil(inputPath, outPath) {
   return { ok: false, reason: 'Moonveil devirtualisasi gagal: ' + (res.stderr || auto.stderr || 'no output'), log: res.stdout + auto.stdout };
 }
 
-async function runLarry(inputPath, outPath) {
+async function runLarry(inputPath, outPath, timeout) {
   const bins = availableBinaries();
   if (!bins.lune) return { ok: false, reason: 'lune tidak tersedia di server' };
-  const res = await runCommand(bins.lune, ['run', join(ENGINES_DIR, 'larry', 'dumper.luau'), inputPath, outPath]);
+  const res = await runCommand(bins.lune, ['run', join(ENGINES_DIR, 'larry', 'dumper.luau'), inputPath, outPath], { timeout: timeout || ENGINE_TIMEOUT_MS });
   const out = readIfExists(outPath);
   if (out) return { ok: true, output: out, log: res.stdout + res.stderr };
   return { ok: false, reason: 'Larry dumper tidak menghasilkan output: ' + (res.stderr || res.stdout || 'no output') };
 }
+
+async function run45ms(inputPath, outPath, timeout) {
+  const bins = availableBinaries();
+  if (!bins.lune) return { ok: false, reason: 'lune tidak tersedia di server' };
+  const res = await runCommand(bins.lune, ['run', join(ENGINES_DIR, '45ms', '45ms.luau'), inputPath, outPath], { timeout: timeout || ENGINE_TIMEOUT_MS });
+  const out = readIfExists(outPath);
+  if (out && out.length > 40) return { ok: true, output: out, log: res.stdout + res.stderr };
+  return { ok: false, reason: '45ms tidak menghasilkan output: ' + (res.stderr || res.stdout || 'no output') };
+}
+
+async function runUnveilr(inputPath, outPath, timeout) {
+  const bins = availableBinaries();
+  if (!bins.lune) return { ok: false, reason: 'lune tidak tersedia di server' };
+  const res = await runCommand(
+    bins.lune,
+    ['run', join(ENGINES_DIR, 'unveilr', 'hi.luau'), `--file=${inputPath}`, '--raw', `--outfile=${outPath}`],
+    { timeout: timeout || 60_000 }
+  );
+  const out = readIfExists(outPath);
+  const successMarker = /\bprocess\.\s*(true|false)/.test(res.stdout) ? res.stdout.includes(', true') || res.stdout.includes(' true') : true;
+  if (out && out.length > 60 && successMarker) return { ok: true, output: out, log: res.stdout + res.stderr };
+  return { ok: false, reason: 'Unveilr tidak menghasilkan output: ' + (res.stderr || res.stdout || 'no output') };
+}
+
+async function runIronVeil(inputPath, outPath, timeout) {
+  const bins = availableBinaries();
+  if (!bins.node) return { ok: false, reason: 'node tidak tersedia di server' };
+  const res = await runCommand(bins.node, [join(ENGINES_DIR, 'ironveil', 'index.js'), inputPath, outPath], { timeout: timeout || 60_000 });
+  const out = readIfExists(outPath);
+  if (out) return { ok: true, output: out, log: res.stdout + res.stderr };
+  return { ok: false, reason: 'IronVeil-deobf gagal: ' + (res.stderr || res.stdout || 'no output') };
+}
+
+const ENGINE_LABELS = {
+  larry: 'Larry dumper.luau',
+  '45ms': '45ms dumper',
+  unveilr: 'UnveilR v1.0.6',
+  ironveil: 'IronVeil-deobf',
+  moonveil: 'Moonveil Devirtualizer',
+};
+
+const ENGINE_CASCADE = {
+  'luraph-v14': ['larry', '45ms', 'unveilr'],
+  'luraph-25ms': ['larry', '45ms', 'unveilr'],
+  'prometheus-ast': ['larry', '45ms', 'unveilr'],
+  'ironbrew-deobf': ['larry', '45ms', 'unveilr'],
+  'mimic-sandbox': ['larry', '45ms', 'unveilr'],
+  'ironveil-deobf': ['ironveil', 'larry', '45ms'],
+  'moonveil-devirt': ['moonveil', 'larry'],
+};
+
+const ENGINE_RUNNERS = {
+  larry: runLarry,
+  '45ms': run45ms,
+  unveilr: runUnveilr,
+  ironveil: runIronVeil,
+  moonveil: runMoonveil,
+};
 
 export async function runDump({ code, engine }) {
   const src = String(code || '').trim();
@@ -213,76 +272,72 @@ export async function runDump({ code, engine }) {
   const outPath = join(TMP_DIR, `out_${id}.lua`);
 
   try {
-    let result = null;
-    let notes = [];
-
-    if (requested === 'moonveil-devirt') {
-      const r = await runMoonveil(inputPath, outPath);
-      if (r.ok) {
-        result = { deobfuscatedCode: r.output, engine: 'Moonveil Devirtualizer', httpLogs: [], constants: [] };
-      } else {
-        notes.push(r.reason);
-      }
-    } else if (['luraph-v14', 'luraph-25ms', 'prometheus-ast', 'ironbrew-deobf', 'mimic-sandbox'].includes(requested)) {
-      const r = await runLarry(inputPath, outPath);
-      if (r.ok) {
-        result = { deobfuscatedCode: r.output, engine: 'Larry dumper.luau', httpLogs: [], constants: [] };
-      } else {
-        notes.push(r.reason);
-      }
-    }
-
-    // Static analysis is always run in parallel with engine output
+    // Static analysis is always available; proven engines run as a cascade.
     const staticRes = staticAnalyze(src);
-
-    if (result) {
-      result.httpLogs = staticRes.httpLogs;
-      result.constants = staticRes.constants;
-      const readable = isLikelyReadableLua(src);
-      let combined;
-      if (readable && !staticRes.payloadExtracted) {
-        // Script sudah terbaca: source asli lebih berguna daripada trace.
-        combined =
-          `-- [Script ini sudah terbaca — bukan ter-obfuscate berat.]\n` +
-          `-- Di bawah = source asli (utuh). Trace engine ${result.engine} ada di lampiran.\n\n` +
-          src +
-          `\n\n-- [Lampiran: trace engine proven ${result.engine}]\n\n` +
-          result.deobfuscatedCode;
-      } else {
-        combined =
-          `-- [Hasil dari engine proven: ${result.engine}]\n\n` +
-          result.deobfuscatedCode +
-          (staticRes.payloadExtracted
-            ? `\n\n-- [Lampiran analisis statis]\n\n${staticRes.deobfuscatedCode}`
-            : '');
+    const cascade =
+      ENGINE_CASCADE[requested] ||
+      (requested === 'bytearray-unpacker' || requested === 'httplog-interceptor' ? [] : ['larry', '45ms', 'unveilr']);
+    const engineOuts = []; // { name, output }
+    const engineNotes = [];
+    let primaryDone = false;
+    for (const name of cascade) {
+      const runner = ENGINE_RUNNERS[name];
+      if (!runner) continue;
+      const isPrimary = !primaryDone;
+      const budget = isPrimary ? ENGINE_TIMEOUT_MS : 30_000;
+      const outPathN = join(TMP_DIR, `out_${id}_${name}.lua`);
+      try {
+        const r = await runner(inputPath, outPathN, budget);
+        if (r.ok && r.output) {
+          engineOuts.push({ name, output: r.output });
+          primaryDone = true;
+        } else {
+          engineNotes.push(r.reason);
+        }
+      } catch (err) {
+        engineNotes.push(`${name}: ${err.message}`);
       }
-      const built = buildResult({
-        detection,
-        code: src,
-        deobfuscatedCode: combined,
-        httpLogs: staticRes.httpLogs,
-        constants: staticRes.constants,
-        notes,
-        engine: result.engine,
-      });
-      built.executionTimeMs = Date.now() - start;
-      return built;
+      if (primaryDone && engineOuts.length > 1) break; // primary + 1 extra cukup
     }
 
-    // Fallback: pure static analysis (honest)
+    const readable = isLikelyReadableLua(src);
+    const primary = engineOuts[0];
+    const combined = (() => {
+      if (readable && !staticRes.payloadExtracted) {
+        const appendixes = engineOuts
+          .map((e) => `-- [Lampiran: ${ENGINE_LABELS[e.name] || e.name}]\n\n${e.output}`)
+          .join('\n\n');
+        return (
+          `-- [Script ini sudah terbaca — bukan ter-obfuscate berat.]\n` +
+          `-- Di bawah = source asli (utuh). Trace engine proven ada di lampiran.\n\n${src}` +
+          (appendixes ? `\n\n${appendixes}` : '')
+        );
+      }
+      const parts = [];
+      if (primary) parts.push(`-- [Hasil dari engine proven: ${ENGINE_LABELS[primary.name] || primary.name}]\n\n${primary.output}`);
+      for (const e of engineOuts.slice(1)) parts.push(`-- [Hasil tambahan: ${ENGINE_LABELS[e.name] || e.name}]\n\n${e.output}`);
+      if (staticRes.payloadExtracted) parts.push(`-- [Lampiran analisis statis]\n\n${staticRes.deobfuscatedCode}`);
+      return parts.join('\n\n') || staticRes.deobfuscatedCode;
+    })();
+
+    const engineName = primary ? ENGINE_LABELS[primary.name] || primary.name : `${engineToDisplayName(detection.engine)} (Statis)`;
     const built = buildResult({
       detection,
       code: src,
-      deobfuscatedCode: staticRes.deobfuscatedCode,
+      deobfuscatedCode: combined,
       httpLogs: staticRes.httpLogs,
       constants: staticRes.constants,
       notes: [
-        ...notes,
-        bins.lune ? '' : 'Dumper Larry tidak tersedia (lune belum terpasang) — memakai analisis statis.',
-        bins.python3 ? '' : 'Moonveil tidak tersedia (python3 belum terpasang).',
-        bins.luau ? '' : 'luau CLI belum terpasang — Moonveil hanya bisa analisis statis.',
+        ...engineNotes,
+        ...(engineOuts.length === 0
+          ? [
+              bins.lune ? '' : 'Engine lune tidak tersedia — memakai analisis statis.',
+              bins.python3 ? '' : 'Moonveil tidak tersedia (python3 belum terpasang).',
+              bins.node ? '' : 'IronVeil tidak tersedia (node belum terpasang).',
+            ]
+          : []),
       ].filter(Boolean),
-      engine: `${engineToDisplayName(detection.engine)} (Statis)`,
+      engine: engineName,
     });
     built.executionTimeMs = Date.now() - start;
     return built;
@@ -290,6 +345,7 @@ export async function runDump({ code, engine }) {
     try {
       rmSync(inputPath, { force: true });
       rmSync(outPath, { force: true });
+      for (const f of readAllFromDir(TMP_DIR, `out_${id}_`)) rmSync(f.file, { force: true });
     } catch {
       // ignore cleanup errors
     }

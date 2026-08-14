@@ -494,11 +494,13 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 <option value="moonveil-devirt">Moonveil Devirtualizer (moonveil_decompile.py)</option>
                 <option value="prometheus-ast">Prometheus / WeAreDevs Unpacker</option>
                 <option value="ironbrew-deobf">IronBrew Deserializer</option>
+                <option value="ironveil-deobf">IronVeil Deobfuscator (statis, cepat)</option>
                 <option value="bytearray-unpacker">Byte Array Unpacker (cepat, tanpa backend)</option>
               </select>
               <p className="text-[10px] text-[var(--text-40)] leading-relaxed">
-                Engine penuh (Larry/Moonveil) dijalankan di server backend. Kalau backend sedang
-                tidur (free plan), otomatis memakai analisis statis browser.
+                Engine penuh (Larry, 45ms, UnveilR, IronVeil, Moonveil) dijalankan di server backend
+                secara cascade. Kalau backend sedang tidur (free plan), otomatis memakai analisis
+                statis browser.
               </p>
             </div>
 

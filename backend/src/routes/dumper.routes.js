@@ -12,6 +12,9 @@ router.get('/dumper/status', (req, res) => {
     binaries: bins,
     engines: {
       larry: !!bins.lune,
+      '45ms': !!bins.lune,
+      unveilr: !!bins.lune,
+      ironveil: !!bins.node,
       moonveil: !!bins.python3 && !!bins.luau,
       static: true,
     },
