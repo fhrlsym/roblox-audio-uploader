@@ -1,5 +1,6 @@
 export type DumperEngine =
   | 'auto'
+  | 'wearedevs-deobf'
   | 'moonveil-devirt'
   | 'luraph-v14'
   | 'luraph-25ms'

@@ -38,7 +38,7 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
   let vmTraces: VMTraceEntry[] | undefined = undefined;
   let finalCode = '';
 
-  // Helper to extract HTTP URLs from source
+  // Extract HTTP URLs from source
   const urlRegex = /(https?:\/\/[^\s"'`\)]+)/gi;
   let urlMatch: RegExpExecArray | null;
   const seenUrls = new Set<string>();
@@ -60,6 +60,14 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
 
   // 2. Dispatch to designated engine
   switch (effectiveEngine) {
+    case 'wearedevs-deobf':
+    case 'prometheus-ast': {
+      const res = deobfuscatePrometheus(rawSource);
+      finalCode = res.code;
+      constants.push(...res.constants);
+      break;
+    }
+
     case 'moonveil-devirt': {
       const res = decompileMoonveil(rawSource);
       finalCode = res.code;
@@ -76,15 +84,7 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
       break;
     }
 
-    case 'prometheus-ast': {
-      const res = deobfuscatePrometheus(rawSource);
-      finalCode = res.code;
-      constants.push(...res.constants);
-      break;
-    }
-
     case 'bytearray-unpacker': {
-      // Decode string.char sequences & numeric byte tables
       let decoded = rawSource;
       const charRegex = /string\.char\s*\(\s*([0-9,\s]+)\s*\)/g;
       let cMatch: RegExpExecArray | null;
@@ -107,7 +107,6 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
         }
       }
 
-      // Check for loadstring(payload)
       const loadstringMatch = /loadstring\s*\(\s*("[^"]+")\s*\)/i.exec(decoded);
       if (loadstringMatch && loadstringMatch[1]) {
         try {
@@ -123,9 +122,7 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
     }
 
     case 'ironbrew-deobf': {
-      // IronBrew deobfuscator
       const header = '-- [Decompiled using IronBrew Deserializer Engine (larry old src/ironbrew)]\n\n';
-      // Extract string constants
       const stringRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'/g;
       let sMatch: RegExpExecArray | null;
       while ((sMatch = stringRegex.exec(rawSource)) !== null) {
@@ -144,7 +141,6 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
     }
 
     case 'httplog-interceptor': {
-      // HTTP & Webhook interceptor
       const lines: string[] = [];
       lines.push('-- [Captured via 25ms HTTP & Webhook Interceptor Engine]\n');
       lines.push(`-- Total Intercepted Endpoints: ${httpLogs.length}`);
@@ -161,16 +157,14 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
     case 'revea-env':
     case 'mimic-sandbox':
     default: {
-      // Mimic V3 Universal Sandbox Emulation
       const lines: string[] = [];
-      lines.push('-- [Reconstructed via Mimic V3 Universal Luau Sandbox Emulator]\n');
-      lines.push('local _ENV = getfenv()');
+      lines.push(`-- [Reconstructed via ${detection.engineName}]\n`);
+      lines.push('local _ENV = getfenv and getfenv() or _ENV');
       lines.push('local game = _ENV.game or game');
       lines.push('local workspace = _ENV.workspace or workspace');
       lines.push('local task = _ENV.task or task');
       lines.push('');
 
-      // Extract literal constants
       const strRegex = /"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'/g;
       let sMatch: RegExpExecArray | null;
       const seen = new Set<string>();
@@ -188,7 +182,6 @@ export function runDumperSandbox(sourceCode: string, engineChoice: DumperEngine 
         }
       }
 
-      // Check if source contains loadstring
       const lsMatch = /loadstring\s*\(\s*([^\)]+)\s*\)/i.exec(rawSource);
       if (lsMatch && lsMatch[1]) {
         lines.push('-- Intercepted Dynamic loadstring() Invocation:');

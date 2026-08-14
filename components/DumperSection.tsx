@@ -448,10 +448,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
               >
                 <option value="auto">Auto-Detect (Rekomendasi: {detection.engineName})</option>
+                <option value="prometheus-ast">Prometheus / WeAreDevs AST &amp; VM Unpacker</option>
                 <option value="moonveil-devirt">Moonveil VM Devirtualizer (2zvh/moonveilvro)</option>
                 <option value="luraph-v14">Luraph v14.x Proto Dumper (2zvh/-)</option>
                 <option value="luraph-25ms">25ms Luraph Dumper Engine</option>
-                <option value="prometheus-ast">Prometheus AST Unparser (Larry Engine)</option>
                 <option value="ironbrew-deobf">IronBrew 1 &amp; 2 Deserializer</option>
                 <option value="bytearray-unpacker">Byte Array &amp; Char Unpacker</option>
                 <option value="httplog-interceptor">25ms HTTP &amp; Webhook Interceptor</option>
