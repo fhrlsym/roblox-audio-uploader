@@ -79,7 +79,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
                 onClick={() => setShowGitHubModal(true)}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
               >
-                <GitHubIcon className="w-3 h-3" />
+                <GitHubIcon className="w-3.5 h-3.5" />
                 Sync ke GitHub ({activeCount})
               </button>
 

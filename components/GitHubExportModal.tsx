@@ -142,7 +142,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
           assetId: cleanId || 0,
           name: s.name || `Song_${cleanId}`,
           playbackSpeed: speed,
-          selected: true,
+          selected: false,
         };
       });
       setItems(mapped);
@@ -479,16 +479,16 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ duration: 0.2 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden"
+        className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden my-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-[var(--line)]">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--line)] shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
+            <div className="w-10 h-10 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
               <GitHubIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-[var(--text)] tracking-tight">
+              <h3 className="font-serif text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
                 Sync ke GitHub (S2 Music)
               </h3>
               <p className="text-xs text-[var(--text-45)]">
@@ -513,7 +513,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
             <button
               type="button"
               onClick={onClose}
-              className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition"
+              className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-lg hover:bg-[var(--surface)]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -527,7 +527,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden border-b border-[var(--line)] bg-[var(--surface-50)] p-4 space-y-3"
+              className="overflow-hidden border-b border-[var(--line)] bg-[var(--surface-50)] p-4 space-y-3 shrink-0"
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-[var(--text)] flex items-center gap-1.5">
@@ -585,7 +585,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs }: GitHubExpo
         </AnimatePresence>
 
         {/* Content Body */}
-        <div className="p-5 space-y-4 overflow-y-auto max-h-[60vh]">
+        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
           {/* Target File and Category Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
             {/* Target JSON Map File */}

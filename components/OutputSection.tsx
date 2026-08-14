@@ -21,6 +21,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [exportSongs, setExportSongs] = useState<ExportableSong[]>([]);
+  const [uploadedCompletedList, setUploadedCompletedList] = useState<ExportableSong[]>([]);
 
   const handleDownload = (file: TunedAudioFile) => {
     const url = URL.createObjectURL(file.blob);
@@ -44,7 +45,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   };
 
   const openGitHubSyncForAll = () => {
-    const songs: ExportableSong[] = tunedFiles
+    const activeFromTuned = tunedFiles
       .filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId)
       .map((f) => ({
         assetId: uploadResults[f.id]!.assetId!,
@@ -52,11 +53,19 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         playbackSpeed: (1 / f.speed).toFixed(4),
         originalSpeed: f.speed,
       }));
-    if (songs.length === 0) {
+
+    const all: ExportableSong[] = [...activeFromTuned];
+    for (const song of uploadedCompletedList) {
+      if (!all.some((s) => s.assetId === song.assetId)) {
+        all.push(song);
+      }
+    }
+
+    if (all.length === 0) {
       toast('Belum ada lagu yang berhasil di-upload ke Roblox', 'error');
       return;
     }
-    setExportSongs(songs);
+    setExportSongs(all);
     setShowGitHubModal(true);
   };
 
@@ -134,6 +143,17 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           [file.id]: { filename: file.tunedName, assetId, status, success: true },
         }));
 
+        const newExportable: ExportableSong = {
+          assetId,
+          name: displayName,
+          playbackSpeed: (1 / file.speed).toFixed(4),
+          originalSpeed: file.speed,
+        };
+        setUploadedCompletedList((prev) => {
+          const exists = prev.some((s) => s.assetId === assetId);
+          return exists ? prev : [newExportable, ...prev];
+        });
+
         if (onUploadSuccess) {
           onUploadSuccess({
             id: `${Date.now()}-${file.id}`,
@@ -199,10 +219,23 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
   const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;
   const uploadingAny = Object.values(uploading).some(Boolean);
+  const totalCompletedCount = uploadedCompletedList.length + tunedFiles.filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId && !uploadedCompletedList.some(u => u.assetId === uploadResults[f.id]?.assetId)).length;
 
   return (
     <div className={CARD + ' p-4'}>
-      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">3. Output & Upload</h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">3. Output &amp; Upload</h2>
+        {totalCompletedCount > 0 && (
+          <button
+            type="button"
+            onClick={openGitHubSyncForAll}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+          >
+            <GitHubIcon className="w-3.5 h-3.5" />
+            Sync ke GitHub ({totalCompletedCount})
+          </button>
+        )}
+      </div>
 
       {tunedFiles.length === 0 ? (
         <div className="rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
