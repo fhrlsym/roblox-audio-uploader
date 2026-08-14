@@ -52,26 +52,33 @@ async function runYtdl(args, cookiesFile) {
   return stdout;
 }
 
-async function runYtdlWithClients(args, cookiesFile, clients = YOUTUBE_CLIENTS) {
+async function runYtdlWithClients(args, cookiesFile) {
   let lastError;
-  const candidates = cookiesFile
-    ? ['web', 'mweb', 'tvhtml5', 'web_safari', 'web_creator', 'default']
-    : ['android', 'ios', 'tvhtml5', 'mweb', 'default'];
-  if (!candidates.includes('default')) {
-    candidates.push('default');
-  }
+  const candidates = [
+    'android,ios',
+    'ios',
+    'android',
+    'mweb',
+    'tvhtml5',
+    'web_safari',
+    'web_creator',
+    'web',
+    'default',
+  ];
+
   for (const client of candidates) {
     try {
       if (client === 'default') {
         return await runYtdl(args, cookiesFile);
       }
-      return await runYtdl([...args, '--extractor-args', `youtube:player_client=${client}`], cookiesFile);
+      return await runYtdl([
+        ...args,
+        '--extractor-args',
+        `youtube:player_client=${client};player_skip=configs`,
+      ], cookiesFile);
     } catch (err) {
       lastError = err;
-      const msg = err.message || '';
-      if (!isBotError(msg) && !isFormatError(msg)) {
-        throw err;
-      }
+      // Continue trying other clients
     }
   }
   throw lastError;
