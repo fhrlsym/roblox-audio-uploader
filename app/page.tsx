@@ -7,6 +7,7 @@ import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import SpooferSection from '../components/SpooferSection';
+import DumperSection from '../components/DumperSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
@@ -16,7 +17,7 @@ import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Terminal } from 'lucide-react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -39,7 +40,7 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
 ];
 
 export default function Home() {
-  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer'>('audio-master');
+  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'dumper'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -321,6 +322,15 @@ export default function Home() {
                   <Sparkles className="w-3.5 h-3.5 shrink-0" />
                   <span className="whitespace-nowrap">Spoofer</span>
                 </button>
+                <button
+                  onClick={() => setActiveTool('dumper')}
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    activeTool === 'dumper' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <Terminal className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Dumper</span>
+                </button>
               </div>
 
               {/* Header Right Actions (Account Dropdown + Theme Picker) */}
@@ -529,21 +539,30 @@ export default function Home() {
             <div className="flex sm:hidden items-center justify-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] w-full mb-1">
               <button
                 onClick={() => setActiveTool('audio-master')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                 }`}
               >
                 <Music className="w-3.5 h-3.5 shrink-0" />
-                <span>Audio Master</span>
+                <span>Audio</span>
               </button>
               <button
                 onClick={() => setActiveTool('spoofer')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
                 }`}
               >
                 <Sparkles className="w-3.5 h-3.5 shrink-0" />
                 <span>Spoofer</span>
+              </button>
+              <button
+                onClick={() => setActiveTool('dumper')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTool === 'dumper' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Terminal className="w-3.5 h-3.5 shrink-0" />
+                <span>Dumper</span>
               </button>
             </div>
           </div>
@@ -552,7 +571,7 @@ export default function Home() {
         {/* Main Application Workbench */}
         <main className="max-w-7xl mx-auto px-4 py-6">
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
-          <div className={activeTool === 'spoofer' ? 'hidden' : 'space-y-6'}>
+          <div className={activeTool === 'audio-master' ? 'space-y-6' : 'hidden'}>
             {/* Top Overview & Stats Bar */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               <div className="grid grid-cols-3 gap-2.5 sm:gap-3 flex-1">
@@ -769,6 +788,11 @@ export default function Home() {
               selectedAccount={selectedAccount}
               backendUrl={BACKEND_URL}
             />
+          </div>
+
+          {/* Dumper Tool (selalu ter-mount agar state tidak reset) */}
+          <div className={activeTool === 'dumper' ? 'space-y-6' : 'hidden'}>
+            <DumperSection backendUrl={BACKEND_URL} />
           </div>
         </main>
 
