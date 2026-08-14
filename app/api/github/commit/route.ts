@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.NEXT_PUBLIC_GITHUB_TOKEN || '';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'fhrlsym/minang-music';
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 const DEFAULT_COVER = 'rbxassetid://94215284059157';
@@ -25,6 +25,13 @@ function normalizeCoverAssetId(val: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!GITHUB_TOKEN) {
+      return NextResponse.json(
+        { error: 'GITHUB_TOKEN belum diatur pada Environment Variables server (Vercel/Railway/Hosting).' },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { mapFilename, genre, songs, isNewMap, newMapName, coverAssetId } = body;
 
@@ -50,12 +57,10 @@ export async function POST(request: NextRequest) {
     const effectiveCover = normalizeCoverAssetId(coverAssetId);
 
     const headers: Record<string, string> = {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
       Accept: 'application/vnd.github.v3+json',
       'Content-Type': 'application/json',
     };
-    if (GITHUB_TOKEN) {
-      headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
-    }
 
     // 1. Fetch current map JSON if exists
     let fileSha: string | undefined = undefined;

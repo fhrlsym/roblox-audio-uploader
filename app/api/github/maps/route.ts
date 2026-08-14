@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN || '';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.NEXT_PUBLIC_GITHUB_TOKEN || '';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'fhrlsym/minang-music';
 
 function formatMapDisplayName(filename: string): string {
@@ -12,13 +12,18 @@ function formatMapDisplayName(filename: string): string {
 
 export async function GET() {
   try {
+    if (!GITHUB_TOKEN) {
+      return NextResponse.json(
+        { error: 'GITHUB_TOKEN belum diatur pada Environment Variables server (Vercel/Railway/Hosting).' },
+        { status: 500 }
+      );
+    }
+
     const [owner, repo] = GITHUB_REPO.split('/');
     const headers: Record<string, string> = {
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
       Accept: 'application/vnd.github.v3+json',
     };
-    if (GITHUB_TOKEN) {
-      headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
-    }
 
     const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`, {
       headers,

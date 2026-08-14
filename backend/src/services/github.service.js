@@ -17,7 +17,22 @@ export function sanitizeMapFilename(name) {
   return s.startsWith('music') ? `${s}.json` : `music${s}.json`;
 }
 
+export function normalizeCoverAssetId(val) {
+  let clean = String(val || '').trim();
+  if (!clean) return DEFAULT_COVER;
+  clean = clean.replace(/^(rbxassetid:\/\/+|rbxassetid:\/+|https?:\/\/)/i, '');
+  clean = clean.replace(/^\/+/, '');
+  if (/^\d+$/.test(clean)) {
+    return `rbxassetid://${clean}`;
+  }
+  return clean ? `rbxassetid://${clean}` : DEFAULT_COVER;
+}
+
 export async function fetchGitHubMaps() {
+  if (!GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN belum diatur pada environment backend.');
+  }
+
   const [owner, repo] = GITHUB_REPO.split('/');
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/`, {
     headers: {
@@ -45,6 +60,8 @@ export async function fetchGitHubMaps() {
 }
 
 export async function fetchGitHubGenres(mapFilename) {
+  if (!GITHUB_TOKEN) return [];
+
   const [owner, repo] = GITHUB_REPO.split('/');
   const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${mapFilename}?ref=${GITHUB_BRANCH}`, {
     headers: {
@@ -73,12 +90,16 @@ export async function fetchGitHubGenres(mapFilename) {
 }
 
 export async function commitSongsToGitHub({ mapFilename, genre, songs, coverAssetId = DEFAULT_COVER }) {
+  if (!GITHUB_TOKEN) {
+    throw new Error('GITHUB_TOKEN belum diatur pada environment backend.');
+  }
   if (!mapFilename) throw new Error('Nama file map tidak boleh kosong');
   if (!genre) throw new Error('Nama genre tidak boleh kosong');
   if (!Array.isArray(songs) || songs.length === 0) throw new Error('Tidak ada lagu yang dipilih untuk di-sync');
 
   const [owner, repo] = GITHUB_REPO.split('/');
   const targetGenre = genre.trim().toUpperCase();
+  const effectiveCover = normalizeCoverAssetId(coverAssetId);
 
   // 1. Get existing file sha and content if file exists
   let fileSha;
@@ -111,7 +132,7 @@ export async function commitSongsToGitHub({ mapFilename, genre, songs, coverAsse
   // 2. Ensure target genre structure exists
   if (!existingData[targetGenre]) {
     existingData[targetGenre] = {
-      Cover: coverAssetId || DEFAULT_COVER,
+      Cover: effectiveCover,
       Songs: [],
     };
   }
