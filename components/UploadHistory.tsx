@@ -16,6 +16,7 @@ interface UploadHistoryProps {
   onRefresh?: (assetId: string) => Promise<void>;
   refreshingIds?: string[];
   onOpenGitHubSync?: () => void;
+  limit?: number;
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -24,10 +25,11 @@ function StatusIcon({ status }: { status: string }) {
   return null;
 }
 
-export default function UploadHistory({ history, onClose, onRefresh, refreshingIds = [], onOpenGitHubSync }: UploadHistoryProps) {
+export default function UploadHistory({ history, onClose, onRefresh, refreshingIds = [], onOpenGitHubSync, limit = 5 }: UploadHistoryProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Failed' | 'Copyright'>('All');
+  const [showAll, setShowAll] = useState(false);
 
   const copyAssetId = (assetId: string) => {
     navigator.clipboard.writeText(assetId);
@@ -53,6 +55,9 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
     const matchesSearch = !q || nameStr.includes(q) || idStr.includes(q);
     return matchesStatus && matchesSearch;
   });
+
+  const displayHistory = showAll ? filteredHistory : filteredHistory.slice(0, limit);
+  const hasMore = filteredHistory.length > limit;
 
   const activeCount = history.filter((r) => r.status === 'Active').length;
 
@@ -149,7 +154,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
         </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {filteredHistory.map((record, index) => {
+          {displayHistory.map((record, index) => {
             const isPending = record.status === 'Pending';
             return (
               <motion.div
@@ -211,6 +216,26 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
               </motion.div>
             );
           })}
+          
+          {hasMore && !showAll && (
+            <button
+              type="button"
+              onClick={() => setShowAll(true)}
+              className="w-full py-2 text-xs font-medium text-[var(--accent-soft)] hover:text-[var(--accent)] transition"
+            >
+              Lihat semua ({filteredHistory.length - limit} lainnya)
+            </button>
+          )}
+          
+          {showAll && hasMore && (
+            <button
+              type="button"
+              onClick={() => setShowAll(false)}
+              className="w-full py-2 text-xs font-medium text-[var(--text-50)] hover:text-[var(--text)] transition"
+            >
+              Tampilkan lebih sedikit
+            </button>
+          )}
         </div>
       )}
     </div>
