@@ -118,10 +118,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           });
         }
         toast(`Berhasil mengunggah "${displayName}" ke Roblox!`, 'success');
-        // Auto remove tuned file from queue so step counts stay accurate
-        setTimeout(() => {
-          onRemoveTuned(file.id);
-        }, 1500);
         return true;
       } else {
         setUploadResults((prev) => ({
@@ -212,14 +208,15 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => handleDownload(file)}
-                      className="p-1.5 text-[var(--text-40)] transition hover:text-[var(--accent-soft)]"
-                      title="Unduh MP3"
+                      className="rounded-lg p-1.5 text-[var(--text-40)] transition hover:bg-[var(--surface-strong)] hover:text-[var(--accent-soft)]"
+                      aria-label={`Unduh ${cleanSongTitle(file.tunedName)}`}
                     >
                       <Download className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onRemoveTuned(file.id)}
-                      className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                      className="rounded-lg p-1.5 text-[var(--text-40)] transition hover:bg-[var(--surface-strong)] hover:text-rose-300"
+                      aria-label={`Hapus ${cleanSongTitle(file.tunedName)}`}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>

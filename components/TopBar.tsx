@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, Music, Palette, Plus, Trash2, User } from 'lucide-react';
+import { Building2, Check, ChevronDown, Monitor, Music, Palette, Plus, Trash2, User } from 'lucide-react';
 import type { SavedAccount } from '../types/audio';
 
 interface ThemeOption {
@@ -71,12 +71,16 @@ export default function TopBar({
                   animate={{ opacity: 1, transform: 'translateY(0) scale(1)' }}
                   exit={{ opacity: 0, transform: 'translateY(-2px) scale(0.98)' }}
                   transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
-                  className="absolute right-0 top-full mt-2 max-h-[70vh] w-48 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-2xl"
+                  role="menu"
+                  aria-label="Pilihan tema"
+                  className="absolute right-0 top-full mt-2 max-h-[70vh] w-48 origin-top-right overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-xl"
                 >
                   {themes.map((option) => (
                     <button
                       key={option.id}
                       type="button"
+                      role="menuitemradio"
+                      aria-checked={theme === option.id}
                       onClick={() => onSelectTheme(option.id)}
                       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors ${
                         theme === option.id
@@ -84,7 +88,13 @@ export default function TopBar({
                           : 'text-[var(--text-70)] hover:bg-[var(--surface)] hover:text-[var(--text)]'
                       }`}
                     >
-                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--line)]" style={{ background: option.swatch }} />
+                      {option.id === 'system' ? (
+                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--text-50)]">
+                          <Monitor className="h-3.5 w-3.5" />
+                        </span>
+                      ) : (
+                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--line)]" style={{ background: option.swatch }} />
+                      )}
                       <span className="flex-1">{option.label}</span>
                       {theme === option.id && <Check className="h-3.5 w-3.5 text-[var(--accent-strong)]" />}
                     </button>
@@ -99,6 +109,8 @@ export default function TopBar({
               type="button"
               onClick={onToggleAccountMenu}
               aria-expanded={accountMenuOpen}
+              aria-haspopup="menu"
+              aria-label={selectedAccount ? `Akun target: ${selectedAccount.name}` : 'Pilih akun target'}
               className="flex h-8 max-w-[170px] items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 text-left transition-colors hover:border-[var(--accent-25)] active:scale-[0.98] sm:max-w-[230px]"
             >
               {selectedAccount?.thumbnail ? (

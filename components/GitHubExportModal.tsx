@@ -392,7 +392,10 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-3 sm:p-6"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="github-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-6"
       onClick={onClose}
     >
       <motion.div
@@ -410,7 +413,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               <GitHubIcon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
+              <h3 id="github-modal-title" className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
                 Sync ke GitHub (S2 Music)
               </h3>
               <p className="text-xs text-[var(--text-45)]">
@@ -422,6 +425,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
           <button
             type="button"
             onClick={onClose}
+            aria-label="Tutup modal GitHub"
             className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-xl hover:bg-[var(--surface)]"
           >
             <X className="w-5 h-5" />

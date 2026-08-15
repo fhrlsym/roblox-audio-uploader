@@ -33,9 +33,17 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} h-full antialiased`}
     >
       <head>
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `try{var s=JSON.parse(localStorage.getItem('audioUploader_settings')||'{}');document.documentElement.setAttribute('data-theme',s.theme||'gold-dark')}catch(e){document.documentElement.setAttribute('data-theme','gold-dark')}`,
+          }}
+        />
         <Script
           src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"
           strategy="beforeInteractive"

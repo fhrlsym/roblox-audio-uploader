@@ -404,7 +404,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                 setYoutubeInput('');
               }}
               className={BTN_GHOST + ' shrink-0 px-3'}
-              title="Tambah link"
+              aria-label="Tambah link YouTube"
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -552,7 +552,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                 setSoundcloudInput('');
               }}
               className={BTN_GHOST + ' shrink-0 px-3'}
-              title="Tambah link"
+              aria-label="Tambah link SoundCloud"
             >
               <Plus className="w-4 h-4" />
             </button>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Lock, Music, Sparkles, Terminal } from 'lucide-react';
+import { Copy, FileCode, Lock, Music } from 'lucide-react';
 
 type Tool = 'audio-master' | 'spoofer' | 'dumper' | 'obfuscator';
 
@@ -11,8 +11,8 @@ interface SidebarProps {
 
 const tools = [
   { id: 'audio-master' as Tool, label: 'Audio', desktopLabel: 'Audio Master', icon: Music },
-  { id: 'spoofer' as Tool, label: 'Spoofer', desktopLabel: 'Spoofer', icon: Sparkles },
-  { id: 'dumper' as Tool, label: 'Dumper', desktopLabel: 'Dumper', icon: Terminal },
+  { id: 'spoofer' as Tool, label: 'Spoofer', desktopLabel: 'Asset Spoofer', icon: Copy },
+  { id: 'dumper' as Tool, label: 'Dumper', desktopLabel: 'Script Dumper', icon: FileCode },
   { id: 'obfuscator' as Tool, label: 'Obfuscator', desktopLabel: 'Obfuscator', icon: Lock },
 ];
 
@@ -54,7 +54,10 @@ export default function Sidebar({ activeTool, onToolChange }: SidebarProps) {
         </nav>
       </aside>
 
-      <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 border-t border-[var(--line)] bg-[var(--panel)]/95 px-2 backdrop-blur-xl lg:hidden">
+      <nav
+        className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[var(--line)] bg-[var(--panel)]/95 px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden"
+        style={{ height: 'calc(4rem + env(safe-area-inset-bottom))' }}
+      >
         {tools.map((tool) => {
           const Icon = tool.icon;
           const active = activeTool === tool.id;

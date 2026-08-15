@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, Music, Sparkles, Wand2 } from 'lucide-react';
+import { Check, CheckCircle2, ChevronDown, CloudUpload, History as HistoryIcon, LockKeyhole, Music, ShieldAlert, SlidersHorizontal } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -27,19 +27,13 @@ const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
 const SETTINGS_KEY = 'audioUploader_settings';
 
 const THEMES: { id: string; label: string; swatch: string }[] = [
-  { id: 'gold-dark', label: 'Gold Dark', swatch: 'linear-gradient(135deg, #f5d77f, #b8860b)' },
+  { id: 'system', label: 'System', swatch: 'linear-gradient(135deg, #34d399, #a67c00)' },
+  { id: 'gold-dark', label: 'Gold Dark', swatch: 'linear-gradient(135deg, #f0cd6b, #b8912a)' },
   { id: 'light', label: 'Light', swatch: 'linear-gradient(135deg, #ffffff, #e2e8f0)' },
-  { id: 'crimson', label: 'Crimson', swatch: 'linear-gradient(135deg, #ef6a6a, #8b0f2b)' },
-  { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg, #6ee7b7, #047857)' },
-  { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b5a3ff, #4c1d95)' },
-  { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #67e8f9, #0e7490)' },
-  { id: 'sunset', label: 'Sunset', swatch: 'linear-gradient(135deg, #fda4af, #c2410c)' },
-  { id: 'violet', label: 'Violet', swatch: 'linear-gradient(135deg, #c4b5fd, #53389e)' },
-  { id: 'rose', label: 'Rose', swatch: 'linear-gradient(135deg, #f9a8d4, #932e64)' },
+  { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg, #55e0ab, #1f8f68)' },
+  { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b0a4ff, #6a58d6)' },
+  { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #7dd3fc, #1f8fc9)' },
   { id: 'graphite', label: 'Graphite', swatch: 'linear-gradient(135deg, #cbd5e1, #465368)' },
-  { id: 'cyber', label: 'Cyber', swatch: 'linear-gradient(135deg, #67e8f9, #0e7490)' },
-  { id: 'light-ocean', label: 'Light Ocean', swatch: 'linear-gradient(135deg, #dbeafe, #0284c7)' },
-  { id: 'light-rose', label: 'Light Rose', swatch: 'linear-gradient(135deg, #fbcfe8, #db2777)' },
 ];
 
 export default function Home() {
@@ -194,94 +188,61 @@ export default function Home() {
   if (!unlocked) {
     return (
       <ToastProvider>
-        <div className="relative min-h-screen flex items-center justify-center bg-[var(--bg)] p-4 overflow-hidden">
-          {/* Ambient Accent Glow */}
-          <div
-            className="pointer-events-none absolute top-1/2 left-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-25 blur-[120px]"
-            style={{ background: 'var(--accent-soft)' }}
-          />
-          <div
-            className="absolute inset-0 opacity-[0.03] pointer-events-none"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 1px 1px, var(--text) 1px, transparent 0)',
-              backgroundSize: '28px 28px',
-            }}
-          />
-
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.4, ease: 'easeOut' }}
+        <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--bg)] p-4">
+          <div className="pointer-events-none absolute inset-0 opacity-[0.035]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, var(--text) 1px, transparent 0)', backgroundSize: '30px 30px' }} />
+          <motion.section
+            initial={{ opacity: 0, transform: 'translateY(12px) scale(0.98)' }}
+            animate={{ opacity: 1, transform: 'translateY(0) scale(1)' }}
+            transition={{ duration: 0.24, ease: [0.23, 1, 0.32, 1] }}
             className="relative w-full max-w-sm"
+            aria-labelledby="access-title"
           >
-            <div className={`${CARD} p-7 space-y-6 text-center shadow-2xl border border-[var(--line)] bg-[var(--panel)] backdrop-blur-xl`}>
-              {/* Logo — centered container */}
-              <motion.div
-                initial={{ scale: 0.7, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.2, type: 'spring', stiffness: 200, damping: 16 }}
-                className="flex flex-col items-center justify-center"
-              >
-                <div className="relative inline-block">
-                  <img
-                    src="/icon.svg"
-                    alt="S2 Studio"
-                    className="h-16 w-16 rounded-2xl shadow-xl border border-[var(--line)] object-cover"
-                  />
-                  <span className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--bg)] bg-[var(--emerald)] shadow-md">
-                    <Check className="w-3.5 h-3.5 text-[#000000] stroke-[3]" />
+            <div className={`${CARD} overflow-hidden`}>
+              <div className="border-b border-[var(--line)] px-6 py-6 sm:px-7">
+                <div className="mb-5 flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
+                    <Music className="h-5 w-5" />
                   </span>
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--text)]">S2 Studio</p>
+                    <p className="mt-0.5 text-xs text-[var(--text-45)]">Roblox audio workspace</p>
+                  </div>
                 </div>
-              </motion.div>
-
-              <div>
-                <h1 className="font-serif text-2xl font-bold tracking-tight text-[var(--text)]">S2 Studio</h1>
-                <p className="text-xs font-medium text-[var(--text-50)] mt-1">Audio Master &amp; Asset Spoofer</p>
-                <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[11px] font-semibold text-[var(--accent-strong)] shadow-sm">
-                  <Sparkles className="w-3 h-3" />
-                  Akses Terproteksi
-                </span>
+                <h1 id="access-title" className="text-2xl font-semibold tracking-[-0.035em] text-[var(--text)]">Welcome back</h1>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-50)]">Masukkan access code untuk membuka workspace.</p>
               </div>
 
-              <form onSubmit={handlePinSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <p className={`text-xs font-medium transition ${pinError ? 'text-[var(--danger)]' : 'text-[var(--text-40)]'}`}>
-                    {pinError ? 'PIN salah, coba lagi.' : 'Masukkan PIN untuk melanjutkan'}
-                  </p>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    pattern="[0-9]*"
-                    value={pin}
-                    onChange={(e) => {
-                      const onlyDigits = e.target.value.replace(/\D/g, '');
-                      setPin(onlyDigits.slice(0, 6));
-                      setPinError(false);
-                    }}
-                    placeholder="••••••"
-                    autoFocus
-                    className="w-full text-center text-3xl tracking-[0.6em] py-3 bg-[var(--surface-focus)] border border-[var(--line)] rounded-xl text-[var(--text)] focus:outline-none focus:border-[var(--accent-40)] focus:ring-1 focus:ring-[var(--accent-30)] placeholder:text-[var(--text-30)] transition"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={pin.length < 1}
-                  className={`${BTN_PRIMARY} w-full py-3 text-sm font-semibold`}
-                >
-                  <Lock className="w-4 h-4" />
-                  Buka Akses
+              <form onSubmit={handlePinSubmit} className="space-y-4 px-6 py-6 sm:px-7">
+                <label htmlFor="access-code" className="block text-xs font-medium text-[var(--text-70)]">Access code</label>
+                <input
+                  id="access-code"
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="[0-9]*"
+                  value={pin}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, '');
+                    setPin(onlyDigits.slice(0, 6));
+                    setPinError(false);
+                  }}
+                  placeholder="6-digit code"
+                  autoFocus
+                  aria-invalid={pinError}
+                  aria-describedby={pinError ? 'access-error' : undefined}
+                  className="w-full rounded-xl border border-[var(--line)] bg-[var(--surface-focus)] px-4 py-3 text-center font-mono text-lg tracking-[0.3em] text-[var(--text)] outline-none transition focus:border-[var(--accent-40)] focus:ring-2 focus:ring-[var(--accent-20)] placeholder:font-sans placeholder:text-sm placeholder:tracking-normal placeholder:text-[var(--text-30)]"
+                />
+                {pinError && <p id="access-error" className="text-xs font-medium text-[var(--danger)]">Code tidak valid. Periksa lalu coba lagi.</p>}
+                <button type="submit" disabled={pin.length !== 6} className={`${BTN_PRIMARY} w-full py-3`}>
+                  <LockKeyhole className="h-4 w-4" />
+                  Enter workspace
                 </button>
               </form>
             </div>
-
-            <p className="mt-6 text-center text-[11px] text-[var(--text-35)]">
-              Created &amp; developed by fhrlsym
-            </p>
-          </motion.div>
-        </div>
+            <p className="mt-5 text-center text-[11px] text-[var(--text-35)]">Built by fhrlsym</p>
+          </motion.section>
+        </main>
       </ToastProvider>
     );
   }
@@ -318,79 +279,63 @@ export default function Home() {
             <div className="max-w-[1400px] w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'audio-master' ? 'space-y-4' : 'hidden'}>
-            <section className="hero-panel relative overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 sm:px-7 sm:py-7">
-              <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--accent-10)] blur-3xl" />
-              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-                <div className="max-w-2xl">
-                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
-                    <Sparkles className="h-3 w-3" />
-                    Audio production workspace
-                  </span>
-                  <h2 className="mt-4 font-serif text-3xl font-semibold leading-none tracking-tight text-[var(--text)] sm:text-4xl">
-                    Dari lagu mentah jadi asset Roblox.
-                  </h2>
-                  <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-50)]">
-                    Ambil audio, atur karakter suaranya, lalu upload ke akun Roblox pilihanmu dalam satu alur yang rapi.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface-50)] p-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
+            <section className="hero-panel relative overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] px-5 py-5 sm:px-7 sm:py-6">
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
                     <Music className="h-5 w-5" />
-                  </div>
+                  </span>
                   <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)]">Sekarang</p>
-                    <p className="text-sm font-bold text-[var(--text)]">Langkah {activeStep} dari 3</p>
+                    <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Audio uploader</h2>
+                    <p className="mt-0.5 text-sm text-[var(--text-50)]">File, YouTube &amp; SoundCloud &rarr; Tune &rarr; Roblox</p>
                   </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-[var(--accent-soft)]" />
+                  <span className="text-[11px] font-semibold text-[var(--text-70)]">Step {activeStep} / 3</span>
                 </div>
               </div>
             </section>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                <div className={`${CARD} p-2.5 sm:p-3 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-40)] shimmer-bar" />
-                  <p className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider inline-flex items-center gap-1 text-[var(--text-45)]">
-                    <CloudUpload className="w-3 h-3 text-[var(--accent-soft)]" />
-                    Total
-                  </p>
-                  <p className="text-base sm:text-lg font-bold text-[var(--text)] mt-0.5">{statsLoading ? <span className="skeleton inline-block w-8 h-6 rounded-md" /> : <AnimatedCounter value={uploadStats.total} />}</p>
-                </div>
-                <div className={`${CARD} p-2.5 sm:p-3 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400 shimmer-bar" />
-                  <p className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider inline-flex items-center gap-1 text-[var(--text-45)]">
-                    <Check className="w-3 h-3 text-[var(--emerald)]" />
-                    Success
-                  </p>
-                  <p className="text-base sm:text-lg font-bold text-[var(--emerald)] mt-0.5">{statsLoading ? <span className="skeleton inline-block w-8 h-6 rounded-md" /> : <AnimatedCounter value={uploadStats.active} />}</p>
-                </div>
-                <div className={`${CARD} p-2.5 sm:p-3 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-rose-400 via-rose-500 to-rose-400 shimmer-bar" />
-                  <p className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider inline-flex items-center gap-1 text-[var(--text-45)]">
-                    <span className="w-2.5 h-2.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
-                    Copyright
-                  </p>
-                  <p className="text-base sm:text-lg font-bold text-[var(--danger)] mt-0.5">{statsLoading ? <span className="skeleton inline-block w-8 h-6 rounded-md" /> : <AnimatedCounter value={uploadStats.copyright} />}</p>
-                </div>
+              <div className={`${CARD} p-3 text-center`}>
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
+                  <CloudUpload className="h-3 w-3 text-[var(--accent-soft)]" />
+                  Total
+                </p>
+                <p className="mt-1 text-lg font-bold text-[var(--text)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.total} />}</p>
               </div>
+              <div className={`${CARD} p-3 text-center`}>
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
+                  <CheckCircle2 className="h-3 w-3 text-[var(--emerald)]" />
+                  Active
+                </p>
+                <p className="mt-1 text-lg font-bold text-[var(--emerald)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.active} />}</p>
+              </div>
+              <div className={`${CARD} p-3 text-center`}>
+                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
+                  <ShieldAlert className="h-3 w-3 text-[var(--danger)]" />
+                  Copyright
+                </p>
+                <p className="mt-1 text-lg font-bold text-[var(--danger)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.copyright} />}</p>
+              </div>
+            </div>
 
 
             {/* Stepper Navigation */}
-            <div className="max-w-2xl mx-auto py-1">
+            <div className="mx-auto max-w-2xl py-1">
               <div className="relative flex items-center justify-between">
-                {/* Background connector track */}
-                <div className="absolute left-[16.66%] right-[16.66%] top-[21px] h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)] z-0 pointer-events-none" />
-                {/* Animated progress connector */}
+                <div className="pointer-events-none absolute left-[16.66%] right-[16.66%] top-[19px] z-0 h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)]" />
                 <motion.div
-                  className="absolute top-[21px] h-[2px] -translate-y-1/2 rounded-full z-0 pointer-events-none overflow-hidden"
+                  className="pointer-events-none absolute top-[19px] z-0 h-[2px] -translate-y-1/2 rounded-full bg-[var(--accent)]"
                   style={{ left: '16.66%' }}
                   animate={{ width: `${(activeStep - 1) * 33.33}%` }}
-                  transition={{ type: 'spring', stiffness: 200, damping: 28 }}
-                >
-                  <div className="w-full h-full bg-gradient-to-r from-[var(--accent-soft)] via-[var(--accent)] to-[var(--accent-soft)] shimmer-bar" />
-                </motion.div>
+                  transition={{ type: 'spring', stiffness: 220, damping: 30 }}
+                />
                 {[
-                  { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
-                  { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
-                  { id: 3, label: 'Output & Upload', icon: CloudUpload, badge: 0 },
+                  { id: 1, label: 'Input', icon: Music, badge: rawFiles.length },
+                  { id: 2, label: 'Tuning', icon: SlidersHorizontal, badge: tunedFiles.length },
+                  { id: 3, label: 'Upload', icon: CloudUpload, badge: 0 },
                 ].map((step) => {
                   const Icon = step.icon;
                   const isActive = activeStep === step.id;
@@ -399,56 +344,24 @@ export default function Home() {
                     <button
                       key={step.id}
                       onClick={() => goToStep(step.id)}
-                      className="relative z-10 flex-1 flex flex-col items-center gap-2 py-1 select-none focus:outline-none"
+                      aria-current={isActive ? 'step' : undefined}
+                      className="relative z-10 flex flex-1 select-none flex-col items-center gap-2 rounded-lg py-1"
                     >
-                      <span className="relative">
-                        {/* Active glow ring pulse */}
-                        {isActive && (
-                          <motion.span
-                            className="absolute inset-0 rounded-full border-2 border-[var(--accent)]"
-                            initial={{ scale: 1, opacity: 0.6 }}
-                            animate={{ scale: 1.4, opacity: 0 }}
-                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
-                          />
-                        )}
-                        <span
-                          className={`relative z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
-                            isActive
-                              ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
-                              : isDone
-                                ? 'border-[var(--accent-soft)] bg-[var(--bg)] text-[var(--accent-strong)]'
-                                : 'border-[var(--line)] bg-[var(--bg)] text-[var(--text-40)]'
-                          }`}
-                        >
-                          {isDone ? (
-                            <motion.span
-                              initial={{ scale: 0, rotate: -90 }}
-                              animate={{ scale: 1, rotate: 0 }}
-                              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </motion.span>
-                          ) : isActive ? (
-                            <Icon className="w-4 h-4" />
-                          ) : (
-                            step.id
-                          )}
-                        </span>
-                      </span>
                       <span
-                        className={`flex items-center gap-1 text-[11px] font-semibold transition ${
-                          isActive ? 'text-[var(--accent-strong)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'
+                        className={`flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-colors duration-200 ${
+                          isActive
+                            ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
+                            : isDone
+                              ? 'border-[var(--accent)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
+                              : 'border-[var(--line)] bg-[var(--panel)] text-[var(--text-40)]'
                         }`}
                       >
+                        {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                      </span>
+                      <span className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-[var(--text)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'}`}>
                         <span>{step.label}</span>
                         {step.badge > 0 && (
-                          <span
-                            className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold leading-none ${
-                              isActive || isDone
-                                ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                                : 'bg-[var(--surface-strong)] text-[var(--text-40)]'
-                            }`}
-                          >
+                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none ${isActive || isDone ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'bg-[var(--surface-strong)] text-[var(--text-40)]'}`}>
                             {step.badge}
                           </span>
                         )}
@@ -585,10 +498,10 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="mb-16 mt-auto shrink-0 border-t border-[var(--line)] py-4 lg:mb-0">
-          <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
+        <footer className="mt-auto shrink-0 border-t border-[var(--line)] py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4">
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--emerald)]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--emerald)]" />
               <span>S2 Studio</span>
             </div>
             {webVersion && (

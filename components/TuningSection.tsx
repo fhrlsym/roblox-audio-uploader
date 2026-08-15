@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { AlertTriangle, ChevronRight, Loader2, Music, ShieldCheck, Sliders, Sparkles, Trash2, Wand2, Zap } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Loader2, Music, ShieldCheck, Sliders, Trash2, Zap } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
 import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
@@ -185,26 +185,26 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         )}
       </div>
 
-      {/* One-Click Presets */}
+      {/* Presets */}
       <div className="mb-5 space-y-2">
         <div className="flex items-center justify-between">
-          <p className={LABEL}>One-Click Presets</p>
-          <span className="text-[11px] font-mono text-[var(--accent-soft)] font-semibold">
+          <p className={LABEL}>Preset</p>
+          <span className="text-[11px] font-mono font-semibold text-[var(--accent-soft)]">
             {speed === 2.3 && amplify === -4
               ? 'Roblox Standard'
               : speed === 2.75 && amplify === -6
-                ? 'Aggressive'
+                ? 'Fast & Clear'
                 : speed === 1.8 && amplify === -2
-                  ? 'Light Bypass'
+                  ? 'Deep & Warm'
                   : 'Custom'}
           </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {[
             { id: 'standard', label: 'Roblox Standard', badge: '2.3x · -4dB', icon: ShieldCheck, s: 2.3, a: -4 },
-            { id: 'aggressive', label: 'Aggressive', badge: '2.75x · -6dB', icon: Zap, s: 2.75, a: -6 },
-            { id: 'light', label: 'Light Bypass', badge: '1.8x · -2dB', icon: Sparkles, s: 1.8, a: -2 },
-            { id: 'custom', label: 'Custom', badge: 'Manual Slider', icon: Sliders, s: null, a: null },
+            { id: 'aggressive', label: 'Fast & Clear', badge: '2.75x · -6dB', icon: Zap, s: 2.75, a: -6 },
+            { id: 'light', label: 'Deep & Warm', badge: '1.8x · -2dB', icon: Music, s: 1.8, a: -2 },
+            { id: 'custom', label: 'Custom', badge: 'Manual', icon: Sliders, s: null, a: null },
           ].map((preset) => {
             const Icon = preset.icon;
             const isMatch =
@@ -289,7 +289,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
       <button
         onClick={handleTuneAll}
         disabled={tuning || rawFiles.length === 0}
-        className={BTN_PRIMARY + ' w-full py-3.5 shadow-[0_0_30px_var(--upload-glow)]'}
+        className={BTN_PRIMARY + ' w-full py-3.5'}
       >
         {tuning ? (
           <>
@@ -298,7 +298,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
           </>
         ) : (
           <>
-            <Wand2 className="w-4 h-4" />
+            <Zap className="w-4 h-4" />
             Tune Semua ({rawFiles.length})
           </>
         )}
