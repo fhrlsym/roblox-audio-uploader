@@ -40,15 +40,15 @@ export default function TopBar({
   onSelectTheme,
 }: TopBarProps) {
   return (
-    <header className="relative z-50 h-14 shrink-0 border-b border-[var(--line)] bg-[var(--panel)]/95 backdrop-blur-xl">
-      <div className="flex h-full items-center justify-between px-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--accent-20)] bg-[var(--accent-10)] text-[var(--accent-strong)]">
+    <header className="relative z-50 h-16 shrink-0 border-b border-[var(--line)] bg-[var(--panel)]/90 backdrop-blur-xl">
+      <div className="flex h-full items-center justify-between px-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
             <Music className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate text-sm font-semibold tracking-tight text-[var(--text)]">S2 Studio</h1>
-            <p className="hidden text-[10px] text-[var(--text-45)] sm:block">Roblox asset workspace</p>
+            <h1 className="truncate font-serif text-lg font-semibold leading-none tracking-tight text-[var(--text)]">S2 Studio</h1>
+            <p className="mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)] sm:block">Roblox audio suite</p>
           </div>
         </div>
 

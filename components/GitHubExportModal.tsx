@@ -1,23 +1,20 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Check,
-  ChevronDown,
   Copy,
   Download,
   FileCode,
   Folder,
   Loader2,
-  Music,
   Plus,
-  RefreshCw,
   Tag,
   UploadCloud,
   X,
 } from 'lucide-react';
-import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
 
 export function GitHubIcon({ className = 'w-4 h-4' }: { className?: string }) {
@@ -49,6 +46,10 @@ interface EditableItem {
   name: string;
   playbackSpeed: number;
   selected: boolean;
+}
+
+interface MapOption {
+  filename: string;
 }
 
 const STORAGE_KEYS = {
@@ -176,7 +177,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
 
       const data = await res.json();
       if (data.success && Array.isArray(data.maps)) {
-        const list = data.maps.map((m: any) => m.filename);
+        const list = data.maps.map((map: MapOption) => map.filename);
         setMapFiles(list);
         const current = list.includes(selectedMapFile) ? selectedMapFile : (list[0] || 'musicsbjoi.json');
         setSelectedMapFile(current);
@@ -429,139 +430,130 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
 
         {/* Content Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
-          {/* Target Map & Genre Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-            {/* Target Map Dropdown */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] flex items-center gap-1.5">
-                  <Folder className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Pilih Map
-                </label>
-                {fetchingMaps && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-45)]">
+                    <Folder className="h-3.5 w-3.5 text-[var(--accent-soft)]" />
+                    Pilih Map
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--text-40)]">Klik kartu tujuan penyimpanan lagu.</p>
+                </div>
+                {fetchingMaps && <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent-soft)]" />}
               </div>
 
-              <select
-                value={isNewMap ? '__new__' : selectedMapFile}
-                onChange={(e) => handleSelectMap(e.target.value)}
-                className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
-              >
-                {mapFiles.map((f) => (
-                  <option key={f} value={f}>
-                    Map {formatMapDisplayName(f)}
-                  </option>
-                ))}
-                <option value="__new__">+ Tambah Map Baru</option>
-              </select>
+              <div className="grid max-h-44 grid-cols-2 gap-2 overflow-y-auto pr-1">
+                {mapFiles.map((filename) => {
+                  const selected = !isNewMap && selectedMapFile === filename;
+                  return (
+                    <button
+                      key={filename}
+                      type="button"
+                      onClick={() => handleSelectMap(filename)}
+                      className={`group flex min-h-16 items-center gap-2.5 rounded-xl border p-3 text-left transition duration-150 ease-out active:scale-[0.98] ${selected ? 'border-[var(--accent-30)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)]'}`}
+                    >
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--surface-strong)] text-[var(--text-45)]'}`}>
+                        {selected ? <Check className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-bold text-[var(--text-90)]">{formatMapDisplayName(filename)}</span>
+                        <span className="mt-0.5 block truncate font-mono text-[9px] text-[var(--text-35)]">{filename}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => handleSelectMap('__new__')}
+                  className={`flex min-h-16 items-center gap-2.5 rounded-xl border border-dashed p-3 text-left transition duration-150 ease-out active:scale-[0.98] ${isNewMap ? 'border-[var(--accent-30)] bg-[var(--accent-10)]' : 'border-[var(--line)] text-[var(--text-50)] hover:border-[var(--accent-25)] hover:text-[var(--accent-strong)]'}`}
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)]">
+                    <Plus className="h-4 w-4" />
+                  </span>
+                  <span className="text-xs font-bold">Map baru</span>
+                </button>
+              </div>
 
               {isNewMap && (
-                <div className="mt-2 space-y-1">
+                <div className="mt-3 rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-3">
                   <input
                     type="text"
                     value={newMapName}
                     onChange={(e) => setNewMapName(e.target.value)}
-                    placeholder="Ketik Nama Map Baru (misal: Padang Panjang)"
-                    className={`${INPUT} text-xs py-2`}
+                    placeholder="Nama map baru"
+                    className={`${INPUT} py-2 text-xs`}
                     autoFocus
                   />
-                  <p className="text-[10px] text-[var(--text-40)]">
-                    File JSON: <span className="font-mono text-[var(--accent-soft)]">{sanitizeMapFilename(newMapName)}</span>
-                  </p>
+                  <p className="mt-1.5 text-[10px] text-[var(--text-40)]">File: <span className="font-mono text-[var(--accent-soft)]">{sanitizeMapFilename(newMapName)}</span></p>
                 </div>
               )}
-            </div>
+            </section>
 
-            {/* Target Genre Dropdown */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] flex items-center gap-1.5">
-                  <Tag className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-                  Genre
-                </label>
-                {fetchingGenres && <Loader2 className="w-3 h-3 animate-spin text-[var(--accent-soft)]" />}
+            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <div>
+                  <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-45)]">
+                    <Tag className="h-3.5 w-3.5 text-[var(--accent-soft)]" />
+                    Pilih Genre
+                  </p>
+                  <p className="mt-1 text-[11px] text-[var(--text-40)]">Pilih kategori yang paling sesuai.</p>
+                </div>
+                {fetchingGenres && <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--accent-soft)]" />}
               </div>
 
-              {!isNewMap && genres.length > 0 ? (
-                <div className="space-y-2">
-                  <select
-                    value={isNewGenre ? '__new__' : selectedGenre}
-                    onChange={(e) => handleSelectGenre(e.target.value)}
-                    className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
+              {!isNewMap && genres.length > 0 && (
+                <div className="flex max-h-32 flex-wrap gap-2 overflow-y-auto pr-1">
+                  {genres.map((genre) => {
+                    const selected = !isNewGenre && selectedGenre === genre;
+                    return (
+                      <button
+                        key={genre}
+                        type="button"
+                        onClick={() => handleSelectGenre(genre)}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-bold transition duration-150 ease-out active:scale-[0.97] ${selected ? 'border-[var(--accent-30)] bg-[var(--accent)] text-[var(--on-accent)]' : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-70)] hover:border-[var(--accent-25)]'}`}
+                      >
+                        {selected && <Check className="h-3 w-3" />}
+                        {genre}
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => handleSelectGenre('__new__')}
+                    className={`inline-flex items-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[11px] font-bold transition duration-150 ease-out active:scale-[0.97] ${isNewGenre ? 'border-[var(--accent-30)] bg-[var(--accent-10)] text-[var(--accent-strong)]' : 'border-[var(--line)] text-[var(--text-50)] hover:border-[var(--accent-25)]'}`}
                   >
-                    {genres.map((g) => (
-                      <option key={g} value={g}>
-                        {g}
-                      </option>
-                    ))}
-                    <option value="__new__">+ Tambah Genre Baru</option>
-                  </select>
-
-                  {isNewGenre && (
-                    <div className="space-y-2 p-2.5 rounded-lg border border-[var(--accent-20)] bg-[var(--surface-50)] mt-2">
-                      <div>
-                        <label className="text-[10px] font-bold text-[var(--accent-soft)] block mb-1">
-                          Nama Genre Baru
-                        </label>
-                        <input
-                          type="text"
-                          value={newGenreName}
-                          onChange={(e) => setNewGenreName(e.target.value.toUpperCase())}
-                          placeholder="Misal: KOPLO, SLOW ROCK, DANGDUT"
-                          className={`${INPUT} text-xs py-1.5 uppercase font-bold`}
-                          autoFocus
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold text-[var(--text-60)] block mb-1">
-                          Cover Image Asset ID
-                        </label>
-                        <input
-                          type="text"
-                          value={coverAssetId}
-                          onChange={(e) => setCoverAssetId(e.target.value)}
-                          placeholder="rbxassetid://94215284059157"
-                          className={`${INPUT} text-xs py-1.5 font-mono`}
-                        />
-                        <p className="text-[10px] text-[var(--text-40)] mt-1">
-                          Bisa masukkan ID angka saja (misal: <code className="text-[var(--accent-soft)] font-mono">94215284059157</code>)
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                    <Plus className="h-3 w-3" />
+                    Genre baru
+                  </button>
                 </div>
-              ) : (
-                <div className="space-y-2 p-2.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)]">
+              )}
+
+              {(isNewMap || isNewGenre || genres.length === 0) && (
+                <div className="space-y-3 rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-3">
                   <div>
-                    <label className="text-[10px] font-bold text-[var(--accent-soft)] block mb-1">
-                      Nama Genre Baru
-                    </label>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--accent-soft)]">Nama genre baru</label>
                     <input
                       type="text"
                       value={newGenreName}
                       onChange={(e) => setNewGenreName(e.target.value.toUpperCase())}
-                      placeholder="Misal: REGGAE, HIPHOP, POP"
-                      className={`${INPUT} text-xs py-1.5 uppercase font-bold`}
-                      autoFocus
+                      placeholder="Contoh: KOPLO, POP, SLOW ROCK"
+                      className={`${INPUT} py-2 text-xs font-bold uppercase`}
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] font-bold text-[var(--text-60)] block mb-1">
-                      Cover Image Asset ID
-                    </label>
+                    <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--text-50)]">Cover Roblox Asset ID</label>
                     <input
                       type="text"
                       value={coverAssetId}
                       onChange={(e) => setCoverAssetId(e.target.value)}
-                      placeholder="rbxassetid://94215284059157"
-                      className={`${INPUT} text-xs py-1.5 font-mono`}
+                      placeholder="94215284059157"
+                      className={`${INPUT} py-2 font-mono text-xs`}
                     />
-                    <p className="text-[10px] text-[var(--text-40)] mt-1">
-                      Bisa masukkan ID angka saja (misal: <code className="text-[var(--accent-soft)] font-mono">94215284059157</code>)
-                    </p>
                   </div>
                 </div>
               )}
-            </div>
+            </section>
           </div>
 
           {/* Song List with Inline Editable Names */}

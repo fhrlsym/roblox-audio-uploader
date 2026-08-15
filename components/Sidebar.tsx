@@ -19,8 +19,11 @@ const tools = [
 export default function Sidebar({ activeTool, onToolChange }: SidebarProps) {
   return (
     <>
-      <aside className="hidden w-52 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] lg:flex lg:flex-col">
-        <nav className="space-y-1 p-2.5">
+      <aside className="hidden w-56 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] lg:flex lg:flex-col">
+        <div className="px-5 pb-2 pt-5">
+          <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--text-35)]">Creative tools</p>
+        </div>
+        <nav className="space-y-1.5 p-3">
           {tools.map((tool) => {
             const Icon = tool.icon;
             const active = activeTool === tool.id;

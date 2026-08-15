@@ -1,8 +1,8 @@
 export const CARD =
-  'rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-sm';
+  'rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_1px_2px_rgba(0,0,0,0.08),0_16px_40px_rgba(0,0,0,0.08)]';
 
 export const PANEL =
-  'rounded-2xl border border-[var(--line)] bg-[var(--surface)] backdrop-blur-md';
+  'rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-md';
 
 export const INPUT =
   'w-full bg-[var(--surface-focus)] text-[var(--text)] rounded-xl px-4 py-3 border border-[var(--line)] text-sm outline-none transition duration-150 ease-out focus:border-[var(--accent-40)] focus:ring-1 focus:ring-[var(--accent-30)] placeholder:text-[var(--text-35)]';

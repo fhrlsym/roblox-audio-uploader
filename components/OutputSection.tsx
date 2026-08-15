@@ -5,8 +5,6 @@ import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../typ
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
 import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
-import GitHubExportModal, { ExportableSong, GitHubIcon } from './GitHubExportModal';
-import Confetti from './Confetti';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -20,10 +18,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const { toast } = useToast();
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
-  const [showGitHubModal, setShowGitHubModal] = useState(false);
-  const [exportSongs, setExportSongs] = useState<ExportableSong[]>([]);
-  const [uploadedCompletedList, setUploadedCompletedList] = useState<ExportableSong[]>([]);
-  const [showConfetti, setShowConfetti] = useState(false);
 
   const handleDownload = (file: TunedAudioFile) => {
     const url = URL.createObjectURL(file.blob);
@@ -44,43 +38,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const copySongInfo = (name: string, assetId: string, playbackSpeed: string) => {
     navigator.clipboard.writeText(`${name}\n${assetId}\n${playbackSpeed}`);
     toast('Nama lagu, asset ID & playback speed disalin', 'success');
-  };
-
-  const openGitHubSyncForAll = () => {
-    const activeFromTuned = tunedFiles
-      .filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId)
-      .map((f) => ({
-        assetId: uploadResults[f.id]!.assetId!,
-        name: cleanSongTitle(f.tunedName),
-        playbackSpeed: (1 / f.speed).toFixed(4),
-        originalSpeed: f.speed,
-      }));
-
-    const all: ExportableSong[] = [...activeFromTuned];
-    for (const song of uploadedCompletedList) {
-      if (!all.some((s) => s.assetId === song.assetId)) {
-        all.push(song);
-      }
-    }
-
-    if (all.length === 0) {
-      toast('Belum ada lagu yang berhasil di-upload ke Roblox', 'error');
-      return;
-    }
-    setExportSongs(all);
-    setShowGitHubModal(true);
-  };
-
-  const openGitHubSyncForSingle = (file: TunedAudioFile, assetId: string) => {
-    setExportSongs([
-      {
-        assetId,
-        name: cleanSongTitle(file.tunedName),
-        playbackSpeed: (1 / file.speed).toFixed(4),
-        originalSpeed: file.speed,
-      },
-    ]);
-    setShowGitHubModal(true);
   };
 
   const handleUploadToRoblox = async (file: TunedAudioFile): Promise<boolean> => {
@@ -145,17 +102,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
           [file.id]: { filename: file.tunedName, assetId, status, success: true },
         }));
 
-        const newExportable: ExportableSong = {
-          assetId,
-          name: displayName,
-          playbackSpeed: (1 / file.speed).toFixed(4),
-          originalSpeed: file.speed,
-        };
-        setUploadedCompletedList((prev) => {
-          const exists = prev.some((s) => s.assetId === assetId);
-          return exists ? prev : [newExportable, ...prev];
-        });
-
         if (onUploadSuccess) {
           onUploadSuccess({
             id: `${Date.now()}-${file.id}`,
@@ -209,39 +155,25 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
     const CONCURRENCY = 2;
     let nextIndex = 0;
-    let successCount = 0;
 
     const worker = async () => {
       while (nextIndex < targets.length) {
         const file = targets[nextIndex++];
-        if (await handleUploadToRoblox(file)) successCount++;
+        await handleUploadToRoblox(file);
       }
     };
 
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
     toast(`Selesai memproses batch upload ${targets.length} audio!`, 'success');
-    if (successCount > 0) setShowConfetti(true);
   };
 
   const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;
   const uploadingAny = Object.values(uploading).some(Boolean);
-  const totalCompletedCount = uploadedCompletedList.length + tunedFiles.filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId && !uploadedCompletedList.some(u => u.assetId === uploadResults[f.id]?.assetId)).length;
 
   return (
     <div className={CARD + ' p-4'}>
-      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">3. Output &amp; Upload</h2>
-        {totalCompletedCount > 0 && (
-          <button
-            type="button"
-            onClick={openGitHubSyncForAll}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
-          >
-            <GitHubIcon className="w-3.5 h-3.5" />
-            Sync ke GitHub ({totalCompletedCount})
-          </button>
-        )}
       </div>
 
       {tunedFiles.length === 0 ? (
@@ -301,14 +233,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                         <div className="flex items-center gap-2">
                           <StatusBadge status={result.status || 'Pending'} />
                           <div className="ml-auto flex items-center gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => openGitHubSyncForSingle(file, result.assetId!)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--accent-strong)] hover:bg-[var(--surface)] transition"
-                            >
-                              <GitHubIcon className="w-3 h-3" />
-                              Sync GitHub
-                            </button>
                             <button
                               type="button"
                               onClick={() => copySongInfo(file.tunedName, result.assetId!, (1 / file.speed).toFixed(4))}
@@ -372,17 +296,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
             </button>
           )}
 
-          {tunedFiles.some((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId) && (
-            <button
-              type="button"
-              onClick={openGitHubSyncForAll}
-              className="w-full py-2.5 text-xs font-semibold rounded-xl border border-[var(--accent-30)] bg-[var(--accent-10)] text-[var(--accent-strong)] hover:bg-[var(--accent-15)] transition flex items-center justify-center gap-2"
-            >
-              <GitHubIcon className="w-4 h-4" />
-              Sync Semua ke GitHub ({tunedFiles.filter((f) => uploadResults[f.id]?.success && uploadResults[f.id]?.assetId).length})
-            </button>
-          )}
-
           <button
             onClick={handleUploadAll}
             disabled={uploadingAny || pendingCount === 0}
@@ -403,12 +316,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         </div>
       )}
 
-      {/* GitHub Export Modal */}
-      <GitHubExportModal
-        isOpen={showGitHubModal}
-        onClose={() => setShowGitHubModal(false)}
-        songs={exportSongs}
-      />
     </div>
   );
 }

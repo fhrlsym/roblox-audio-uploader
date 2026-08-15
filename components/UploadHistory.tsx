@@ -6,7 +6,7 @@ import { CheckCircle2, Copy, History, Music2, Search, X } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
 import { UploadRecord } from '../types/audio';
-import { CARD, INPUT, BTN_GHOST } from '../lib/ui';
+import { CARD, INPUT } from '../lib/ui';
 import { useToast } from './Toast';
 import { GitHubIcon } from './GitHubExportModal';
 

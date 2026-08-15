@@ -12,7 +12,7 @@ import ObfuscatorSection from '../components/ObfuscatorSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
-import GitHubExportModal, { GitHubIcon } from '../components/GitHubExportModal';
+import GitHubExportModal from '../components/GitHubExportModal';
 import { ToastProvider } from '../components/Toast';
 import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
@@ -318,9 +318,34 @@ export default function Home() {
             <div className="max-w-[1400px] w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'audio-master' ? 'space-y-4' : 'hidden'}>
-            {/* Compact Stats Toolbar + GitHub Sync */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 sm:gap-3">
-              <div className="grid grid-cols-3 gap-2 sm:gap-2.5 flex-1">
+            <section className="hero-panel relative overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 sm:px-7 sm:py-7">
+              <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-[var(--accent-10)] blur-3xl" />
+              <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                <div className="max-w-2xl">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-[var(--accent-20)] bg-[var(--accent-10)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent-strong)]">
+                    <Sparkles className="h-3 w-3" />
+                    Audio production workspace
+                  </span>
+                  <h2 className="mt-4 font-serif text-3xl font-semibold leading-none tracking-tight text-[var(--text)] sm:text-4xl">
+                    Dari lagu mentah jadi asset Roblox.
+                  </h2>
+                  <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--text-50)]">
+                    Ambil audio, atur karakter suaranya, lalu upload ke akun Roblox pilihanmu dalam satu alur yang rapi.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface-50)] p-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
+                    <Music className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)]">Sekarang</p>
+                    <p className="text-sm font-bold text-[var(--text)]">Langkah {activeStep} dari 3</p>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
                 <div className={`${CARD} p-2.5 sm:p-3 text-center relative overflow-hidden`}>
                   <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-40)] shimmer-bar" />
                   <p className="text-[9px] sm:text-[10px] font-medium uppercase tracking-wider inline-flex items-center gap-1 text-[var(--text-45)]">
@@ -347,21 +372,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* GitHub Sync Button */}
-              <button
-                type="button"
-                onClick={() => setGithubModalOpen(true)}
-                className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 sm:px-4 py-2 sm:py-2.5 text-[11px] sm:text-xs font-bold text-[var(--on-accent)] shadow-lg transition hover:brightness-110 active:scale-[0.98] shrink-0"
-              >
-                <GitHubIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>Sync GitHub</span>
-                {uploadStats.active > 0 && (
-                  <span className="rounded-full bg-black/25 px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-extrabold text-[var(--on-accent)]">
-                    {uploadStats.active}
-                  </span>
-                )}
-              </button>
-            </div>
 
             {/* Stepper Navigation */}
             <div className="max-w-2xl mx-auto py-1">
