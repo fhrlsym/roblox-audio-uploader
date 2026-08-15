@@ -22,7 +22,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
-    "backend/check-supabase.js",
+    // Backend is a separate Node.js service with its own runtime and third-party engines.
+    "backend/**",
+    // opencode skill scripts are CommonJS tooling, not Next.js code.
+    ".opencode/**",
   ]),
 ]);
 

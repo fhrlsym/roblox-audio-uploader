@@ -4,6 +4,10 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.NEXT_PUBLIC_GITHUB_
 const GITHUB_REPO = process.env.GITHUB_REPO || 'fhrlsym/minang-music';
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Internal Server Error';
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -37,22 +41,21 @@ export async function GET(request: NextRequest) {
 
     const fileData = await res.json();
     const contentStr = Buffer.from(fileData.content, 'base64').toString('utf8');
-    let parsed: any = {};
+    let parsed: Record<string, unknown> = {};
     try {
-      parsed = JSON.parse(contentStr);
+      const raw = JSON.parse(contentStr);
+      if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+        parsed = raw as Record<string, unknown>;
+      }
     } catch {
       return NextResponse.json({ success: true, genres: [] });
     }
 
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const genres = Object.keys(parsed).filter((k) => k !== 'Cover' && k !== 'Songs');
-      return NextResponse.json({ success: true, genres });
-    }
-
-    return NextResponse.json({ success: true, genres: [] });
-  } catch (error: any) {
+    const genres = Object.keys(parsed).filter((k) => k !== 'Cover' && k !== 'Songs');
+    return NextResponse.json({ success: true, genres });
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error?.message || 'Internal Server Error' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }

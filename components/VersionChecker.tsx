@@ -33,7 +33,7 @@ export default function VersionChecker() {
     const interval = setInterval(checkVersion, 30000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
   return null;
 }

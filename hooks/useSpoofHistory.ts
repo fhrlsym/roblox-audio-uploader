@@ -80,7 +80,7 @@ export function useSpoofHistory() {
 
   useEffect(() => {
     loadSpoofHistory();
-  }, []);
+  }, [loadSpoofHistory]);
 
   return {
     records,

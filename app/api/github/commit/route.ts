@@ -5,6 +5,34 @@ const GITHUB_REPO = process.env.GITHUB_REPO || 'fhrlsym/minang-music';
 const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
 const DEFAULT_COVER = 'rbxassetid://94215284059157';
 
+interface SongEntry {
+  AssetId: number;
+  Name: string;
+  PlaybackSpeed: number;
+}
+
+interface GenreEntry {
+  Cover?: string;
+  Songs: SongEntry[];
+}
+
+interface CommitRequest {
+  mapFilename?: string;
+  genre?: string;
+  songs?: Array<{
+    AssetId?: string | number;
+    Name?: string;
+    PlaybackSpeed?: string | number;
+  }>;
+  isNewMap?: boolean;
+  newMapName?: string;
+  coverAssetId?: string;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Internal Server Error';
+}
+
 function sanitizeMapFilename(name: string): string {
   let s = String(name || '').toLowerCase().trim().replace(/[^a-z0-9]/g, '_');
   s = s.replace(/_+/g, '_').replace(/^_+|_+$/g, '');
@@ -32,12 +60,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const body = (await request.json()) as CommitRequest;
     const { mapFilename, genre, songs, isNewMap, newMapName, coverAssetId } = body;
 
     let targetFilename = mapFilename;
     if (isNewMap) {
-      targetFilename = sanitizeMapFilename(newMapName);
+      targetFilename = sanitizeMapFilename(newMapName || '');
     }
 
     if (!targetFilename) {
@@ -54,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     const [owner, repo] = GITHUB_REPO.split('/');
     const targetGenre = String(genre).trim().toUpperCase();
-    const effectiveCover = normalizeCoverAssetId(coverAssetId);
+    const effectiveCover = normalizeCoverAssetId(coverAssetId || '');
 
     const headers: Record<string, string> = {
       Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -64,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Fetch current map JSON if exists
     let fileSha: string | undefined = undefined;
-    let existingData: Record<string, any> = {};
+    let existingData: Record<string, GenreEntry> = {};
 
     const getRes = await fetch(
       `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilename}?ref=${GITHUB_BRANCH}`,
@@ -76,9 +104,9 @@ export async function POST(request: NextRequest) {
       fileSha = fileData.sha;
       try {
         const contentStr = Buffer.from(fileData.content, 'base64').toString('utf8');
-        existingData = JSON.parse(contentStr);
-        if (typeof existingData !== 'object' || Array.isArray(existingData)) {
-          existingData = {};
+        const parsed = JSON.parse(contentStr);
+        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          existingData = parsed as Record<string, GenreEntry>;
         }
       } catch {
         existingData = {};
@@ -110,13 +138,13 @@ export async function POST(request: NextRequest) {
         speedNum = parseFloat(speedNum.toFixed(4));
       }
 
-      const songEntry = {
+      const songEntry: SongEntry = {
         AssetId: assetIdNum || 0,
         Name: String(song.Name || `Song_${assetIdNum}`).trim(),
         PlaybackSpeed: speedNum,
       };
 
-      const existingIdx = existingSongs.findIndex((s: any) => Number(s.AssetId) === assetIdNum);
+      const existingIdx = existingSongs.findIndex((s) => Number(s.AssetId) === assetIdNum);
       if (existingIdx >= 0) {
         existingSongs[existingIdx] = songEntry;
         updatedCount++;
@@ -131,7 +159,7 @@ export async function POST(request: NextRequest) {
     const base64Content = Buffer.from(updatedContent, 'utf8').toString('base64');
     const commitMessage = `feat(music): update ${targetFilename} [${targetGenre}] (+${addedCount} songs, ~${updatedCount} updated)`;
 
-    const putBody: Record<string, any> = {
+    const putBody: Record<string, string> = {
       message: commitMessage,
       content: base64Content,
       branch: GITHUB_BRANCH,
@@ -159,9 +187,9 @@ export async function POST(request: NextRequest) {
       mapFilename: targetFilename,
       genre: targetGenre,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error?.message || 'Internal Server Error' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }

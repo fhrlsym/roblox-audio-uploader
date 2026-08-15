@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, CloudUpload, Copy, Download, Film, History, Loader2, Pause, Play, Plus, Sparkles, Trash2, UploadCloud, Volume2, Wand2, X } from 'lucide-react';
+import { Check, CloudUpload, Copy, Download, Film, History, Loader2, Pause, Play, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react';
 import { SavedAccount } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
@@ -292,9 +292,6 @@ const stopPolling = () => {
     pending: records.filter((r) => r.status === 'Pending').length,
     failed: records.filter((r) => r.status === 'Failed').length,
   };
-
-  const readyItems = (job?.items || []).filter((it) => it.status === 'downloaded' || (it.status !== 'failed' && !it.error));
-  const newIdCount = (job?.items || []).filter((it) => it.uploadStatus === 'done').length;
 
   return (
     <div className="space-y-6">

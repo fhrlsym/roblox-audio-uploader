@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { HttpLogEntry, ConstantEntry } from '../lib/dumper/types';
 
@@ -28,7 +28,7 @@ export function useDumperHistory() {
   const [records, setRecords] = useState<DumperRecord[]>([]);
 
   // Load from Supabase Database + LocalStorage Hybrid
-  const loadHistory = async () => {
+  const loadHistory = useCallback(async () => {
     let localList: DumperRecord[] = [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -56,22 +56,22 @@ export function useDumperHistory() {
         .limit(50);
 
       if (!error && data && data.length > 0) {
-        const dbList: DumperRecord[] = data.map((row: any) => ({
-          id: row.id,
-          title: row.title || 'Luau Script',
-          obfuscator: row.obfuscator || 'Unknown',
-          engine: row.engine || 'Universal Sandbox',
+        const dbList: DumperRecord[] = data.map((row: Record<string, unknown>) => ({
+          id: String(row.id),
+          title: String(row.title || 'Luau Script'),
+          obfuscator: String(row.obfuscator || 'Unknown'),
+          engine: String(row.engine || 'Universal Sandbox'),
           originalLines: Number(row.original_lines) || 0,
           dumpedLines: Number(row.dumped_lines) || 0,
           constantsCount: Number(row.constants_count) || 0,
           httpLogsCount: Number(row.http_logs_count) || 0,
           executionTimeMs: Number(row.execution_time_ms) || 0,
-          inputSnippet: row.input_snippet || '',
-          inputCode: row.input_code || '',
-          dumpedCode: row.dumped_code || '',
-          httpLogs: Array.isArray(row.http_logs) ? row.http_logs : [],
-          constants: Array.isArray(row.constants) ? row.constants : [],
-          createdAt: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+          inputSnippet: String(row.input_snippet || ''),
+          inputCode: String(row.input_code || ''),
+          dumpedCode: String(row.dumped_code || ''),
+          httpLogs: Array.isArray(row.http_logs) ? (row.http_logs as HttpLogEntry[]) : [],
+          constants: Array.isArray(row.constants) ? (row.constants as ConstantEntry[]) : [],
+          createdAt: row.created_at ? new Date(String(row.created_at)).getTime() : Date.now(),
         }));
 
         // Merge DB records and local records
@@ -92,11 +92,11 @@ export function useDumperHistory() {
     } catch {
       // ignore network / table not ready errors
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [loadHistory]);
 
   const saveToStorage = (list: DumperRecord[]) => {
     setRecords(list);

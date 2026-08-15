@@ -3,6 +3,15 @@ import { NextResponse } from 'next/server';
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN || process.env.NEXT_PUBLIC_GITHUB_TOKEN || '';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'fhrlsym/minang-music';
 
+interface GitHubContentEntry {
+  type: string;
+  name: string;
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Internal Server Error';
+}
+
 function formatMapDisplayName(filename: string): string {
   let clean = filename.replace(/\.json$/i, '');
   clean = clean.replace(/^music[_]?/i, '');
@@ -43,17 +52,17 @@ export async function GET() {
       return NextResponse.json({ success: true, maps: [] });
     }
 
-    const maps = data
-      .filter((f: any) => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
-      .map((f: any) => ({
+    const maps = (data as GitHubContentEntry[])
+      .filter((f) => f.type === 'file' && f.name.toLowerCase().endsWith('.json'))
+      .map((f) => ({
         filename: f.name,
         displayName: formatMapDisplayName(f.name),
       }));
 
     return NextResponse.json({ success: true, maps });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return NextResponse.json(
-      { error: error?.message || 'Internal Server Error' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     );
   }

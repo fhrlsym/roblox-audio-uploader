@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { UploadRecord, UploadStats, SavedAccount } from '../types/audio';
 import { cleanSongTitle } from '../lib/utils';
@@ -17,15 +17,15 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     accountsRef.current = accounts;
   };
 
-  const resolveAccountName = (accountId?: string): string => {
+  const resolveAccountName = useCallback((accountId?: string): string => {
     if (!accountId) {
       return selectedAccountRef.current?.name || 'Roblox';
     }
     const found = accountsRef.current.find((a) => a.id === accountId);
     return found?.name || 'Roblox';
-  };
+  }, [selectedAccountRef]);
 
-  const loadUploadHistory = async () => {
+  const loadUploadHistory = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
@@ -78,7 +78,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [resolveAccountName]);
 
   const updateAssetStatus = async (assetId: string, status: string) => {
     try {
@@ -188,7 +188,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     if (unlocked) {
       loadUploadHistory();
     }
-  }, [unlocked]);
+  }, [unlocked, loadUploadHistory]);
 
   return {
     uploadHistory,
