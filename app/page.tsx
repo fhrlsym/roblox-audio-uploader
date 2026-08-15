@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, Music, Plus, Trash2, User, Wand2 } from 'lucide-react';
+import { Check, ChevronDown, CloudUpload, History as HistoryIcon, Lock, Music, Sparkles, Wand2 } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -18,11 +18,9 @@ import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
-import { Sparkles, Terminal } from 'lucide-react';
 import AnimatedCounter from '../components/AnimatedCounter';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
-import ParticleBackground from '../components/ParticleBackground';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -170,7 +168,7 @@ export default function Home() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('.relative')) {
+      if (!target.closest('[data-popover-root]')) {
         setAccountMenuOpen(false);
         setThemeOpen(false);
       }
@@ -291,16 +289,23 @@ export default function Home() {
   return (
     <ToastProvider>
       <VersionChecker />
-      <ParticleBackground />
-      <div className="animated-mesh" />
-      
-      <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] transition-colors duration-300 relative z-10">
-        {/* Top Bar */}
+      <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         <TopBar
+          savedAccounts={savedAccounts}
           selectedAccount={selectedAccount}
-          onAccountClick={toggleAccountMenu}
+          accountMenuOpen={accountMenuOpen}
+          themeMenuOpen={themeOpen}
           theme={theme}
-          onThemeClick={toggleThemeMenu}
+          themes={THEMES}
+          onToggleAccountMenu={toggleAccountMenu}
+          onToggleThemeMenu={toggleThemeMenu}
+          onSelectAccount={selectAccount}
+          onDeleteAccount={handleDeleteAccount}
+          onAddAccount={() => {
+            setAccountMenuOpen(false);
+            setShowAccountModal(true);
+          }}
+          onSelectTheme={changeTheme}
         />
         
         {/* Main Layout: Sidebar + Content */}
@@ -309,7 +314,7 @@ export default function Home() {
           <Sidebar activeTool={activeTool} onToolChange={setActiveTool} />
            
           {/* Main Application Workbench */}
-          <main className="flex-1 overflow-y-auto">
+          <main className="min-w-0 flex-1 overflow-y-auto pb-20 lg:pb-0">
             <div className="max-w-[1400px] w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'audio-master' ? 'space-y-4' : 'hidden'}>
@@ -570,7 +575,7 @@ export default function Home() {
         </div>
 
         {/* Footer */}
-        <footer className="border-t border-[var(--line)] py-4 mt-auto shrink-0">
+        <footer className="mb-16 mt-auto shrink-0 border-t border-[var(--line)] py-4 lg:mb-0">
           <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--emerald)]" />

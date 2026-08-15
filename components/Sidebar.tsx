@@ -1,8 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { Music, Sparkles, Terminal, Lock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Lock, Music, Sparkles, Terminal } from 'lucide-react';
 
 type Tool = 'audio-master' | 'spoofer' | 'dumper' | 'obfuscator';
 
@@ -12,89 +10,66 @@ interface SidebarProps {
 }
 
 const tools = [
-  { id: 'audio-master' as Tool, label: 'Audio Master', icon: Music, description: 'Convert & upload audio' },
-  { id: 'spoofer' as Tool, label: 'Spoofer', icon: Sparkles, description: 'Asset ID spoofer' },
-  { id: 'dumper' as Tool, label: 'Dumper', icon: Terminal, description: 'Script deobfuscator' },
-  { id: 'obfuscator' as Tool, label: 'Obfuscator', icon: Lock, description: 'Script protection' },
+  { id: 'audio-master' as Tool, label: 'Audio', desktopLabel: 'Audio Master', icon: Music },
+  { id: 'spoofer' as Tool, label: 'Spoofer', desktopLabel: 'Spoofer', icon: Sparkles },
+  { id: 'dumper' as Tool, label: 'Dumper', desktopLabel: 'Dumper', icon: Terminal },
+  { id: 'obfuscator' as Tool, label: 'Obfuscator', desktopLabel: 'Obfuscator', icon: Lock },
 ];
 
 export default function Sidebar({ activeTool, onToolChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
-
   return (
-    <motion.aside
-      initial={false}
-      animate={{ width: collapsed ? 80 : 240 }}
-      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-      className="sidebar relative flex flex-col h-[calc(100vh-64px)] border-r border-[var(--line)] bg-[var(--panel)]"
-    >
-      {/* Collapse Toggle */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-6 z-10 w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--text)] flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
-      >
-        {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-      </button>
+    <>
+      <aside className="hidden w-52 shrink-0 border-r border-[var(--line)] bg-[var(--panel)] lg:flex lg:flex-col">
+        <nav className="space-y-1 p-2.5">
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+            const active = activeTool === tool.id;
 
-      {/* Navigation Items */}
-      <nav className="flex-1 py-4 px-2 space-y-2">
+            return (
+              <button
+                key={tool.id}
+                type="button"
+                onClick={() => onToolChange(tool.id)}
+                className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors active:scale-[0.98] ${
+                  active
+                    ? 'bg-[var(--accent-12)] text-[var(--text)]'
+                    : 'text-[var(--text-60)] hover:bg-[var(--surface)] hover:text-[var(--text)]'
+                }`}
+              >
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${active ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'bg-[var(--surface)] text-[var(--text-50)]'}`}>
+                  <Icon className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold">{tool.desktopLabel}</span>
+                  <span className="mt-0.5 block text-[10px] text-[var(--text-40)]">
+                    {tool.id === 'audio-master' ? 'Convert & upload' : tool.id === 'spoofer' ? 'Clone assets' : tool.id === 'dumper' ? 'Inspect scripts' : 'Protect scripts'}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      </aside>
+
+      <nav className="fixed inset-x-0 bottom-0 z-40 grid h-16 grid-cols-4 border-t border-[var(--line)] bg-[var(--panel)]/95 px-2 backdrop-blur-xl lg:hidden">
         {tools.map((tool) => {
           const Icon = tool.icon;
-          const isActive = activeTool === tool.id;
-          
+          const active = activeTool === tool.id;
+
           return (
-            <motion.button
+            <button
               key={tool.id}
+              type="button"
               onClick={() => onToolChange(tool.id)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`
-                sidebar-item neon-glow w-full flex items-center gap-3 px-3 py-3 rounded-xl
-                transition-all duration-200
-                ${isActive ? 'active text-[var(--text)]' : 'text-[var(--text-60)] hover:text-[var(--text)]'}
-              `}
+              className={`relative flex flex-col items-center justify-center gap-1 text-[10px] font-medium transition-colors active:scale-[0.96] ${active ? 'text-[var(--accent-strong)]' : 'text-[var(--text-45)]'}`}
             >
-              <div className={`
-                w-10 h-10 rounded-lg flex items-center justify-center shrink-0
-                ${isActive ? 'bg-[var(--accent-20)] text-[var(--accent)]' : 'bg-[var(--surface)] text-[var(--text-60)]'}
-              `}>
-                <Icon className="w-5 h-5" />
-              </div>
-              
-              <AnimatePresence>
-                {!collapsed && (
-                  <motion.div
-                    initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: 'auto' }}
-                    exit={{ opacity: 0, width: 0 }}
-                    transition={{ duration: 0.2 }}
-                    className="flex-1 text-left overflow-hidden"
-                  >
-                    <div className="font-semibold text-sm whitespace-nowrap">{tool.label}</div>
-                    <div className="text-xs text-[var(--text-50)] whitespace-nowrap">{tool.description}</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.button>
+              {active && <span className="absolute inset-x-4 top-0 h-0.5 rounded-full bg-[var(--accent)]" />}
+              <Icon className="h-4.5 w-4.5" />
+              <span>{tool.label}</span>
+            </button>
           );
         })}
       </nav>
-
-      {/* Bottom Section - Stats Summary */}
-      <AnimatePresence>
-        {!collapsed && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="p-4 border-t border-[var(--line)]"
-          >
-            <div className="text-xs text-[var(--text-50)] text-center">
-              S2 Studio v2.0
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.aside>
+    </>
   );
 }
