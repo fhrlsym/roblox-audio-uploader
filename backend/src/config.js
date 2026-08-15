@@ -9,10 +9,15 @@ export const BACKEND_ROOT = join(__dirname, '..');
 export const YTDLP = process.env.YTDLP_PATH ||
   join(BACKEND_ROOT, 'bin', process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp');
 
-export const YOUTUBE_CLIENTS = ['android', 'ios', 'mweb', 'tvhtml5', 'web_safari', 'web', 'default'];
+export const YOUTUBE_POT_PROVIDER_URL =
+  process.env.YOUTUBE_POT_PROVIDER_URL || 'http://127.0.0.1:4416';
 
 export function isBotError(message) {
-  return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human/i.test(message || '');
+  return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human|login required/i.test(message || '');
+}
+
+export function isCookieError(message) {
+  return /cookies.*(invalid|expired)|account cookies|login cookies|cookie.*expired|authentication.*failed/i.test(message || '');
 }
 
 export function isFormatError(message) {

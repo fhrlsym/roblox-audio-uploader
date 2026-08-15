@@ -6,8 +6,9 @@ import { LRUCache } from 'lru-cache';
 import {
   BACKEND_ROOT,
   YTDLP,
-  YOUTUBE_CLIENTS,
+  YOUTUBE_POT_PROVIDER_URL,
   isBotError,
+  isCookieError,
   isFormatError,
   getVideoId,
   cleanYoutubeUrl,
@@ -34,16 +35,65 @@ function prepareCookiesFile(cookies) {
   return filePath;
 }
 
+function errorText(error) {
+  return [error?.stderr, error?.stdout, error?.message].filter(Boolean).join('\n');
+}
+
+function redactSensitiveText(value) {
+  return String(value || '').replace(/(https?:\/\/)[^\s:@/]+:[^\s@/]+@/gi, '$1[credentials]@');
+}
+
+function createYoutubeError(error, cookiesFile) {
+  const raw = redactSensitiveText(errorText(error));
+  const youtubeError = new Error('Gagal mengakses YouTube.');
+  youtubeError.status = 502;
+
+  if (isCookieError(raw)) {
+    youtubeError.code = 'YOUTUBE_COOKIES_EXPIRED';
+    youtubeError.status = 401;
+    youtubeError.message = 'Cookies YouTube sudah tidak valid atau kedaluwarsa. Export cookies baru lalu coba lagi.';
+    return youtubeError;
+  }
+
+  if (isBotError(raw)) {
+    if (cookiesFile) {
+      youtubeError.code = 'YOUTUBE_ACCESS_BLOCKED';
+      youtubeError.status = 403;
+      youtubeError.message = 'YouTube masih menolak akses setelah PO Token dan cookies dicoba. Coba lagi beberapa saat.';
+    } else {
+      youtubeError.code = 'YOUTUBE_AUTH_REQUIRED';
+      youtubeError.status = 401;
+      youtubeError.message = 'PO Token belum cukup untuk video ini. Tambahkan cookies YouTube lalu coba lagi.';
+    }
+    return youtubeError;
+  }
+
+  if (isFormatError(raw)) {
+    youtubeError.code = 'YOUTUBE_FORMAT_UNAVAILABLE';
+    youtubeError.status = 422;
+    youtubeError.message = 'Format audio video ini tidak tersedia.';
+    return youtubeError;
+  }
+
+  youtubeError.code = 'YOUTUBE_REQUEST_FAILED';
+  youtubeError.message = raw.split('\n').find(Boolean)?.slice(0, 300) || 'Gagal mengakses YouTube.';
+  return youtubeError;
+}
+
 async function runYtdl(args, cookiesFile) {
   const baseArgs = [
     '--no-warnings',
     '--no-check-certificates',
     '--no-playlist',
+    '--socket-timeout', '20',
+    '--retries', '2',
+    '--fragment-retries', '2',
     '--referer', 'https://www.youtube.com/',
+    '--js-runtimes', 'node',
+    '--extractor-args', `youtubepot-bgutilhttp:base_url=${YOUTUBE_POT_PROVIDER_URL}`,
   ];
-  if (cookiesFile) {
-    baseArgs.push('--cookies', cookiesFile);
-  }
+  if (cookiesFile) baseArgs.push('--cookies', cookiesFile);
+
   const { stdout } = await execFileAsync(YTDLP, [...baseArgs, ...args], {
     timeout: 120000,
     maxBuffer: 10 * 1024 * 1024,
@@ -53,34 +103,24 @@ async function runYtdl(args, cookiesFile) {
 
 async function runYtdlWithClients(args, cookiesFile) {
   let lastError;
-  const candidates = [
-    'android,ios',
-    'ios',
-    'android',
-    'mweb',
-    'tvhtml5',
-    'web_safari',
-    'web_creator',
-    'web',
-    'default',
-  ];
-
+  const candidates = cookiesFile
+    ? ['mweb', 'web_safari', 'web', 'default']
+    : ['mweb', 'android_vr', 'web_safari', 'ios', 'android', 'default'];
   for (const client of candidates) {
     try {
-      if (client === 'default') {
-        return await runYtdl(args, cookiesFile);
-      }
+      if (client === 'default') return await runYtdl(args, cookiesFile);
       return await runYtdl([
         ...args,
         '--extractor-args',
-        `youtube:player_client=${client};player_skip=configs`,
+        `youtube:player_client=${client}`,
       ], cookiesFile);
-    } catch (err) {
-      lastError = err;
-      // Continue trying other clients
+    } catch (error) {
+      lastError = error;
+      if (isCookieError(errorText(error))) throw createYoutubeError(error, cookiesFile);
     }
   }
-  throw lastError;
+
+  throw createYoutubeError(lastError, cookiesFile);
 }
 
 export async function runYtCommand(args, cookiesFile) {
@@ -107,10 +147,9 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       cleanYoutubeUrl(url),
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio/best',
-      '--retries', '5',
     ];
     if (!cookiesFile) {
-      ytArgs.push('--downloader', 'aria2c', '--downloader-args', 'aria2c:-j 8 -x 8 -k 1M');
+      ytArgs.push('--downloader', 'aria2c', '--downloader-args', 'aria2c:-j 4 -x 4 -k 1M');
     }
 
     const stdout = String(await runYtCommand(ytArgs, cookiesFile));
@@ -183,7 +222,7 @@ export async function searchYoutube(query, cookies) {
     };
   } catch (error) {
     console.error('YouTube search error:', error);
-    return null;
+    throw error;
   } finally {
     if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
   }

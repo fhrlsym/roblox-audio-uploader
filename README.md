@@ -111,7 +111,8 @@ Open: [http://localhost:3000](http://localhost:3000)
 3. Select `backend` folder
 4. Set start command: `npm start`
 5. Add PORT environment variable (auto-provided)
-6. Deploy
+6. Deploy. The Docker image includes a local BgUtils PO Token provider for YouTube.
+7. SoundCloud track URLs work without cookies.
 
 **Render:**
 1. Go to [https://render.com](https://render.com)

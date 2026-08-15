@@ -4,11 +4,21 @@ import { existsSync, unlinkSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';
 import { downloadYoutubeMp3, fetchYoutubeVideoInfo, searchYoutube } from '../services/youtube.service.js';
+import { downloadSoundCloudMp3, fetchSoundCloudInfo } from '../services/soundcloud.service.js';
 import { runFFmpeg } from '../services/ffmpeg.service.js';
 import { uploadToRoblox } from '../services/roblox.service.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = Router();
+
+function sendYoutubeError(res, error, fallback) {
+  res.status(error.status || 500).json({
+    success: false,
+    code: error.code || 'YOUTUBE_REQUEST_FAILED',
+    error: error.message || fallback,
+    poTokenAttempted: true,
+  });
+}
 
 router.post('/youtube-download', async (req, res) => {
   const { url, speed = 1.0, amplify = 0, cookies } = req.body;
@@ -26,7 +36,7 @@ router.post('/youtube-download', async (req, res) => {
     });
   } catch (error) {
     console.error('Download error:', error);
-    res.status(500).json({ error: error.message || 'Download failed' });
+    sendYoutubeError(res, error, 'Download failed');
   }
 });
 
@@ -45,7 +55,37 @@ router.post('/youtube-info', async (req, res) => {
     });
   } catch (error) {
     console.error('YouTube info error:', error);
-    res.status(500).json({ error: error.message || 'Failed to fetch video info' });
+    sendYoutubeError(res, error, 'Failed to fetch video info');
+  }
+});
+
+router.post('/soundcloud-info', async (req, res) => {
+  const { url } = req.body;
+  try {
+    const audio = await fetchSoundCloudInfo(url);
+    res.json({ success: true, audio });
+  } catch (error) {
+    console.error('SoundCloud info error:', error.message);
+    res.status(502).json({
+      success: false,
+      code: 'SOUNDCLOUD_REQUEST_FAILED',
+      error: error.message || 'Gagal mengambil info SoundCloud',
+    });
+  }
+});
+
+router.post('/soundcloud-download', async (req, res) => {
+  const { url } = req.body;
+  try {
+    const { title, fileId } = await downloadSoundCloudMp3({ url });
+    res.json({ success: true, filename: `${title}.mp3`, fileId });
+  } catch (error) {
+    console.error('SoundCloud download error:', error.message);
+    res.status(502).json({
+      success: false,
+      code: 'SOUNDCLOUD_DOWNLOAD_FAILED',
+      error: error.message || 'Gagal mengunduh audio SoundCloud',
+    });
   }
 });
 
@@ -65,7 +105,7 @@ router.get('/youtube-search', async (req, res) => {
     res.json({ success: true, video });
   } catch (error) {
     console.error('YouTube search error:', error);
-    res.status(500).json({ error: error.message || 'Gagal mencari video di YouTube' });
+    sendYoutubeError(res, error, 'Gagal mencari video di YouTube');
   }
 });
 
