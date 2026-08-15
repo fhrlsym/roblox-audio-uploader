@@ -85,6 +85,7 @@ export default function Home() {
   const {
     uploadHistory,
     uploadStats,
+    isLoading: statsLoading,
     setKnownAccounts,
     refreshingIds,
     handleRefreshStatus,
@@ -585,7 +586,7 @@ export default function Home() {
                     <CloudUpload className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--accent-soft)]" />
                     Total
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.total} /></p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1">{statsLoading ? <span className="skeleton inline-block w-8 h-7 rounded-md" /> : <AnimatedCounter value={uploadStats.total} />}</p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
                   <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400 shimmer-bar" />
@@ -593,7 +594,7 @@ export default function Home() {
                     <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--emerald)]" />
                     Success
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.active} /></p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1">{statsLoading ? <span className="skeleton inline-block w-8 h-7 rounded-md" /> : <AnimatedCounter value={uploadStats.active} />}</p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
                   <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-rose-400 shimmer-bar" />
@@ -601,7 +602,7 @@ export default function Home() {
                     <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
                     Copyright
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--danger)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.copyright} /></p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--danger)] mt-0.5 sm:mt-1">{statsLoading ? <span className="skeleton inline-block w-8 h-7 rounded-md" /> : <AnimatedCounter value={uploadStats.copyright} />}</p>
                 </div>
               </div>
 

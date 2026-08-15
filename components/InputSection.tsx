@@ -302,13 +302,13 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                 </button>
               </div>
               <AnimatePresence>
-                {youtubeLinks.map((link) => (
+                {youtubeLinks.map((link, index) => (
                   <motion.div
                     key={link.url}
                     initial={{ opacity: 0, height: 0, y: 6 }}
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, y: -6 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, delay: index * 0.04 }}
                     className={`flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 transition ${
                       link.error ? 'border-rose-400/25' : 'hover:border-[var(--accent-25)]'
                     }`}

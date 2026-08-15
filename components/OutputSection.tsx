@@ -6,6 +6,7 @@ import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
 import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import GitHubExportModal, { ExportableSong, GitHubIcon } from './GitHubExportModal';
+import Confetti from './Confetti';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -22,6 +23,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const [showGitHubModal, setShowGitHubModal] = useState(false);
   const [exportSongs, setExportSongs] = useState<ExportableSong[]>([]);
   const [uploadedCompletedList, setUploadedCompletedList] = useState<ExportableSong[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const handleDownload = (file: TunedAudioFile) => {
     const url = URL.createObjectURL(file.blob);
@@ -215,6 +217,9 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
     toast(`Selesai memproses batch upload ${targets.length} audio!`, 'success');
+    // Celebrate if any uploads succeeded
+    const successCount = targets.filter((f) => uploadResults[f.id]?.success).length;
+    if (successCount > 0) setShowConfetti(true);
   };
 
   const pendingCount = tunedFiles.filter((f) => !uploadResults[f.id]?.success).length;
@@ -223,6 +228,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
   return (
     <div className={CARD + ' p-4'}>
+      {showConfetti && <Confetti onComplete={() => setShowConfetti(false)} />}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">3. Output &amp; Upload</h2>
         {totalCompletedCount > 0 && (
@@ -245,7 +251,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
-            {tunedFiles.map((file) => {
+            {tunedFiles.map((file, index) => {
               const result = uploadResults[file.id];
 
               return (
@@ -254,7 +260,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                   initial={{ opacity: 0, height: 0, y: 6 }}
                   animate={{ opacity: 1, height: 'auto', y: 0 }}
                   exit={{ opacity: 0, height: 0, y: -6 }}
-                  transition={{ duration: 0.2 }}
+                  transition={{ duration: 0.2, delay: index * 0.04 }}
                   className={`rounded-xl border p-4 transition ${result?.success
                       ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
                       : result

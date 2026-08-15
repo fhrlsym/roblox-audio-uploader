@@ -376,13 +376,13 @@ const stopPolling = () => {
             </div>
             <div className="space-y-1.5 max-h-56 overflow-y-auto">
               <AnimatePresence>
-                {queue.map((item) => (
+                {queue.map((item, index) => (
                   <motion.div
                     key={item.id}
                     initial={{ opacity: 0, height: 0, y: 6 }}
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, y: -6 }}
-                    transition={{ duration: 0.18 }}
+                    transition={{ duration: 0.18, delay: index * 0.04 }}
                     className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent-25)]"
                   >
                     <Film className="w-4 h-4 shrink-0 text-[var(--accent-soft)]" />
@@ -633,11 +633,12 @@ const stopPolling = () => {
           </div>
 
           <div className="space-y-3">
-            {records.map((rec) => (
+            {records.map((rec, index) => (
               <motion.div
                 key={rec.id}
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.03 }}
                 className="rounded-xl border border-[var(--line)] bg-[var(--surface-50)] p-3.5 text-xs"
               >
                 <div className="flex items-center justify-between gap-3">

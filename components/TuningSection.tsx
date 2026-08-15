@@ -126,7 +126,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
             <AnimatePresence>
-              {rawFiles.map((file) => {
+              {rawFiles.map((file, index) => {
                 const overLimit = file.video?.duration
                   ? file.video.duration / speed >= 420
                   : false;
@@ -136,7 +136,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                     initial={{ opacity: 0, height: 0, y: 6 }}
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, y: -6 }}
-                    transition={{ duration: 0.2 }}
+                    transition={{ duration: 0.2, delay: index * 0.04 }}
                     className={`flex items-center gap-3 rounded-xl border bg-[var(--surface)] p-2.5 transition ${
                       overLimit ? 'border-amber-400/25' : 'border-[var(--line)]'
                     }`}

@@ -9,6 +9,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
   const [uploadStats, setUploadStats] = useState<UploadStats>({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
   const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const statusRefreshLockRef = useRef(false);
   const accountsRef = useRef<SavedAccount[]>([]);
 
@@ -25,6 +26,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
   };
 
   const loadUploadHistory = async () => {
+    setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('audio_uploads')
@@ -73,6 +75,8 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
       }
     } catch {
       // ignore
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -190,6 +194,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     uploadHistory,
     uploadStats,
     refreshingIds,
+    isLoading,
     setKnownAccounts,
     loadUploadHistory,
     handleRefreshStatus,
