@@ -1,7 +1,8 @@
 FROM node:22-bookworm-slim AS pot-builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git \
+    ca-certificates \
+    curl \
     python3 \
     build-essential \
     pkg-config \
@@ -11,7 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgif-dev \
     librsvg2-dev \
     && rm -rf /var/lib/apt/lists/* \
-    && git clone --depth 1 --branch 1.3.1 https://github.com/Brainicism/bgutil-ytdlp-pot-provider.git /opt/bgutil-ytdlp-pot-provider \
+    && mkdir -p /opt/bgutil-ytdlp-pot-provider \
+    && curl --fail --location https://github.com/Brainicism/bgutil-ytdlp-pot-provider/archive/refs/tags/1.3.1.tar.gz \
+        | tar -xz --strip-components=1 -C /opt/bgutil-ytdlp-pot-provider \
     && cd /opt/bgutil-ytdlp-pot-provider/server \
     && npm ci \
     && npx tsc
