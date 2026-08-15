@@ -19,6 +19,7 @@ import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
 import { Sparkles, Terminal } from 'lucide-react';
+import AnimatedCounter from '../components/AnimatedCounter';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
@@ -303,44 +304,36 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Desktop Tool Switcher */}
-              <div className="hidden sm:flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-2xl border border-[var(--line)] ml-4 shrink-0">
-                <button
-                  onClick={() => setActiveTool('audio-master')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <Music className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Audio Master</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('spoofer')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Spoofer</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('dumper')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTool === 'dumper' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <Terminal className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Dumper</span>
-                </button>
-                <button
-                  onClick={() => setActiveTool('obfuscator')}
-                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    activeTool === 'obfuscator' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                  }`}
-                >
-                  <Lock className="w-3.5 h-3.5 shrink-0" />
-                  <span className="whitespace-nowrap">Obfuscator</span>
-                </button>
+              {/* Desktop Tool Switcher — Sliding Pill */}
+              <div className="hidden sm:flex relative items-center gap-1 p-1 bg-[var(--surface-50)] rounded-2xl border border-[var(--line)] ml-4 shrink-0">
+                {([
+                  { id: 'audio-master' as const, label: 'Audio Master', icon: Music },
+                  { id: 'spoofer' as const, label: 'Spoofer', icon: Sparkles },
+                  { id: 'dumper' as const, label: 'Dumper', icon: Terminal },
+                  { id: 'obfuscator' as const, label: 'Obfuscator', icon: Lock },
+                ]).map((tool) => {
+                  const Icon = tool.icon;
+                  const isActive = activeTool === tool.id;
+                  return (
+                    <button
+                      key={tool.id}
+                      onClick={() => setActiveTool(tool.id)}
+                      className={`relative z-10 flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-colors duration-200 ${
+                        isActive ? 'text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                      }`}
+                    >
+                      {isActive && (
+                        <motion.div
+                          layoutId="tool-pill"
+                          className="absolute inset-0 bg-[var(--accent)] rounded-xl shadow-sm"
+                          transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                        />
+                      )}
+                      <Icon className="w-3.5 h-3.5 shrink-0 relative z-10" />
+                      <span className="whitespace-nowrap relative z-10">{tool.label}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Header Right Actions (Account Dropdown + Theme Picker) */}
@@ -545,44 +538,36 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Mobile Tool Switcher Bar */}
-            <div className="flex sm:hidden items-center justify-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] w-full mb-1">
-              <button
-                onClick={() => setActiveTool('audio-master')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTool === 'audio-master' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                }`}
-              >
-                <Music className="w-3.5 h-3.5 shrink-0" />
-                <span>Audio</span>
-              </button>
-              <button
-                onClick={() => setActiveTool('spoofer')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTool === 'spoofer' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5 shrink-0" />
-                <span>Spoofer</span>
-              </button>
-              <button
-                onClick={() => setActiveTool('dumper')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTool === 'dumper' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                }`}
-              >
-                <Terminal className="w-3.5 h-3.5 shrink-0" />
-                <span>Dumper</span>
-              </button>
-              <button
-                onClick={() => setActiveTool('obfuscator')}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTool === 'obfuscator' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5 shrink-0" />
-                <span>Obfuscator</span>
-              </button>
+            {/* Mobile Tool Switcher Bar — Sliding Pill */}
+            <div className="flex sm:hidden relative items-center justify-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)] w-full mb-1">
+              {([
+                { id: 'audio-master' as const, label: 'Audio', icon: Music },
+                { id: 'spoofer' as const, label: 'Spoofer', icon: Sparkles },
+                { id: 'dumper' as const, label: 'Dumper', icon: Terminal },
+                { id: 'obfuscator' as const, label: 'Obfuscator', icon: Lock },
+              ]).map((tool) => {
+                const Icon = tool.icon;
+                const isActive = activeTool === tool.id;
+                return (
+                  <button
+                    key={tool.id}
+                    onClick={() => setActiveTool(tool.id)}
+                    className={`flex-1 relative z-10 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-colors duration-200 ${
+                      isActive ? 'text-[#000000]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="tool-pill-mobile"
+                        className="absolute inset-0 bg-[var(--accent)] rounded-lg shadow-sm"
+                        transition={{ type: 'spring', stiffness: 400, damping: 32 }}
+                      />
+                    )}
+                    <Icon className="w-3.5 h-3.5 shrink-0 relative z-10" />
+                    <span className="relative z-10">{tool.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </header>
@@ -600,7 +585,7 @@ export default function Home() {
                     <CloudUpload className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--accent-soft)]" />
                     Total
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1">{uploadStats.total}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.total} /></p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
                   <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400 shimmer-bar" />
@@ -608,7 +593,7 @@ export default function Home() {
                     <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--emerald)]" />
                     Success
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1">{uploadStats.active}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.active} /></p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
                   <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-rose-400 shimmer-bar" />
@@ -616,7 +601,7 @@ export default function Home() {
                     <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
                     Copyright
                   </p>
-                  <p className="text-lg sm:text-2xl font-bold text-[var(--danger)] mt-0.5 sm:mt-1">{uploadStats.copyright}</p>
+                  <p className="text-lg sm:text-2xl font-bold text-[var(--danger)] mt-0.5 sm:mt-1"><AnimatedCounter value={uploadStats.copyright} /></p>
                 </div>
               </div>
 
@@ -639,15 +624,17 @@ export default function Home() {
             {/* Stepper Navigation */}
             <div className="max-w-2xl mx-auto py-2">
               <div className="relative flex items-center justify-between">
-                {/* Precise Connector line anchored exactly at center of 34px step circles (top-[21px]) */}
+                {/* Background connector track */}
                 <div className="absolute left-[16.66%] right-[16.66%] top-[21px] h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)] z-0 pointer-events-none" />
-                <div
-                  className="absolute top-[21px] h-[2px] -translate-y-1/2 rounded-full bg-gradient-to-r from-[var(--accent-soft)] to-[var(--accent)] transition-all duration-500 z-0 pointer-events-none"
-                  style={{
-                    left: '16.66%',
-                    width: `${(activeStep - 1) * 33.33}%`,
-                  }}
-                />
+                {/* Animated progress connector */}
+                <motion.div
+                  className="absolute top-[21px] h-[2px] -translate-y-1/2 rounded-full z-0 pointer-events-none overflow-hidden"
+                  style={{ left: '16.66%' }}
+                  animate={{ width: `${(activeStep - 1) * 33.33}%` }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 28 }}
+                >
+                  <div className="w-full h-full bg-gradient-to-r from-[var(--accent-soft)] via-[var(--accent)] to-[var(--accent-soft)] shimmer-bar" />
+                </motion.div>
                 {[
                   { id: 1, label: 'Input Audio', icon: Music, badge: rawFiles.length },
                   { id: 2, label: 'Audio Tuning', icon: Wand2, badge: tunedFiles.length },
@@ -662,16 +649,39 @@ export default function Home() {
                       onClick={() => goToStep(step.id)}
                       className="relative z-10 flex-1 flex flex-col items-center gap-2 py-1 select-none focus:outline-none"
                     >
-                      <span
-                        className={`relative z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
-                          isActive
-                            ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
-                            : isDone
-                              ? 'border-[var(--accent-soft)] bg-[var(--bg)] text-[var(--accent-strong)]'
-                              : 'border-[var(--line)] bg-[var(--bg)] text-[var(--text-40)]'
-                        }`}
-                      >
-                        {isDone ? <Check className="w-3.5 h-3.5" /> : isActive ? <Icon className="w-4 h-4" /> : step.id}
+                      <span className="relative">
+                        {/* Active glow ring pulse */}
+                        {isActive && (
+                          <motion.span
+                            className="absolute inset-0 rounded-full border-2 border-[var(--accent)]"
+                            initial={{ scale: 1, opacity: 0.6 }}
+                            animate={{ scale: 1.4, opacity: 0 }}
+                            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeOut' }}
+                          />
+                        )}
+                        <span
+                          className={`relative z-10 flex h-[34px] w-[34px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-all duration-300 ${
+                            isActive
+                              ? 'border-[var(--accent)] bg-[var(--accent)] text-[#000000] shadow-[0_0_0_4px_var(--accent-12)]'
+                              : isDone
+                                ? 'border-[var(--accent-soft)] bg-[var(--bg)] text-[var(--accent-strong)]'
+                                : 'border-[var(--line)] bg-[var(--bg)] text-[var(--text-40)]'
+                          }`}
+                        >
+                          {isDone ? (
+                            <motion.span
+                              initial={{ scale: 0, rotate: -90 }}
+                              animate={{ scale: 1, rotate: 0 }}
+                              transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </motion.span>
+                          ) : isActive ? (
+                            <Icon className="w-4 h-4" />
+                          ) : (
+                            step.id
+                          )}
+                        </span>
                       </span>
                       <span
                         className={`flex items-center gap-1 text-[11px] font-semibold transition ${

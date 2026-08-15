@@ -22,6 +22,7 @@ export function useToast() {
 }
 
 let toastId = 0;
+const TOAST_DURATION = 4000;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -31,7 +32,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => [...prev, { id, type, message }]);
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
-    }, 4000);
+    }, TOAST_DURATION);
   }, []);
 
   const icons: Record<ToastType, ReactNode> = {
@@ -47,10 +48,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="toast-enter pointer-events-auto flex items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 shadow-2xl"
+            className="toast-enter pointer-events-auto flex flex-col items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden"
           >
-            {icons[t.type]}
-            <p className="text-sm text-[var(--text-80)]">{t.message}</p>
+            <div className="flex items-start gap-2.5 px-4 pt-3 pb-2">
+              {icons[t.type]}
+              <p className="text-sm text-[var(--text-80)]">{t.message}</p>
+            </div>
+            {/* Auto-dismiss progress bar */}
+            <div className="w-full h-0.5 bg-[var(--surface-strong)]">
+              <div
+                className={`h-full toast-progress rounded-full ${
+                  t.type === 'success' ? 'bg-emerald-400' : t.type === 'error' ? 'bg-rose-400' : 'bg-[var(--accent)]'
+                }`}
+                style={{ animationDuration: `${TOAST_DURATION}ms` }}
+              />
+            </div>
           </div>
         ))}
       </div>
