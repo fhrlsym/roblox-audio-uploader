@@ -545,6 +545,130 @@ body {
   animation: fade-in-up 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 
+/* ═══════════════════════════════════════════════════
+   GLASSMORPHISM LAYER — Animated background + glass effects
+   ═══════════════════════════════════════════════════ */
+
+/* Animated gradient mesh orbs behind everything */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 600px 500px at 20% 20%, var(--glow-1, rgba(212, 175, 55, 0.07)), transparent 70%),
+    radial-gradient(ellipse 500px 600px at 80% 80%, var(--glow-2, rgba(122, 92, 31, 0.12)), transparent 70%),
+    radial-gradient(ellipse 400px 400px at 50% 50%, var(--glow-3, rgba(255, 255, 255, 0.03)), transparent 70%);
+  animation: mesh-drift 20s ease-in-out infinite alternate;
+}
+
+/* Subtle dot grid overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: radial-gradient(circle at 1px 1px, var(--text) 1px, transparent 0);
+  background-size: 32px 32px;
+}
+
+@keyframes mesh-drift {
+  0% {
+    background-position: 0% 0%, 100% 100%, 50% 50%;
+    filter: hue-rotate(0deg);
+  }
+  33% {
+    background-position: 10% 30%, 70% 60%, 40% 70%;
+  }
+  66% {
+    background-position: 30% 10%, 90% 80%, 60% 30%;
+  }
+  100% {
+    background-position: 20% 20%, 80% 90%, 50% 50%;
+    filter: hue-rotate(8deg);
+  }
+}
+
+/* Glass card hover effect — add to any card for lift + glow */
+.glass-hover {
+  transition: transform 0.25s cubic-bezier(0.23, 1, 0.32, 1),
+              box-shadow 0.25s cubic-bezier(0.23, 1, 0.32, 1),
+              border-color 0.25s ease;
+}
+.glass-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px -8px var(--glow-1, rgba(212, 175, 55, 0.07)),
+              0 0 0 1px var(--accent-15, rgba(212, 175, 55, 0.15));
+}
+
+/* Animated shimmer for accent bars */
+.shimmer-bar {
+  background-size: 200% 100%;
+  animation: shimmer-slide 3s ease-in-out infinite;
+}
+
+@keyframes shimmer-slide {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Glowing button press */
+.btn-glow {
+  transition: transform 0.15s ease, box-shadow 0.25s ease;
+}
+.btn-glow:hover {
+  box-shadow: 0 0 20px -4px var(--accent-30, rgba(212, 175, 55, 0.3)),
+              0 4px 16px -4px var(--glow-1, rgba(212, 175, 55, 0.07));
+}
+.btn-glow:active {
+  transform: scale(0.97);
+  box-shadow: 0 0 8px -2px var(--accent-30, rgba(212, 175, 55, 0.3));
+}
+
+/* Header glassmorphism enhancement */
+.header-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.01) 100%
+  );
+  box-shadow:
+    0 1px 0 0 var(--line),
+    0 4px 24px -4px var(--glow-1, rgba(212, 175, 55, 0.07)),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+}
+
+/* Light theme header adjustments */
+[data-theme="light"] .header-glass,
+[data-theme="light-ocean"] .header-glass,
+[data-theme="light-rose"] .header-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  box-shadow:
+    0 1px 0 0 var(--line),
+    0 4px 24px -4px rgba(0, 0, 0, 0.06),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.8);
+}
+
+/* Light theme background adjustments */
+[data-theme="light"] body::before,
+[data-theme="light-ocean"] body::before,
+[data-theme="light-rose"] body::before {
+  opacity: 0.5;
+}
+
+[data-theme="light"] body::after,
+[data-theme="light-ocean"] body::after,
+[data-theme="light-rose"] body::after {
+  opacity: 0.04;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toast-enter,
   .modal-enter,
@@ -554,5 +678,11 @@ body {
   }
   * {
     transition-duration: 0.01ms !important;
+  }
+  body::before {
+    animation: none;
+  }
+  .shimmer-bar {
+    animation: none;
   }
 }

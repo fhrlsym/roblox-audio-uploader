@@ -51,6 +51,21 @@ const PRESETS: {
   settings: ObfuscatorSettings;
 }[] = [
   {
+    id: 'roblox',
+    label: 'Roblox Studio',
+    badge: 'Safe & Stable',
+    icon: Lock,
+    settings: {
+      encryptStrings: true,
+      proxifyLocals: true,
+      proxifyFunctions: false,
+      antiTamper: false,
+      controlFlowFlattening: true,
+      isLuauRuntime: true,
+      loaderVMDepth: 2,
+    },
+  },
+  {
     id: 'light',
     label: 'Light',
     badge: 'Strings only',

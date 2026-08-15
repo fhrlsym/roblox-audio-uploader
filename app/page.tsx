@@ -288,7 +288,7 @@ export default function Home() {
       <VersionChecker />
       <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         {/* Header Navigation */}
-        <header className="sticky top-0 z-40 bg-[var(--surface)] border-b border-[var(--line)] backdrop-blur-lg bg-opacity-90">
+        <header className="sticky top-0 z-40 border-b border-[var(--line)] backdrop-blur-xl bg-opacity-90 header-glass">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             <div className="flex items-center justify-between gap-2 w-full sm:w-auto">
               <div className="flex items-center gap-2">
@@ -595,7 +595,7 @@ export default function Home() {
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
               <div className="grid grid-cols-3 gap-2.5 sm:gap-3 flex-1">
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-40)] shimmer-bar" />
                   <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
                     <CloudUpload className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--accent-soft)]" />
                     Total
@@ -603,7 +603,7 @@ export default function Home() {
                   <p className="text-lg sm:text-2xl font-bold text-[var(--text)] mt-0.5 sm:mt-1">{uploadStats.total}</p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 via-emerald-500 to-emerald-400 shimmer-bar" />
                   <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
                     <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[var(--emerald)]" />
                     Success
@@ -611,7 +611,7 @@ export default function Home() {
                   <p className="text-lg sm:text-2xl font-bold text-[var(--emerald)] mt-0.5 sm:mt-1">{uploadStats.active}</p>
                 </div>
                 <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
+                  <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 via-rose-500 to-rose-400 shimmer-bar" />
                   <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1 sm:gap-1.5 text-[var(--text-45)]">
                     <span className="w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
                     Copyright
