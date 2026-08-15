@@ -379,18 +379,21 @@ export default function Home() {
                         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--text-40)] px-1">
                           Pilih Akun Roblox Target
                         </p>
-                        {savedAccounts.map((acc) => {
+                        {savedAccounts.map((acc, index) => {
                           const hasQuota = acc.quota != null && acc.quota.capacity > 0;
                           const qUsage = acc.quota?.usage ?? 0;
                           const qCap = acc.quota?.capacity ?? 1;
                           const qPct = Math.min(100, (qUsage / qCap) * 100);
                           const qColor = qPct >= 90 ? 'bg-rose-400' : qPct >= 70 ? 'bg-amber-400' : 'bg-emerald-400';
 
-                          return (
-                            <div
-                              key={acc.id}
-                              onClick={() => selectAccount(acc)}
-                              className={`group flex w-full flex-col rounded-xl border p-2.5 transition cursor-pointer ${
+                           return (
+                             <motion.div
+                               key={acc.id}
+                               initial={{ opacity: 0, transform: 'translateY(6px)' }}
+                               animate={{ opacity: 1, transform: 'translateY(0)' }}
+                               transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
+                               onClick={() => selectAccount(acc)}
+                               className={`group flex w-full flex-col rounded-xl border p-2.5 transition cursor-pointer ${
                                 selectedAccount?.id === acc.id
                                   ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
                                   : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)] hover:bg-[var(--surface)]'
@@ -476,10 +479,10 @@ export default function Home() {
                                     <Trash2 className="w-3 h-3" />
                                   </button>
                                 </div>
-                              </div>
-                            </div>
-                          );
-                        })}
+                               </div>
+                             </motion.div>
+                           );
+                         })}
 
                         <div className="pt-2 border-t border-[var(--line)] space-y-1">
                           <button

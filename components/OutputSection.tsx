@@ -83,10 +83,10 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     setShowGitHubModal(true);
   };
 
-  const handleUploadToRoblox = async (file: TunedAudioFile) => {
+  const handleUploadToRoblox = async (file: TunedAudioFile): Promise<boolean> => {
     if (!selectedAccount || !selectedAccount.apiKey) {
       toast('Pilih akun Roblox terlebih dahulu di bagian Roblox Account', 'error');
-      return;
+      return false;
     }
 
     setUploading((prev) => ({ ...prev, [file.id]: true }));
@@ -176,6 +176,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         setTimeout(() => {
           onRemoveTuned(file.id);
         }, 1500);
+        return true;
       } else {
         setUploadResults((prev) => ({
           ...prev,
@@ -193,6 +194,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     } finally {
       setUploading((prev) => ({ ...prev, [file.id]: false }));
     }
+    return false;
   };
 
   const handleUploadAll = async () => {
@@ -207,18 +209,17 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
     const CONCURRENCY = 2;
     let nextIndex = 0;
+    let successCount = 0;
 
     const worker = async () => {
       while (nextIndex < targets.length) {
         const file = targets[nextIndex++];
-        await handleUploadToRoblox(file);
+        if (await handleUploadToRoblox(file)) successCount++;
       }
     };
 
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, targets.length) }, worker));
     toast(`Selesai memproses batch upload ${targets.length} audio!`, 'success');
-    // Celebrate if any uploads succeeded
-    const successCount = targets.filter((f) => uploadResults[f.id]?.success).length;
     if (successCount > 0) setShowConfetti(true);
   };
 
@@ -244,7 +245,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       </div>
 
       {tunedFiles.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
+        <div className="empty-state rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
           <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
           <p className="text-sm text-[var(--text-45)]">Belum ada file yang di-tune.</p>
         </div>

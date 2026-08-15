@@ -583,14 +583,17 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
             </div>
 
             {items.length === 0 ? (
-              <div className="py-8 text-center rounded-xl border border-dashed border-[var(--line)] text-xs text-[var(--text-40)]">
+              <div className="empty-state py-8 text-center rounded-xl border border-dashed border-[var(--line)] text-xs text-[var(--text-40)]">
                 Belum ada audio dengan status Active yang siap di-sync.
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-                {items.map((item) => (
-                  <div
+                {items.map((item, index) => (
+                  <motion.div
                     key={item.id}
+                    initial={{ opacity: 0, transform: 'translateY(6px)' }}
+                    animate={{ opacity: 1, transform: 'translateY(0)' }}
+                    transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
                     className={`flex items-center gap-3 p-3 rounded-xl border transition ${
                       item.selected
                         ? 'border-[var(--accent-30)] bg-[var(--accent-06)]'
@@ -625,7 +628,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                         </span>
                       </div>
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}

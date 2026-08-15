@@ -119,7 +119,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         </div>
 
         {rawFiles.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
+          <div className="empty-state rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
             <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
             <p className="text-sm text-[var(--text-45)]">Belum ada file. Tambah dari Input Audio.</p>
           </div>

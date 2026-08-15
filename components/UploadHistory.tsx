@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { CheckCircle2, Copy, History, Music2, Search, X } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
@@ -140,7 +141,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
 
       {/* History Items List */}
       {filteredHistory.length === 0 ? (
-        <div className="py-8 text-center rounded-xl border border-dashed border-[var(--line)]">
+        <div className="empty-state py-8 text-center rounded-xl border border-dashed border-[var(--line)]">
           <History className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
           <p className="text-xs text-[var(--text-45)]">
             {history.length === 0 ? 'Belum ada riwayat upload.' : 'Tidak ada hasil yang cocok.'}
@@ -148,11 +149,14 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
         </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {filteredHistory.map((record) => {
+          {filteredHistory.map((record, index) => {
             const isPending = record.status === 'Pending';
             return (
-              <div
+              <motion.div
                 key={record.id}
+                initial={{ opacity: 0, transform: 'translateY(6px)' }}
+                animate={{ opacity: 1, transform: 'translateY(0)' }}
+                transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
                 className="group rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-xs transition hover:border-[var(--accent-25)]"
               >
                 <div className="flex items-start justify-between gap-3">
@@ -204,7 +208,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
                     )}
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>

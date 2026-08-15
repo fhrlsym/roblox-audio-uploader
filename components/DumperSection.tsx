@@ -870,9 +870,12 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-                    {filteredHistory.map((rec) => (
-                      <div
+                    {filteredHistory.map((rec, index) => (
+                      <motion.div
                         key={rec.id}
+                        initial={{ opacity: 0, transform: 'translateY(6px)' }}
+                        animate={{ opacity: 1, transform: 'translateY(0)' }}
+                        transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
                         className="p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="space-y-1 min-w-0 flex-1">
@@ -947,7 +950,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}
