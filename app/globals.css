@@ -790,6 +790,240 @@ body {
 }
 
 /* ═══════════════════════════════════════════════════
+   NEON GLOW EFFECTS — Cyberpunk/Gaming vibes
+   ═══════════════════════════════════════════════════ */
+
+.neon-glow {
+  position: relative;
+}
+
+.neon-glow::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(45deg, var(--accent), transparent, var(--accent-soft));
+  border-radius: inherit;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+  filter: blur(8px);
+}
+
+.neon-glow:hover::before,
+.neon-glow.active::before {
+  opacity: 0.6;
+}
+
+/* Neon border effect */
+.neon-border {
+  position: relative;
+  background: var(--panel);
+}
+
+.neon-border::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, var(--accent), transparent 40%, transparent 60%, var(--accent-soft));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.neon-border:hover::after,
+.neon-border.active::after {
+  opacity: 1;
+}
+
+/* Pulsing glow for active elements */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px var(--accent-20), 0 0 40px var(--accent-10);
+  }
+  50% {
+    box-shadow: 0 0 30px var(--accent-30), 0 0 60px var(--accent-15);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════════════
+   RIPPLE EFFECT — Button click feedback
+   ═══════════════════════════════════════════════════ */
+
+.ripple-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.5) 0%, transparent 70%);
+  opacity: 0;
+  transition: opacity 0.6s;
+}
+
+.ripple-button:active::after {
+  opacity: 1;
+  transition: opacity 0s;
+}
+
+/* ═══════════════════════════════════════════════════
+   GRADIENT TEXT — Premium headings
+   ═══════════════════════════════════════════════════ */
+
+.gradient-text {
+  background: linear-gradient(135deg, var(--accent-strong), var(--accent-soft));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ═══════════════════════════════════════════════════
+   PARTICLES — Floating sparkles background
+   ═══════════════════════════════════════════════════ */
+
+@keyframes float-particle {
+  0%, 100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(50px);
+    opacity: 0;
+  }
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--accent);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: float-particle 10s linear infinite;
+  box-shadow: 0 0 10px var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════
+   SIDEBAR — Collapsible navigation
+   ═══════════════════════════════════════════════════ */
+
+.sidebar {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-item {
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.sidebar-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%) scaleY(0);
+  width: 3px;
+  height: 60%;
+  background: var(--accent);
+  border-radius: 0 4px 4px 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.sidebar-item:hover::before,
+.sidebar-item.active::before {
+  transform: translateY(-50%) scaleY(1);
+}
+
+.sidebar-item.active {
+  background: var(--accent-10);
+}
+
+/* ═══════════════════════════════════════════════════
+   CARD HOVER LIFT — Premium interaction
+   ═══════════════════════════════════════════════════ */
+
+.card-hover-lift {
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15),
+              0 0 30px var(--accent-10);
+}
+
+/* ═══════════════════════════════════════════════════
+   ANIMATED GRADIENT BACKGROUND — Mesh enhancement
+   ═══════════════════════════════════════════════════ */
+
+@keyframes mesh-pulse {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animated-mesh {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.animated-mesh::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse 800px 600px at 20% 30%, var(--accent-15), transparent 50%),
+    radial-gradient(ellipse 600px 800px at 80% 70%, var(--accent-10), transparent 50%),
+    radial-gradient(ellipse 900px 500px at 50% 50%, var(--accent-05), transparent 50%);
+  animation: mesh-pulse 8s ease-in-out infinite;
+  filter: blur(40px);
+}
+
+/* ═══════════════════════════════════════════════════
+   TOOL TRANSITION — Smooth content switch
+   ═══════════════════════════════════════════════════ */
+
+.tool-enter {
+  animation: tool-slide-in 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes tool-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ═══════════════════════════════════════════════════
    GLASSMORPHISM LAYER — Animated background + glass effects
    ═══════════════════════════════════════════════════ */
 
