@@ -8,6 +8,7 @@ import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
 import SpooferSection from '../components/SpooferSection';
 import DumperSection from '../components/DumperSection';
+import ObfuscatorSection from '../components/ObfuscatorSection';
 import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
@@ -40,7 +41,7 @@ const THEMES: { id: string; label: string; swatch: string }[] = [
 ];
 
 export default function Home() {
-  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'dumper'>('audio-master');
+  const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'dumper' | 'obfuscator'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -297,7 +298,7 @@ export default function Home() {
                 <div>
                   <h1 className="font-bold text-xs sm:text-sm leading-none text-[var(--text)]">S2 Studio</h1>
                   <p className="text-[10px] sm:text-[11px] text-[var(--text-45)] font-medium mt-0.5 max-w-[90px] sm:w-[150px] truncate">
-                    {activeTool === 'audio-master' ? 'Audio Master' : 'Spoofer'}
+                    {activeTool === 'audio-master' ? 'Audio Master' : activeTool === 'obfuscator' ? 'Obfuscator' : 'Spoofer'}
                   </p>
                 </div>
               </div>
@@ -330,6 +331,15 @@ export default function Home() {
                 >
                   <Terminal className="w-3.5 h-3.5 shrink-0" />
                   <span className="whitespace-nowrap">Dumper</span>
+                </button>
+                <button
+                  onClick={() => setActiveTool('obfuscator')}
+                  className={`flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    activeTool === 'obfuscator' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                  }`}
+                >
+                  <Lock className="w-3.5 h-3.5 shrink-0" />
+                  <span className="whitespace-nowrap">Obfuscator</span>
                 </button>
               </div>
 
@@ -564,6 +574,15 @@ export default function Home() {
                 <Terminal className="w-3.5 h-3.5 shrink-0" />
                 <span>Dumper</span>
               </button>
+              <button
+                onClick={() => setActiveTool('obfuscator')}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTool === 'obfuscator' ? 'bg-[var(--accent)] text-[#000000] shadow-sm' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5 shrink-0" />
+                <span>Obfuscator</span>
+              </button>
             </div>
           </div>
         </header>
@@ -793,6 +812,11 @@ export default function Home() {
           {/* Dumper Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'dumper' ? 'space-y-6' : 'hidden'}>
             <DumperSection backendUrl={BACKEND_URL} />
+          </div>
+
+          {/* Obfuscator Tool (selalu ter-mount agar state tidak reset) */}
+          <div className={activeTool === 'obfuscator' ? 'space-y-6' : 'hidden'}>
+            <ObfuscatorSection />
           </div>
         </main>
 

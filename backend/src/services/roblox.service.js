@@ -568,6 +568,8 @@ export async function runSpoofUpload({ jobId, creatorType = 'user', creatorId, a
         if (existsSync(tempFile)) {
           try { unlinkSync(tempFile); } catch {}
         }
+        // Free memory immediately after upload
+        item.bytes = null;
       }
     }
   };
@@ -673,9 +675,12 @@ export async function runSpoofDirect({ assetIds, creatorType = 'user', creatorId
             }
           }
         }
+        // Free memory immediately after processing each item
+        item.bytes = null;
       } catch (err) {
         item.status = 'failed';
         item.error = err.message || 'Gagal mengunduh aset';
+        item.bytes = null;
       }
 
       items.push(item);

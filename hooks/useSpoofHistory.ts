@@ -1,17 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '../lib/supabase';
 import { SpoofRecord } from '../types/audio';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export function useSpoofHistory() {
   const [records, setRecords] = useState<SpoofRecord[]>([]);
 
-  const loadSpoofHistory = async () => {
+  const loadSpoofHistory = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('spoof_history')
@@ -34,7 +30,7 @@ export function useSpoofHistory() {
     } catch {
       // ignore
     }
-  };
+  }, []);
 
   const upsertRecord = async (record: SpoofRecord) => {
     try {

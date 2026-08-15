@@ -5,19 +5,28 @@ import { get, set, del } from 'idb-keyval';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 
 const IDB_KEY_TUNED = 'audioUploader_tunedFiles';
+const IDB_KEY_TIMESTAMP = 'audioUploader_tunedFiles_ts';
+const MAX_TUNED_AGE = 24 * 60 * 60 * 1000; // 24 hours
 
 export function useAudioQueue() {
   const [rawFiles, setRawFiles] = useState<RawAudioFile[]>([]);
   const [tunedFiles, setTunedFiles] = useState<TunedAudioFile[]>([]);
   const [activeStep, setActiveStep] = useState(1);
 
-  // Restore tuned audio files from IndexedDB auto-backup on mount
+  // Restore tuned audio files from IndexedDB auto-backup on mount (with 24h expiry)
   useEffect(() => {
     (async () => {
       try {
         const saved = await get<TunedAudioFile[]>(IDB_KEY_TUNED);
+        const savedTs = await get<number>(IDB_KEY_TIMESTAMP);
         if (saved && Array.isArray(saved) && saved.length > 0) {
-          setTunedFiles(saved);
+          // Auto-expire: discard if older than 24 hours
+          if (savedTs && Date.now() - savedTs > MAX_TUNED_AGE) {
+            await del(IDB_KEY_TUNED);
+            await del(IDB_KEY_TIMESTAMP);
+          } else {
+            setTunedFiles(saved);
+          }
         }
       } catch {
         // ignore
@@ -31,8 +40,10 @@ export function useAudioQueue() {
       try {
         if (tunedFiles.length > 0) {
           await set(IDB_KEY_TUNED, tunedFiles);
+          await set(IDB_KEY_TIMESTAMP, Date.now());
         } else {
           await del(IDB_KEY_TUNED);
+          await del(IDB_KEY_TIMESTAMP);
         }
       } catch {
         // ignore

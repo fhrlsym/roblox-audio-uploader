@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 8000);
+      const timer = setTimeout(() => controller.abort(), 20000);
       const res = await fetch(`${BACKEND_URL}/api/dumper/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

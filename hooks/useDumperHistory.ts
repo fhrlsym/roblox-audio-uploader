@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import { HttpLogEntry, ConstantEntry } from '../lib/dumper/types';
 
 export interface DumperRecord {
@@ -23,10 +23,6 @@ export interface DumperRecord {
 }
 
 const STORAGE_KEY = 's2studio_dumperHistory';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-const supabase = createClient(supabaseUrl, supabaseKey);
 
 export function useDumperHistory() {
   const [records, setRecords] = useState<DumperRecord[]>([]);

@@ -75,6 +75,39 @@ function sweepOldFiles() {
 }
 setInterval(sweepOldFiles, 10 * 60 * 1000);
 
+// Keep-alive self-ping to prevent Railway free plan cold start
+const KEEP_ALIVE_URL = process.env.RAILWAY_PUBLIC_URL || process.env.BACKEND_URL;
+if (KEEP_ALIVE_URL) {
+  const PING_INTERVAL = 10 * 60 * 1000; // every 10 minutes
+  setInterval(async () => {
+    try {
+      await fetch(`${KEEP_ALIVE_URL}/api/health`);
+      console.log('[KeepAlive] Self-ping OK');
+    } catch {
+      console.log('[KeepAlive] Self-ping failed (non-critical)');
+    }
+  }, PING_INTERVAL);
+  console.log(`[KeepAlive] Active → pinging ${KEEP_ALIVE_URL}/api/health every 10min`);
+}
+
+// Graceful shutdown: cleanup temp files on SIGTERM/SIGINT
+function gracefulShutdown(signal) {
+  console.log(`[${signal}] received, cleaning up...`);
+  try {
+    for (const prefix of ['spoof_', 'output_', 'temp_', 'cookies_']) {
+      for (const f of readdirSync(BACKEND_ROOT)) {
+        if (f.startsWith(prefix)) {
+          try { unlinkSync(join(BACKEND_ROOT, f)); } catch {}
+        }
+      }
+    }
+  } catch {}
+  console.log('[Shutdown] Cleanup done, exiting.');
+  process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Backend server running on port ${PORT}`);

@@ -131,7 +131,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
     const results: RawAudioFile[] = [];
     const succeeded: string[] = [];
 
-    const CONCURRENCY = 2;
+    const CONCURRENCY = 3;
     let nextIndex = 0;
 
     const worker = async () => {
