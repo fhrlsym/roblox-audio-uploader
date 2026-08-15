@@ -288,7 +288,7 @@ export default function Home() {
   return (
     <ToastProvider>
       <VersionChecker />
-      <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
+      <div className="min-h-screen flex flex-col bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
         {/* Header Navigation */}
         <header className="sticky top-0 z-40 border-b border-[var(--line)] backdrop-blur-xl bg-opacity-90 header-glass">
           <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
@@ -577,7 +577,7 @@ export default function Home() {
         </header>
 
         {/* Main Application Workbench */}
-        <main className="max-w-[1400px] mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <main className="flex-1 max-w-[1400px] w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
           <div className={activeTool === 'audio-master' ? 'space-y-4' : 'hidden'}>
             {/* Compact Stats Toolbar + GitHub Sync */}
@@ -835,7 +835,7 @@ export default function Home() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-[var(--line)] py-4 mt-8">
+        <footer className="border-t border-[var(--line)] py-4 mt-auto shrink-0">
           <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
               <span className="w-1.5 h-1.5 rounded-full bg-[var(--emerald)]" />
