@@ -41,8 +41,12 @@ export default function RootLayout({
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `try{var s=JSON.parse(localStorage.getItem('s2_ui')||'{}');var t=s.state?s.state.theme:'gold-dark';document.documentElement.setAttribute('data-theme',t)}catch(e){document.documentElement.setAttribute('data-theme','gold-dark')}`,
+            __html: `try{var s=JSON.parse(localStorage.getItem('audioUploader_settings')||'{}');document.documentElement.setAttribute('data-theme',s.theme||'gold-dark')}catch(e){document.documentElement.setAttribute('data-theme','gold-dark')}`,
           }}
+        />
+        <Script
+          src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"
+          strategy="beforeInteractive"
         />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
