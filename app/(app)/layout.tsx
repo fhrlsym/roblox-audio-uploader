@@ -1,12 +1,13 @@
 'use client';
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sidebar } from '../../components/layout/sidebar';
 import { TopBar } from '../../components/layout/topbar';
 import { ToastContainer } from '../../components/ui/toast';
 import { PinGate } from '../../components/layout/pin-gate';
 import { useUIStore } from '../../lib/stores/uiStore';
+import { useAccountStore } from '../../lib/stores/accountStore';
 import { VersionChecker } from '../../components/shared/version-checker';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -24,6 +25,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   );
 
   const unlocked = useUIStore((s) => s.unlocked);
+  const loadAccounts = useAccountStore((s) => s.loadFromSupabase);
+
+  useEffect(() => {
+    if (unlocked) {
+      loadAccounts();
+    }
+  }, [unlocked, loadAccounts]);
 
   if (!unlocked) return <PinGate />;
 

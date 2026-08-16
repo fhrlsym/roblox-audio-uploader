@@ -181,7 +181,9 @@ export default function AudioMasterPage() {
           tf.originalName,
           {
             creatorType: selectedAccount.type === 'group' ? 'Group' : 'User',
-            creatorId: selectedAccount.id,
+            creatorId: selectedAccount.type === 'group'
+              ? selectedAccount.groupId || selectedAccount.id
+              : selectedAccount.userId || selectedAccount.id,
             apiKey: selectedAccount.apiKey,
           }
         );

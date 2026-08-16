@@ -56,12 +56,14 @@ export default function AccountsPage() {
     const owner = validationResult.owner;
 
     const account: SavedAccount = {
-      id: isGroup && group ? `group_${group.id}` : `user_${owner.id}`,
+      id: isGroup && group ? group.id : owner.id,
       type: isGroup ? 'group' : 'user',
       name: isGroup && group ? group.name : owner.name,
       displayName: isGroup && group ? group.name : owner.displayName || owner.name,
       thumbnail: isGroup && group ? group.thumbnail || null : null,
       apiKey: apiKey.trim(),
+      userId: owner.id,
+      groupId: isGroup && group ? group.id : undefined,
     };
 
     try {
@@ -74,7 +76,7 @@ export default function AccountsPage() {
       account.audioCapacity = quota.capacity;
     } catch {}
 
-    addAccount(account);
+    await addAccount(account);
     selectAccount(account.id);
     addToast(`Account "${account.displayName}" added`, 'success');
     setModalOpen(false);
@@ -86,7 +88,7 @@ export default function AccountsPage() {
   const handleRefreshQuota = async (account: SavedAccount) => {
     try {
       const isGroup = account.type === 'group';
-      const id = account.id.replace(isGroup ? 'group_' : 'user_', '');
+      const id = isGroup ? (account.groupId || account.id) : (account.userId || account.id);
       const quota = await RobloxService.getQuota(account.apiKey, id, isGroup ? 'Group' : 'User');
       updateQuota(account.id, quota.usage, quota.capacity);
       addToast('Quota refreshed', 'success');

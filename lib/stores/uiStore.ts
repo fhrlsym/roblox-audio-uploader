@@ -26,10 +26,21 @@ interface UIState {
 
 let toastId = 0;
 
+function migrateLegacyTheme(): ThemeId {
+  try {
+    const raw = localStorage.getItem('audioUploader_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed.theme) return parsed.theme as ThemeId;
+    }
+  } catch {}
+  return 'gold-dark';
+}
+
 export const useUIStore = create<UIState>()(
   persist(
     (set) => ({
-      theme: 'gold-dark',
+      theme: migrateLegacyTheme(),
       activeTool: 'audio-master',
       unlocked: false,
       youtubeCookies: '',

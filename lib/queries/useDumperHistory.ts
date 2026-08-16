@@ -12,18 +12,31 @@ export interface DumperRecord {
   createdAt: string;
 }
 
-const LOCAL_KEY = 's2_dumper_history';
+const NEW_KEY = 's2_dumper_history';
+const LEGACY_KEY = 's2studio_dumperHistory';
 
 function getLocalHistory(): DumperRecord[] {
   try {
-    return JSON.parse(localStorage.getItem(LOCAL_KEY) || '[]');
+    const raw = localStorage.getItem(NEW_KEY) || localStorage.getItem(LEGACY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    const mapped = parsed.map((r: Record<string, unknown>) => ({
+      id: String(r.id || crypto.randomUUID()),
+      code: String(r.code || r.inputCode || ''),
+      output: String(r.output || r.dumpedCode || ''),
+      engineUsed: String(r.engineUsed || r.engine || ''),
+      executionTimeMs: r.executionTimeMs ? Number(r.executionTimeMs) : (r.executionTimeMs === 0 ? 0 : undefined),
+      createdAt: String(r.createdAt || new Date().toISOString()),
+    }));
+    return mapped;
   } catch {
     return [];
   }
 }
 
 function setLocalHistory(records: DumperRecord[]) {
-  localStorage.setItem(LOCAL_KEY, JSON.stringify(records.slice(0, 50)));
+  localStorage.setItem(NEW_KEY, JSON.stringify(records.slice(0, 50)));
 }
 
 export function useDumperHistory() {
@@ -38,9 +51,9 @@ export function useDumperHistory() {
       if (error) return local;
       const remote = (data || []).map((r: Record<string, unknown>) => ({
         id: String(r.id),
-        code: String(r.code || ''),
-        output: String(r.output || ''),
-        engineUsed: String(r.engine_used || ''),
+        code: String(r.code || r.input_code || ''),
+        output: String(r.output || r.dumped_code || ''),
+        engineUsed: String(r.engine_used || r.engine || ''),
         executionTimeMs: r.execution_time_ms ? Number(r.execution_time_ms) : undefined,
         createdAt: String(r.created_at || new Date().toISOString()),
       }));
@@ -95,7 +108,7 @@ export function useClearDumperHistory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async () => {
-      localStorage.removeItem(LOCAL_KEY);
+      localStorage.removeItem(NEW_KEY);
       await supabase.from('dumper_history').delete().neq('id', '');
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dumper-history'] }),

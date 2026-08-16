@@ -24,11 +24,11 @@ export function useSpoofHistory() {
       if (error) throw error;
       return (data || []).map((r: Record<string, unknown>) => ({
         id: String(r.id),
-        assetId: String(r.asset_id || ''),
-        name: r.name ? String(r.name) : undefined,
+        assetId: String(r.original_asset_id || r.asset_id || ''),
+        name: r.title ? String(r.title) : (r.name ? String(r.name) : undefined),
         assetType: r.asset_type ? String(r.asset_type) : undefined,
         newAssetId: r.new_asset_id ? String(r.new_asset_id) : undefined,
-        success: Boolean(r.success),
+        success: r.status === 'Active' || r.status === 'Success' || Boolean(r.success),
         createdAt: String(r.created_at || new Date().toISOString()),
       }));
     },
@@ -47,10 +47,13 @@ export function useUpsertSpoof() {
       success: boolean;
     }) => {
       const { error } = await supabase.from('spoof_history').upsert({
+        original_asset_id: record.assetId,
         asset_id: record.assetId,
+        title: record.name || null,
         name: record.name || null,
         asset_type: record.assetType || null,
         new_asset_id: record.newAssetId || null,
+        status: record.success ? 'Active' : 'Failed',
         success: record.success,
         created_at: new Date().toISOString(),
       });

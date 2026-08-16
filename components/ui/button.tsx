@@ -4,7 +4,7 @@ import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 const variants = {
   primary:
-    'bg-[var(--accent)] text-[var(--on-accent)] shadow-sm hover:brightness-[1.06] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100',
+    'bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] shadow-sm shadow-[var(--accent-15)] hover:brightness-[1.08] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100',
   secondary:
     'border border-[var(--accent-25)] bg-[var(--accent-10)] text-[var(--accent-strong)] hover:bg-[var(--accent-15)] active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100',
   ghost:
