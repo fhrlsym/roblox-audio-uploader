@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Loader2, Building2, Check, Sparkles, User, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Building2, Check, Sparkles, User, Eye, EyeOff } from 'lucide-react';
 import { INPUT, LABEL } from '../lib/ui';
 import { SavedAccount } from '../types/audio';
+import { Modal } from './ui/Modal';
 
 interface KeyOwner {
   id: string;
@@ -140,34 +141,16 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
-      onClick={onClose}
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Tambah Akun Roblox"
+      subtitle="API key tersimpan di database, tersinkron untuk semua pengguna."
+      size="md"
     >
-      <div
-        className="modal-enter w-full max-w-lg rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-[var(--line)]">
-          <div>
-            <h3 className="font-serif text-xl font-semibold text-[var(--text)]">Tambah Akun Roblox</h3>
-            <p className="mt-0.5 text-xs text-[var(--text-40)]">
-              API key tersimpan di database, tersinkron untuk semua pengguna.
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 text-[var(--text-40)] transition hover:text-[var(--text)]"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 space-y-4">
-          {/* API Key Input */}
-          <div>
+      <div className="space-y-4">
+        {/* API Key Input */}
+        <div>
             <label className={LABEL + ' mb-2 block flex items-center justify-between'}>
               <span>API Key</span>
               <button
@@ -345,8 +328,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
               </button>
             </div>
           )}
-        </div>
       </div>
-    </div>
+    </Modal>
   );
 }

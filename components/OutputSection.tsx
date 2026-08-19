@@ -4,7 +4,8 @@ import { CloudUpload, Copy, Download, Loader2, Music, RotateCcw, Trash2 } from '
 import { TunedAudioFile, UploadResult, SavedAccount, UploadRecord } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
-import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
+import { BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
+import { Card } from './ui/Card';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -167,7 +168,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const uploadingAny = Object.values(uploading).some(Boolean);
 
   return (
-    <div className={CARD + ' p-4'}>
+    <Card className="p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">3. Output &amp; Upload</h2>
       </div>
@@ -313,6 +314,6 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
         </div>
       )}
 
-    </div>
+    </Card>
   );
 }

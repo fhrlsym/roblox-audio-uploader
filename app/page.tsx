@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, CheckCircle2, ChevronDown, CloudUpload, History as HistoryIcon, LockKeyhole, Music, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, ChevronDown, CloudUpload, History as HistoryIcon, LockKeyhole, Music, ShieldAlert, SlidersHorizontal } from 'lucide-react';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -14,26 +14,33 @@ import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
 import GitHubExportModal from '../components/GitHubExportModal';
 import { ToastProvider } from '../components/Toast';
-import { CARD, BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
+import { cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
 import { useUploadHistory } from '../hooks/useUploadHistory';
 import { useAudioQueue } from '../hooks/useAudioQueue';
 import AnimatedCounter from '../components/AnimatedCounter';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
+import { StatCard } from '../components/ui/StatCard';
+import { Stepper } from '../components/ui/Stepper';
+import { useTheme, type ThemeName, type ThemeMode } from '../hooks/useTheme';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
-const SETTINGS_KEY = 'audioUploader_settings';
 
-const THEMES: { id: string; label: string; swatch: string }[] = [
-  { id: 'system', label: 'System', swatch: 'linear-gradient(135deg, #34d399, #a67c00)' },
-  { id: 'gold-dark', label: 'Gold Dark', swatch: 'linear-gradient(135deg, #f0cd6b, #b8912a)' },
-  { id: 'light', label: 'Light', swatch: 'linear-gradient(135deg, #ffffff, #e2e8f0)' },
+const THEMES: { id: ThemeName; label: string; swatch: string }[] = [
+  { id: 'default', label: 'Default', swatch: 'linear-gradient(135deg, #4f46e5, #818cf8)' },
+  { id: 'gold', label: 'Gold', swatch: 'linear-gradient(135deg, #f0cd6b, #b8912a)' },
   { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg, #55e0ab, #1f8f68)' },
   { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b0a4ff, #6a58d6)' },
   { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #7dd3fc, #1f8fc9)' },
   { id: 'graphite', label: 'Graphite', swatch: 'linear-gradient(135deg, #cbd5e1, #465368)' },
+];
+
+const MODES: { id: ThemeMode; label: string }[] = [
+  { id: 'light', label: 'Light' },
+  { id: 'dark', label: 'Dark' },
+  { id: 'system', label: 'System' },
 ];
 
 export default function Home() {
@@ -41,7 +48,7 @@ export default function Home() {
   const [unlocked, setUnlocked] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
-  const [theme, setTheme] = useState('gold-dark');
+  const { theme, mode, setTheme, setMode } = useTheme();
   const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
   const [webVersion, setWebVersion] = useState('');
@@ -104,14 +111,9 @@ export default function Home() {
   } = useAudioQueue();
 
   useEffect(() => {
-    const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-    if (settings.theme) setTheme(settings.theme);
+    const settings = JSON.parse(localStorage.getItem('audioUploader_settings') || '{}');
     if (settings.youtubeCookies) setYoutubeCookies(settings.youtubeCookies);
   }, []);
-
-  useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [theme]);
 
   // Periodic quota & status refresh
   useEffect(() => {
@@ -136,24 +138,22 @@ export default function Home() {
     }
   };
 
-  const changeTheme = (newTheme: string) => {
+  const changeTheme = (newTheme: ThemeName) => {
     setTheme(newTheme);
     setThemeOpen(false);
-    try {
-      const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-      settings.theme = newTheme;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    } catch {
-      // ignore
-    }
+  };
+
+  const changeMode = (newMode: ThemeMode) => {
+    setMode(newMode);
+    setThemeOpen(false);
   };
 
   const handleYoutubeCookiesChange = (cookies: string) => {
     setYoutubeCookies(cookies);
     try {
-      const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      const settings = JSON.parse(localStorage.getItem('audioUploader_settings') || '{}');
       settings.youtubeCookies = cookies;
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem('audioUploader_settings', JSON.stringify(settings));
     } catch {
       // ignore
     }
@@ -287,7 +287,9 @@ export default function Home() {
           accountMenuOpen={accountMenuOpen}
           themeMenuOpen={themeOpen}
           theme={theme}
+          mode={mode}
           themes={THEMES}
+          modes={MODES}
           onToggleAccountMenu={toggleAccountMenu}
           onToggleThemeMenu={toggleThemeMenu}
           onSelectAccount={selectAccount}
@@ -297,6 +299,7 @@ export default function Home() {
             setShowAccountModal(true);
           }}
           onSelectTheme={changeTheme}
+          onSelectMode={changeMode}
         />
         
         {/* Main Layout: Sidebar + Content */}
@@ -329,78 +332,36 @@ export default function Home() {
             </section>
 
             <div className="grid grid-cols-3 gap-2 sm:gap-3">
-              <div className={`${CARD} p-3 text-center`}>
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
-                  <CloudUpload className="h-3 w-3 text-[var(--accent-soft)]" />
-                  Total
-                </p>
-                <p className="mt-1 text-lg font-bold text-[var(--text)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.total} />}</p>
-              </div>
-              <div className={`${CARD} p-3 text-center`}>
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
-                  <CheckCircle2 className="h-3 w-3 text-[var(--emerald)]" />
-                  Active
-                </p>
-                <p className="mt-1 text-lg font-bold text-[var(--emerald)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.active} />}</p>
-              </div>
-              <div className={`${CARD} p-3 text-center`}>
-                <p className="inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider text-[var(--text-45)]">
-                  <ShieldAlert className="h-3 w-3 text-[var(--danger)]" />
-                  Copyright
-                </p>
-                <p className="mt-1 text-lg font-bold text-[var(--danger)]">{statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.copyright} />}</p>
-              </div>
+              <StatCard
+                label="Total"
+                icon={<CloudUpload className="h-3 w-3" />}
+                value={statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.total} />}
+              />
+              <StatCard
+                label="Active"
+                icon={<CheckCircle2 className="h-3 w-3" />}
+                tone="success"
+                value={statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.active} />}
+              />
+              <StatCard
+                label="Copyright"
+                icon={<ShieldAlert className="h-3 w-3" />}
+                tone="danger"
+                value={statsLoading ? <span className="skeleton inline-block h-6 w-8 rounded-md" /> : <AnimatedCounter value={uploadStats.copyright} />}
+              />
             </div>
-
 
             {/* Stepper Navigation */}
             <div className="mx-auto max-w-2xl py-1">
-              <div className="relative flex items-center justify-between">
-                <div className="pointer-events-none absolute left-[16.66%] right-[16.66%] top-[19px] z-0 h-[2px] -translate-y-1/2 rounded-full bg-[var(--surface-strong)]" />
-                <motion.div
-                  className="pointer-events-none absolute top-[19px] z-0 h-[2px] -translate-y-1/2 rounded-full bg-[var(--accent)]"
-                  style={{ left: '16.66%' }}
-                  animate={{ width: `${(activeStep - 1) * 33.33}%` }}
-                  transition={{ type: 'spring', stiffness: 220, damping: 30 }}
-                />
-                {[
+              <Stepper
+                steps={[
                   { id: 1, label: 'Input', icon: Music, badge: rawFiles.length },
                   { id: 2, label: 'Tuning', icon: SlidersHorizontal, badge: tunedFiles.length },
                   { id: 3, label: 'Upload', icon: CloudUpload, badge: 0 },
-                ].map((step) => {
-                  const Icon = step.icon;
-                  const isActive = activeStep === step.id;
-                  const isDone = step.id < activeStep;
-                  return (
-                    <button
-                      key={step.id}
-                      onClick={() => goToStep(step.id)}
-                      aria-current={isActive ? 'step' : undefined}
-                      className="relative z-10 flex flex-1 select-none flex-col items-center gap-2 rounded-lg py-1"
-                    >
-                      <span
-                        className={`flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 text-[11px] font-bold transition-colors duration-200 ${
-                          isActive
-                            ? 'border-[var(--accent)] bg-[var(--accent)] text-[var(--on-accent)]'
-                            : isDone
-                              ? 'border-[var(--accent)] bg-[var(--accent-15)] text-[var(--accent-strong)]'
-                              : 'border-[var(--line)] bg-[var(--panel)] text-[var(--text-40)]'
-                        }`}
-                      >
-                        {isDone ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                      </span>
-                      <span className={`flex items-center gap-1 text-[11px] font-semibold transition-colors ${isActive ? 'text-[var(--text)]' : isDone ? 'text-[var(--text-70)]' : 'text-[var(--text-40)]'}`}>
-                        <span>{step.label}</span>
-                        {step.badge > 0 && (
-                          <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold leading-none ${isActive || isDone ? 'bg-[var(--accent-15)] text-[var(--accent-strong)]' : 'bg-[var(--surface-strong)] text-[var(--text-40)]'}`}>
-                            {step.badge}
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                ]}
+                activeStep={activeStep}
+                onStepClick={goToStep}
+              />
             </div>
 
             {/* Animated Step Workstation Panels */}

@@ -2,12 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Check, CloudUpload, Copy, Download, Film, History, Loader2, Pause, Play, Plus, Sparkles, Trash2, Wand2, X } from 'lucide-react';
+import { Check, CloudUpload, Copy, Download, Film, History, Loader2, Pause, Play, Plus, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import { SavedAccount } from '../types/audio';
 import { StatusBadge } from './StatusBadge';
-import { CARD, INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
+import { INPUT, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
 import { useSpoofHistory } from '../hooks/useSpoofHistory';
+import { Card } from './ui/Card';
+import { Modal } from './ui/Modal';
+import { StatCard } from './ui/StatCard';
+import { Terminal } from './ui/CodeBlock';
 
 interface QueueItem {
   id: string;
@@ -297,34 +301,30 @@ const stopPolling = () => {
     <div className="space-y-6">
       {/* Spoofer Stats Bar */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] to-[var(--accent)]" />
-          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-            <Sparkles className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
-            Total Spoof
-          </p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--text)] mt-1">{stats.total}</p>
-        </div>
-        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-400 to-emerald-600" />
-          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-            <Check className="w-3.5 h-3.5 text-[var(--emerald)]" />
-            Success
-          </p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--emerald)] mt-1">{stats.active}</p>
-        </div>
-        <div className={`${CARD} p-3 sm:p-4 text-center relative overflow-hidden`}>
-          <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-rose-400 to-rose-600" />
-          <p className="text-[10px] sm:text-[11px] font-medium uppercase tracking-wider inline-flex items-center gap-1.5 text-[var(--text-45)]">
-            <span className="w-3.5 h-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />
-            Failed
-          </p>
-          <p className="text-xl sm:text-2xl font-bold text-[var(--danger)] mt-1">{stats.failed}</p>
-        </div>
+        <StatCard
+          topBar
+          label="Total Spoof"
+          icon={<Sparkles className="w-3.5 h-3.5" />}
+          value={stats.total}
+        />
+        <StatCard
+          topBar
+          tone="success"
+          label="Success"
+          icon={<Check className="w-3.5 h-3.5" />}
+          value={stats.active}
+        />
+        <StatCard
+          topBar
+          tone="danger"
+          label="Failed"
+          icon={<span className="h-3.5 w-3.5 rounded-full border-2 border-[var(--danger)] shrink-0" />}
+          value={stats.failed}
+        />
       </div>
 
       {/* Workbench Form Card */}
-      <div className={`${CARD} p-6 space-y-5`}>
+      <Card className="space-y-5 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
@@ -429,183 +429,145 @@ const stopPolling = () => {
             </span>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Job Progress / Terminal & Results Modal */}
-      <AnimatePresence>
-        {jobOpen && job && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => !uploading && handleCloseModal()}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-4 backdrop-blur-sm"
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-[95vw] sm:w-full max-w-2xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl overflow-hidden"
-            >
-              <div className="flex items-center justify-between p-5 border-b border-[var(--line)]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
-                    {uploading || polling ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CloudUpload className="w-4 h-4" />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-serif text-lg font-semibold text-[var(--text)]">
-                      {uploading ? 'Uploading ke Roblox' : polling ? 'Memproses Spoof' : 'Hasil Spoof'}
-                    </h3>
-                    <p className="text-[11px] text-[var(--text-40)] font-mono">
-                      Job {job.jobId || 'Active'} · {job.items.length} asset
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => !uploading && handleCloseModal()}
-                  className="p-1.5 text-[var(--text-40)] transition hover:text-[var(--text)]"
+      <Modal
+        isOpen={jobOpen && !!job}
+        onClose={() => !uploading && handleCloseModal()}
+        preventClose={uploading}
+        title={uploading ? 'Uploading ke Roblox' : polling ? 'Memproses Spoof' : 'Hasil Spoof'}
+        subtitle={job ? `Job ${job.jobId || 'Active'} · ${job.items.length} asset` : undefined}
+        icon={
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-15)] text-[var(--accent)]">
+            {uploading || polling ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <CloudUpload className="h-4 w-4" />
+            )}
+          </div>
+        }
+        size="lg"
+        footer={
+          <div className="flex gap-3">
+            {uploading ? (
+              <button
+                disabled
+                className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60 flex items-center justify-center gap-2`}
+              >
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Memproses &amp; Mengunggah Asset ke Roblox...
+              </button>
+            ) : (
+              <button onClick={handleCloseModal} className={`${BTN_PRIMARY} w-full py-3 text-xs font-bold`}>
+                Tutup Modal
+              </button>
+            )}
+          </div>
+        }
+      >
+        {job && (
+          <div className="space-y-4">
+            {/* Terminal — hanya saat running */}
+            {polling && (
+              <Terminal title="spoofer-job.sh" maxHeight="56">
+                {(job.logs || []).slice(-40).map((line, i) => (
+                  <p key={i} className={line.includes('GAGAL') || line.includes('gagal') ? 'text-rose-300' : 'text-[var(--text-80)]'}>
+                    {line}
+                  </p>
+                ))}
+                {job.logs.length === 0 && <p className="text-[var(--text-40)]">Menyiapkan...</p>}
+                <span className="inline-block h-3.5 w-2 animate-pulse bg-[var(--accent)] align-middle" />
+              </Terminal>
+            )}
+
+            {/* Results list */}
+            <div className="space-y-2">
+              {(job.items || []).map((item) => (
+                <div
+                  key={item.key}
+                  className={`flex items-center gap-3 rounded-xl border p-3 text-xs ${
+                    item.status === 'failed'
+                      ? 'border-rose-400/25 bg-rose-400/[0.04]'
+                      : item.newAssetId
+                        ? 'border-[var(--emerald-25)] bg-[var(--emerald-10)]'
+                        : 'border-[var(--line)] bg-[var(--surface-50)]'
+                  }`}
                 >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Terminal — hanya saat running */}
-              {polling && (
-                <div className="mx-5 mt-5 rounded-xl bg-black/70 border border-[var(--line)] overflow-hidden">
-                  <div className="flex items-center gap-1.5 px-3 py-2 border-b border-white/10">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-400" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                    <span className="ml-2 text-[10px] text-white/50 font-mono">spoofer-job.sh</span>
-                  </div>
-                  <div className="p-3 max-h-56 overflow-y-auto font-mono text-[11px] leading-relaxed">
-                    {(job.logs || []).slice(-40).map((line, i) => (
-                      <p key={i} className={line.includes('GAGAL') || line.includes('gagal') ? 'text-rose-300' : 'text-[var(--text-80)]'}>
-                        {line}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-semibold text-[var(--text-90)]">
+                        {item.name || `Asset_${item.originalAssetId}`}
                       </p>
-                    ))}
-                    {job.logs.length === 0 && (
-                      <p className="text-[var(--text-40)]">Menyiapkan...</p>
+                      <span className="shrink-0 rounded-md bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-strong)]">
+                        {item.assetType || 'Audio'}
+                      </span>
+                    </div>
+                    <p className="truncate text-[11px] text-[var(--text-45)] font-mono">
+                      ID Asli: {item.originalAssetId}
+                    </p>
+                    {item.fileName && (
+                      <p className="truncate text-[10px] text-[var(--text-35)] font-mono">{item.fileName}</p>
                     )}
-                    <span className="inline-block w-2 h-3.5 bg-[var(--accent)] animate-pulse align-middle" />
+                    {item.newAssetId && (
+                      <p className="truncate text-[11px] font-mono mt-0.5">
+                        ID Baru: <code className="font-bold text-[var(--emerald)]">{item.newAssetId}</code>
+                      </p>
+                    )}
+                    {item.status === 'failed' && (
+                      <p className="text-[11px] text-rose-300">{item.error}</p>
+                    )}
+                    {item.uploadStatus === 'failed' && (
+                      <p className="text-[11px] text-rose-300">{item.uploadError}</p>
+                    )}
+                    {item.uploadStatus === 'done' && item.newAssetId && (
+                      <button
+                        onClick={() => copyToClipboard(item.newAssetId!, 'ID Baru')}
+                        className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent-strong)] hover:underline"
+                      >
+                        <Copy className="w-3 h-3" />
+                        Salin ID Baru
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.assetType === 'Audio' && (
+                      <button
+                        type="button"
+                        onClick={() => togglePlayAudio(item.originalAssetId)}
+                        className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
+                        title={playingAssetId === item.originalAssetId ? "Stop Audio" : "Putar Audio"}
+                      >
+                        {playingAssetId === item.originalAssetId ? (
+                          <Pause className="w-3.5 h-3.5 text-[var(--accent)]" />
+                        ) : (
+                          <Play className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadAsset(item.originalAssetId)}
+                      className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
+                      title="Download File Asli ke PC"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
+              ))}
+              {(!job.items || job.items.length === 0) && (
+                <p className="text-[var(--text-40)] text-xs">Tidak ada item.</p>
               )}
-
-              <div className="p-5 space-y-4 max-h-[55vh] overflow-y-auto">
-                {/* Results list */}
-                <div className="space-y-2">
-                  {(job.items || []).map((item) => (
-                    <div
-                      key={item.key}
-                      className={`flex items-center gap-3 rounded-xl border p-3 text-xs ${
-                        item.status === 'failed'
-                          ? 'border-rose-400/25 bg-rose-400/[0.04]'
-                          : item.newAssetId
-                            ? 'border-[var(--emerald-25)] bg-[var(--emerald-10)]'
-                            : 'border-[var(--line)] bg-[var(--surface-50)]'
-                      }`}
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="truncate font-semibold text-[var(--text-90)]">
-                            {item.name || `Asset_${item.originalAssetId}`}
-                          </p>
-                          <span className="shrink-0 rounded-md bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-strong)]">
-                            {item.assetType || 'Audio'}
-                          </span>
-                        </div>
-                        <p className="truncate text-[11px] text-[var(--text-45)] font-mono">
-                          ID Asli: {item.originalAssetId}
-                        </p>
-                        {item.fileName && (
-                          <p className="truncate text-[10px] text-[var(--text-35)] font-mono">{item.fileName}</p>
-                        )}
-                        {item.newAssetId && (
-                          <p className="truncate text-[11px] font-mono mt-0.5">
-                            ID Baru: <code className="font-bold text-[var(--emerald)]">{item.newAssetId}</code>
-                          </p>
-                        )}
-                        {item.status === 'failed' && (
-                          <p className="text-[11px] text-rose-300">{item.error}</p>
-                        )}
-                        {item.uploadStatus === 'failed' && (
-                          <p className="text-[11px] text-rose-300">{item.uploadError}</p>
-                        )}
-                        {item.uploadStatus === 'done' && item.newAssetId && (
-                          <button
-                            onClick={() => copyToClipboard(item.newAssetId!, 'ID Baru')}
-                            className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent-strong)] hover:underline"
-                          >
-                            <Copy className="w-3 h-3" />
-                            Salin ID Baru
-                          </button>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        {item.assetType === 'Audio' && (
-                          <button
-                            type="button"
-                            onClick={() => togglePlayAudio(item.originalAssetId)}
-                            className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
-                            title={playingAssetId === item.originalAssetId ? "Stop Audio" : "Putar Audio"}
-                          >
-                            {playingAssetId === item.originalAssetId ? (
-                              <Pause className="w-3.5 h-3.5 text-[var(--accent)]" />
-                            ) : (
-                              <Play className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleDownloadAsset(item.originalAssetId)}
-                          className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
-                          title="Download File Asli ke PC"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {(!job.items || job.items.length === 0) && (
-                    <p className="text-[var(--text-40)] text-xs">Tidak ada item.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-3 p-5 border-t border-[var(--line)]">
-                {uploading ? (
-                  <button
-                    disabled
-                    className={`${BTN_PRIMARY} flex-1 py-3 text-xs font-bold disabled:opacity-60 flex items-center justify-center gap-2`}
-                  >
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Memproses &amp; Mengunggah Asset ke Roblox...
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleCloseModal}
-                    className={`${BTN_PRIMARY} w-full py-3 text-xs font-bold`}
-                  >
-                    Tutup Modal
-                  </button>
-                )}
-              </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
+      </Modal>
 
       {/* History of Spoofed Assets */}
       {records.length > 0 && (
-        <div className={`${CARD} p-5 space-y-4`}>
+        <Card className="space-y-4 p-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
               <History className="w-4 h-4 text-[var(--accent-soft)]" />
@@ -705,7 +667,7 @@ const stopPolling = () => {
               </motion.div>
             ))}
           </div>
-        </div>
+        </Card>
       )}
     </div>
   );

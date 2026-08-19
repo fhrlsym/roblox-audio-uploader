@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronRight, Clock, Headphones, Loader2, Music, Play, Plus, Trash2, Upload, X } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
+import { ChevronRight, Headphones, Loader2, Play, Plus, Upload, X } from 'lucide-react';
 import { RawAudioFile, VideoInfo } from '../types/audio';
-import { CARD, INPUT, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
+import { INPUT, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
 import { useToast } from './Toast';
+import { Card } from './ui/Card';
+import { LinkQueueItem } from './tools/LinkQueueItem';
 
 interface YoutubeLinkEntry {
   url: string;
@@ -297,7 +299,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
   const doneCount = rawFilesCount;
 
   return (
-    <div className={CARD + ' p-4'}>
+    <Card className="p-4">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">1. Input Audio</h2>
         <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-0.5 sm:flex">
@@ -420,77 +422,17 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
               </div>
               <AnimatePresence>
                 {youtubeLinks.map((link, index) => (
-                  <motion.div
+                  <LinkQueueItem
                     key={link.url}
-                    initial={{ opacity: 0, height: 0, y: 6 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -6 }}
-                    transition={{ duration: 0.2, delay: index * 0.04 }}
-                    className={`flex items-center gap-2.5 sm:gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2 sm:p-2.5 transition ${
-                      link.error ? 'border-rose-400/25' : 'hover:border-[var(--accent-25)]'
-                    }`}
-                  >
-                    {link.loading ? (
-                      <>
-                        <div className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--surface-strong)]" />
-                          <div className="h-2.5 w-1/3 animate-pulse rounded bg-[var(--surface-strong)]" />
-                        </div>
-                        <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[var(--accent-soft)]" />
-                      </>
-                    ) : link.video ? (
-                      <>
-                        {link.video.thumbnail ? (
-                          <img
-                            src={link.video.thumbnail}
-                            alt=""
-                            referrerPolicy="no-referrer"
-                            className="h-10 w-14 sm:h-12 sm:w-20 shrink-0 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-10 w-14 sm:h-12 sm:w-20 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
-                            <Music className="w-5 h-5 text-[var(--text-40)]" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(link.video.title)}</p>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-45)]">
-                            <Clock className="w-3 h-3" />
-                            {link.video.channel || 'YouTube'} · {link.video.durationString}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeLink(link.url)}
-                          className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg border border-rose-400/25 bg-rose-400/5">
-                          <Play className="w-5 h-5 text-rose-300" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs text-[var(--text-60)]">{link.url}</p>
-                          <p className="mt-0.5 text-xs text-rose-300">{link.error}</p>
-                        </div>
-                        <button
-                          onClick={() => retryLink(link.url)}
-                          className="shrink-0 text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
-                        >
-                          Coba lagi
-                        </button>
-                        <button
-                          onClick={() => removeLink(link.url)}
-                          className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </>
-                    )}
-                  </motion.div>
+                    url={link.url}
+                    loading={link.loading}
+                    video={link.video}
+                    error={link.error}
+                    index={index}
+                    placeholderIcon="youtube"
+                    onRemove={() => removeLink(link.url)}
+                    onRetry={() => retryLink(link.url)}
+                  />
                 ))}
               </AnimatePresence>
             </div>
@@ -568,53 +510,17 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
               </div>
               <AnimatePresence>
                 {soundcloudLinks.map((link, index) => (
-                  <motion.div
+                  <LinkQueueItem
                     key={link.url}
-                    initial={{ opacity: 0, height: 0, y: 6 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -6 }}
-                    transition={{ duration: 0.2, delay: index * 0.04 }}
-                    className={`flex items-center gap-2.5 rounded-xl border bg-[var(--surface)] p-2.5 ${link.error ? 'border-rose-400/25' : 'border-[var(--line)]'}`}
-                  >
-                    {link.loading ? (
-                      <>
-                        <div className="h-12 w-20 shrink-0 animate-pulse rounded-lg bg-[var(--surface-strong)]" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--surface-strong)]" />
-                          <div className="h-2.5 w-1/3 animate-pulse rounded bg-[var(--surface-strong)]" />
-                        </div>
-                        <Loader2 className="w-4 h-4 animate-spin text-[var(--accent-soft)]" />
-                      </>
-                    ) : link.video ? (
-                      <>
-                        {link.video.thumbnail ? (
-                          <img src={link.video.thumbnail} alt="" className="h-12 w-20 shrink-0 rounded-lg object-cover" />
-                        ) : (
-                          <div className="flex h-12 w-20 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)]">
-                            <Headphones className="w-5 h-5 text-[var(--text-40)]" />
-                          </div>
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(link.video.title)}</p>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-xs text-[var(--text-45)]">
-                            <Clock className="w-3 h-3" />
-                            {link.video.channel || 'SoundCloud'} · {link.video.durationString}
-                          </p>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs text-[var(--text-60)]">{link.url}</p>
-                        <p className="mt-0.5 text-xs text-rose-300">{link.error}</p>
-                      </div>
-                    )}
-                    {link.error && (
-                      <button onClick={() => retrySoundCloudLink(link.url)} className="shrink-0 text-[11px] text-[var(--accent-soft)]">Coba lagi</button>
-                    )}
-                    <button onClick={() => setSoundcloudLinks((prev) => prev.filter((item) => item.url !== link.url))} className="shrink-0 p-1.5 text-[var(--text-40)] hover:text-rose-300">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </motion.div>
+                    url={link.url}
+                    loading={link.loading}
+                    video={link.video}
+                    error={link.error}
+                    index={index}
+                    placeholderIcon="soundcloud"
+                    onRemove={() => setSoundcloudLinks((prev) => prev.filter((item) => item.url !== link.url))}
+                    onRetry={() => retrySoundCloudLink(link.url)}
+                  />
                 ))}
               </AnimatePresence>
             </div>
@@ -724,6 +630,6 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
           </div>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

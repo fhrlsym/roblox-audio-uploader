@@ -6,9 +6,10 @@ import { CheckCircle2, Copy, History, Music2, Search, X } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
 import { UploadRecord } from '../types/audio';
-import { CARD, INPUT } from '../lib/ui';
+import { INPUT } from '../lib/ui';
 import { useToast } from './Toast';
 import { GitHubIcon } from './GitHubExportModal';
+import { Card } from './ui/Card';
 
 interface UploadHistoryProps {
   history: UploadRecord[];
@@ -62,7 +63,7 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
   const activeCount = history.filter((r) => r.status === 'Active').length;
 
   return (
-    <div className={`${CARD} p-5 space-y-4 shadow-xl border border-[var(--line)] bg-[var(--panel)]`}>
+    <Card className="space-y-4 p-5 shadow-xl border border-[var(--line)] bg-[var(--panel)]">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div className="flex items-center gap-2.5">
@@ -238,6 +239,6 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
           )}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

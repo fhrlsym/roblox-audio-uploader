@@ -5,8 +5,10 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, ChevronRight, Loader2, Music, ShieldCheck, Sliders, Trash2, Zap } from 'lucide-react';
 import { RawAudioFile, TunedAudioFile } from '../types/audio';
 import { processAudio } from '../lib/audioProcessor';
-import { CARD, LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
+import { LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
 import { useToast } from './Toast';
+import { Card } from './ui/Card';
+import { ProgressBar } from './ui/ProgressBar';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
@@ -102,7 +104,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
   };
 
   return (
-    <div className={CARD + ' p-4'}>
+    <Card className="p-4">
       <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">2. Audio Tuning</h2>
 
       <div className="mb-4">
@@ -305,11 +307,8 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
       </button>
 
       {tuning && (
-        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-[var(--surface-strong)]">
-          <div
-            className="h-full bg-gradient-to-r from-[var(--accent-deep)] to-[var(--accent-strong)] transition-all duration-300"
-            style={{ width: `${progress}%` }}
-          />
+        <div className="mt-3">
+          <ProgressBar value={progress} />
         </div>
       )}
 
@@ -319,6 +318,6 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
           <ChevronRight className="w-4 h-4" />
         </button>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,13 +1,19 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, Monitor, Music, Palette, Plus, Trash2, User } from 'lucide-react';
+import { Building2, Check, ChevronDown, Moon, Monitor, Music, Palette, Plus, Sun, Trash2, User } from 'lucide-react';
 import type { SavedAccount } from '../types/audio';
+import type { ThemeName, ThemeMode } from '../hooks/useTheme';
 
 interface ThemeOption {
-  id: string;
+  id: ThemeName;
   label: string;
   swatch: string;
+}
+
+interface ModeOption {
+  id: ThemeMode;
+  label: string;
 }
 
 interface TopBarProps {
@@ -15,15 +21,24 @@ interface TopBarProps {
   selectedAccount: SavedAccount | null;
   accountMenuOpen: boolean;
   themeMenuOpen: boolean;
-  theme: string;
+  theme: ThemeName;
+  mode: ThemeMode;
   themes: ThemeOption[];
+  modes: ModeOption[];
   onToggleAccountMenu: () => void;
   onToggleThemeMenu: () => void;
   onSelectAccount: (account: SavedAccount) => void;
   onDeleteAccount: (id: string) => void;
   onAddAccount: () => void;
-  onSelectTheme: (theme: string) => void;
+  onSelectTheme: (theme: ThemeName) => void;
+  onSelectMode: (mode: ThemeMode) => void;
 }
+
+const MODE_ICON: Record<ThemeMode, typeof Sun> = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+};
 
 export default function TopBar({
   savedAccounts,
@@ -31,13 +46,16 @@ export default function TopBar({
   accountMenuOpen,
   themeMenuOpen,
   theme,
+  mode,
   themes,
+  modes,
   onToggleAccountMenu,
   onToggleThemeMenu,
   onSelectAccount,
   onDeleteAccount,
   onAddAccount,
   onSelectTheme,
+  onSelectMode,
 }: TopBarProps) {
   return (
     <header className="relative z-50 h-16 shrink-0 border-b border-[var(--line)] bg-[var(--panel)]/90 backdrop-blur-xl">
@@ -47,7 +65,7 @@ export default function TopBar({
             <Music className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <h1 className="truncate font-serif text-lg font-semibold leading-none tracking-tight text-[var(--text)]">S2 Studio</h1>
+            <h1 className="truncate font-semibold text-lg leading-none tracking-tight text-[var(--text)]">S2 Studio</h1>
             <p className="mt-1 hidden text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)] sm:block">Roblox audio suite</p>
           </div>
         </div>
@@ -73,8 +91,32 @@ export default function TopBar({
                   transition={{ duration: 0.16, ease: [0.23, 1, 0.32, 1] }}
                   role="menu"
                   aria-label="Pilihan tema"
-                  className="absolute right-0 top-full mt-2 max-h-[70vh] w-48 origin-top-right overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-xl"
+                  className="absolute right-0 top-full mt-2 max-h-[70vh] w-52 origin-top-right overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5 shadow-xl"
                 >
+                  <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)]">Mode</p>
+                  <div className="mb-1 flex gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-1">
+                    {modes.map((m) => {
+                      const Icon = MODE_ICON[m.id];
+                      const active = mode === m.id;
+                      return (
+                        <button
+                          key={m.id}
+                          type="button"
+                          role="menuitemradio"
+                          aria-checked={active}
+                          onClick={() => onSelectMode(m.id)}
+                          className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-[11px] font-semibold transition-colors ${
+                            active ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                          }`}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-40)]">Warna</p>
                   {themes.map((option) => (
                     <button
                       key={option.id}
@@ -88,13 +130,7 @@ export default function TopBar({
                           : 'text-[var(--text-70)] hover:bg-[var(--surface)] hover:text-[var(--text)]'
                       }`}
                     >
-                      {option.id === 'system' ? (
-                        <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center text-[var(--text-50)]">
-                          <Monitor className="h-3.5 w-3.5" />
-                        </span>
-                      ) : (
-                        <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--line)]" style={{ background: option.swatch }} />
-                      )}
+                      <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[var(--line)]" style={{ background: option.swatch }} />
                       <span className="flex-1">{option.label}</span>
                       {theme === option.id && <Check className="h-3.5 w-3.5 text-[var(--accent-strong)]" />}
                     </button>

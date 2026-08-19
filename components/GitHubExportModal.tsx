@@ -12,10 +12,10 @@ import {
   Plus,
   Tag,
   UploadCloud,
-  X,
 } from 'lucide-react';
 import { INPUT, LABEL, BTN_PRIMARY, BTN_GHOST } from '../lib/ui';
 import { useToast } from './Toast';
+import { Modal } from './ui/Modal';
 
 export function GitHubIcon({ className = 'w-4 h-4' }: { className?: string }) {
   return (
@@ -391,50 +391,69 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
   if (!isOpen) return null;
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="github-modal-title"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-3 sm:p-6"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ opacity: 0, scale: 0.96, y: 10 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.96, y: 10 }}
-        transition={{ duration: 0.2 }}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl max-h-[92vh] flex flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden my-auto"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-[var(--line)] shrink-0 bg-[var(--surface-50)]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
-              <GitHubIcon className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 id="github-modal-title" className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
-                Sync ke GitHub (S2 Music)
-              </h3>
-              <p className="text-xs text-[var(--text-45)]">
-                Otomatis update list lagu ke repository <code className="font-mono text-[var(--accent-soft)]">{DEFAULT_REPO}</code>
-              </p>
-            </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Sync ke GitHub (S2 Music)"
+      subtitle={
+        <>
+          Otomatis update list lagu ke repository{' '}
+          <code className="font-mono text-[var(--accent-soft)]">{DEFAULT_REPO}</code>
+        </>
+      }
+      icon={
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-15)] text-[var(--accent)]">
+          <GitHubIcon className="w-5 h-5" />
+        </div>
+      }
+      size="xl"
+      footer={
+        <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setActiveTab(activeTab === 'commit' ? 'snippet' : 'commit')}
+              className={`${BTN_GHOST} text-xs py-2 px-3 w-full sm:w-auto`}
+            >
+              <FileCode className="w-3.5 h-3.5" />
+              {activeTab === 'commit' ? 'Lihat JSON Manual' : 'Kembali ke Mode Commit'}
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Tutup modal GitHub"
-            className="p-2 text-[var(--text-40)] hover:text-[var(--text)] transition rounded-xl hover:bg-[var(--surface)]"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={committing}
+              className="px-4 py-2 text-xs font-semibold text-[var(--text-60)] hover:text-[var(--text)] transition"
+            >
+              Batal
+            </button>
 
-        {/* Content Body */}
-        <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-5 space-y-4">
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <button
+              type="button"
+              onClick={handleCommitToGitHub}
+              disabled={committing || selectedCount === 0}
+              className={`${BTN_PRIMARY} text-xs py-2 px-5 font-bold flex-1 sm:flex-none flex items-center justify-center gap-2`}
+            >
+              {committing ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  Mengirim Commit ke GitHub...
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-3.5 h-3.5" />
+                  Commit &amp; Push ({selectedCount} Lagu)
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
@@ -659,52 +678,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               </pre>
             </div>
           )}
-        </div>
-
-        {/* Footer Actions */}
-        <div className="p-4 sm:p-5 border-t border-[var(--line)] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[var(--surface-50)] shrink-0">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={() => setActiveTab(activeTab === 'commit' ? 'snippet' : 'commit')}
-              className={`${BTN_GHOST} text-xs py-2 px-3 w-full sm:w-auto`}
-            >
-              <FileCode className="w-3.5 h-3.5" />
-              {activeTab === 'commit' ? 'Lihat JSON Manual' : 'Kembali ke Mode Commit'}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={committing}
-              className="px-4 py-2 text-xs font-semibold text-[var(--text-60)] hover:text-[var(--text)] transition"
-            >
-              Batal
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCommitToGitHub}
-              disabled={committing || selectedCount === 0}
-              className={`${BTN_PRIMARY} text-xs py-2 px-5 font-bold flex-1 sm:flex-none flex items-center justify-center gap-2`}
-            >
-              {committing ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Mengirim Commit ke GitHub...
-                </>
-              ) : (
-                <>
-                  <UploadCloud className="w-3.5 h-3.5" />
-                  Commit &amp; Push ({selectedCount} Lagu)
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </Modal>
   );
 }

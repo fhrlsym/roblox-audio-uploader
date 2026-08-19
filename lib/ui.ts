@@ -1,5 +1,5 @@
 export const CARD =
-  'rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_24px_-12px_rgba(0,0,0,0.25)]';
+  'rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-card)]';
 
 export const PANEL =
   'rounded-2xl border border-[var(--line)] bg-[var(--surface)]';

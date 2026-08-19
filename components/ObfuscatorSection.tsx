@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Code,
@@ -12,7 +12,6 @@ import {
   Shield,
   Sliders,
   Trash2,
-  Upload,
   Wand2,
   Zap,
   Eye,
@@ -20,8 +19,11 @@ import {
   Cpu,
   ChevronDown,
 } from 'lucide-react';
-import { CARD, INPUT, LABEL, BTN_PRIMARY } from '../lib/ui';
+import { BTN_PRIMARY } from '../lib/ui';
 import { useToast } from './Toast';
+import { Card } from './ui/Card';
+import { CodeEditor } from './ui/CodeEditor';
+import { Toggle } from './ui/Toggle';
 
 interface ObfuscatorSettings {
   encryptStrings: boolean;
@@ -192,7 +194,6 @@ interface HistoryRecord {
 
 export default function ObfuscatorSection() {
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Input State
   const [inputCode, setInputCode] = useState('');
@@ -263,19 +264,6 @@ export default function ObfuscatorSection() {
     } catch {
       toast('Gagal membaca clipboard browser', 'error');
     }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const content = String(ev.target?.result || '');
-      setInputCode(content);
-      toast(`File "${file.name}" berhasil dimuat`, 'success');
-    };
-    reader.readAsText(file);
-    e.target.value = '';
   };
 
   const handleLoadSample = (sample: typeof SAMPLE_SCRIPTS[0]) => {
@@ -362,9 +350,7 @@ export default function ObfuscatorSection() {
     toast(`Riwayat "${rec.title}" dimuat`, 'info');
   };
 
-  const lineCount = inputCode ? inputCode.split(/\r?\n/).length : 0;
-  const charCount = inputCode.length;
-  const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
+const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
 
   const activeSettingsCount = [
     settings.encryptStrings,
@@ -377,17 +363,8 @@ export default function ObfuscatorSection() {
 
   return (
     <div className="space-y-6">
-      {/* Hidden File Input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".lua,.luau,.txt"
-        className="hidden"
-        onChange={handleFileUpload}
-      />
-
       {/* Top Banner */}
-      <div className={`${CARD} p-4 sm:p-5 relative overflow-hidden`}>
+      <Card className="relative overflow-hidden p-4 sm:p-5">
         <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-strong)]" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -418,61 +395,33 @@ export default function ObfuscatorSection() {
             ))}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Main 2-Column Split Workstation */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Input Editor & Settings (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           {/* Input Editor */}
-          <div className={`${CARD} p-4 space-y-3`}>
-            <div className="flex items-center justify-between">
-              <label className={LABEL}>Script Input (Lua / Luau)</label>
-              <div className="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={handlePasteClipboard}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[11px] font-medium text-[var(--accent-soft)] hover:bg-[var(--accent-10)] transition"
-                >
-                  <Copy className="w-3 h-3" />
-                  Paste
-                </button>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[11px] font-medium text-[var(--text-60)] hover:text-[var(--text)] hover:bg-[var(--surface-50)] transition"
-                >
-                  <Upload className="w-3 h-3" />
-                  Upload
-                </button>
-                {inputCode && (
-                  <button
-                    type="button"
-                    onClick={() => { setInputCode(''); setOutputCode(''); setExecutionTimeMs(null); }}
-                    className="p-1 rounded-lg text-[var(--text-35)] hover:text-[var(--danger)] transition"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <textarea
+          <Card className="space-y-3 p-4">
+            <CodeEditor
+              label="Script Input (Lua / Luau)"
               value={inputCode}
-              onChange={(e) => setInputCode(e.target.value)}
+              onChange={setInputCode}
               placeholder="Tempelkan script Luau/Lua yang ingin di-obfuscate di sini..."
-              className={`${INPUT} font-mono text-xs h-64 resize-y leading-relaxed p-3.5`}
-              spellCheck={false}
+              heightClass="h-64"
+              onPasteClipboard={handlePasteClipboard}
+              onLoaded={(code, fileName) => {
+                setInputCode(code);
+                setOutputCode('');
+                setExecutionTimeMs(null);
+                toast(`File "${fileName}" berhasil dimuat`, 'success');
+              }}
+              onClear={() => { setInputCode(''); setOutputCode(''); setExecutionTimeMs(null); }}
             />
-
-            <div className="flex items-center justify-between text-[11px] text-[var(--text-40)] font-mono pt-1">
-              <span>Baris: {lineCount}</span>
-              <span>Karakter: {charCount.toLocaleString()}</span>
-            </div>
-          </div>
+          </Card>
 
           {/* Settings Panel */}
-          <div className={`${CARD} p-4 space-y-3`}>
+          <Card className="space-y-3 p-4">
             <button
               type="button"
               onClick={() => setSettingsOpen(!settingsOpen)}
@@ -541,30 +490,13 @@ export default function ObfuscatorSection() {
                       { key: 'controlFlowFlattening' as const, label: 'Control Flow', desc: 'Flatten struktur kontrol menjadi dispatch loop' },
                       { key: 'isLuauRuntime' as const, label: 'Luau Runtime', desc: 'Optimasi untuk Roblox Luau VM' },
                     ]).map((item) => (
-                      <button
+                      <Toggle
                         key={item.key}
-                        type="button"
-                        onClick={() => toggleSetting(item.key)}
-                        className={`flex items-center justify-between w-full rounded-xl border p-2.5 transition-all ${
-                          settings[item.key]
-                            ? 'border-[var(--accent-30)] bg-[var(--accent-06)]'
-                            : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-20)]'
-                        }`}
-                      >
-                        <div className="text-left">
-                          <p className={`text-xs font-semibold ${settings[item.key] ? 'text-[var(--text)]' : 'text-[var(--text-60)]'}`}>
-                            {item.label}
-                          </p>
-                          <p className="text-[10px] text-[var(--text-40)]">{item.desc}</p>
-                        </div>
-                        <div className={`w-9 h-5 rounded-full transition-all shrink-0 ml-2 flex items-center ${
-                          settings[item.key] ? 'bg-[var(--accent)] justify-end' : 'bg-[var(--surface-strong)] justify-start'
-                        }`}>
-                          <div className={`w-4 h-4 rounded-full mx-0.5 transition-all ${
-                            settings[item.key] ? 'bg-white shadow-sm' : 'bg-[var(--text-30)]'
-                          }`} />
-                        </div>
-                      </button>
+                        checked={settings[item.key]}
+                        onChange={() => toggleSetting(item.key)}
+                        label={item.label}
+                        description={item.desc}
+                      />
                     ))}
                   </div>
 
@@ -599,7 +531,7 @@ export default function ObfuscatorSection() {
                 </motion.div>
               )}
             </AnimatePresence>
-          </div>
+          </Card>
 
           {/* Big Run Button */}
           <button
@@ -624,7 +556,7 @@ export default function ObfuscatorSection() {
 
         {/* Right Column: Output Viewer (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
-          <div className={`${CARD} p-4 space-y-4 min-h-[500px] flex flex-col`}>
+          <Card className="flex min-h-[500px] flex-col space-y-4 p-4">
             {/* Output Header */}
             <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
@@ -718,7 +650,7 @@ export default function ObfuscatorSection() {
                 </div>
               </div>
             )}
-          </div>
+          </Card>
         </div>
       </div>
 
@@ -752,7 +684,7 @@ export default function ObfuscatorSection() {
               transition={{ duration: 0.3, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <div className={`${CARD} p-4 space-y-3`}>
+              <Card className="space-y-3 p-4">
                 <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
                   <div className="flex items-center gap-2">
                     <FileCode className="w-4 h-4 text-[var(--accent)]" />
@@ -857,7 +789,7 @@ export default function ObfuscatorSection() {
                     ))}
                   </div>
                 )}
-              </div>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
