@@ -39,6 +39,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# claude code (local editor settings)
+.claude/
+
 # dev logs
 next_output.log
 

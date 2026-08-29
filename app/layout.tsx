@@ -14,8 +14,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "S2 Studio — Audio Master to Roblox",
-  description: "YouTube converter, audio tuning, and batch uploader for Roblox. Created by fhrlsym.",
+  title: "S2 Studio — Roblox Audio Suite",
+  description: "Konversi, tuning, dan batch upload audio ke Roblox dalam satu workspace. Created by fhrlsym.",
 };
 
 export default function RootLayout({

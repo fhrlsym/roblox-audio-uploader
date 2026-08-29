@@ -8,7 +8,9 @@ import { processAudio } from '../lib/audioProcessor';
 import { LABEL, BTN_PRIMARY, BTN_GHOST, cleanSongTitle } from '../lib/ui';
 import { useToast } from './Toast';
 import { Card } from './ui/Card';
+import { EmptyState } from './ui/EmptyState';
 import { ProgressBar } from './ui/ProgressBar';
+import Waveform from './Waveform';
 
 interface TuningSectionProps {
   rawFiles: RawAudioFile[];
@@ -121,10 +123,11 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         </div>
 
         {rawFiles.length === 0 ? (
-          <div className="empty-state rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
-            <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
-            <p className="text-sm text-[var(--text-45)]">Belum ada file. Tambah dari Input Audio.</p>
-          </div>
+          <EmptyState
+            icon={<Music className="h-5 w-5" />}
+            title="Belum ada file"
+            description="Tambahkan audio dari tab Input (file lokal, YouTube, atau SoundCloud) lalu kembali ke sini."
+          />
         ) : (
           <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
             <AnimatePresence>
@@ -172,6 +175,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                           Setelah speed {speed}x jadi ~{fmtDuration(file.video!.duration! / speed)} — lebih dari 7 menit, ditolak Roblox.
                         </p>
                       )}
+                      {file.file && <Waveform file={file} speed={speed} className="mt-2" />}
                     </div>
                     <button
                       onClick={() => onRemoveRaw(file.id)}

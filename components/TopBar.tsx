@@ -1,7 +1,8 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Building2, Check, ChevronDown, Moon, Monitor, Music, Palette, Plus, Sun, Trash2, User } from 'lucide-react';
+import { Building2, Check, ChevronDown, Moon, Monitor, Palette, Plus, Sun, Trash2, User } from 'lucide-react';
+import S2Logo from './S2Logo';
 import type { SavedAccount } from '../types/audio';
 import type { ThemeName, ThemeMode } from '../hooks/useTheme';
 
@@ -61,8 +62,8 @@ export default function TopBar({
     <header className="relative z-50 h-16 shrink-0 border-b border-[var(--line)] bg-[var(--panel)]/90 backdrop-blur-xl">
       <div className="flex h-full items-center justify-between px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--on-accent)] shadow-sm">
-            <Music className="h-4 w-4" />
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-[var(--on-accent)] shadow-sm">
+            <S2Logo className="h-5 w-5" />
           </div>
           <div className="min-w-0">
             <h1 className="truncate font-semibold text-lg leading-none tracking-tight text-[var(--text)]">S2 Studio</h1>

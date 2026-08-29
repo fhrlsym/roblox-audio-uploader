@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, ChevronDown, CloudUpload, History as HistoryIcon, LockKeyhole, Music, ShieldAlert, SlidersHorizontal } from 'lucide-react';
+import { Modal } from '../components/ui/Modal';
+import LandingSection from '../components/LandingSection';
+import S2Logo from '../components/S2Logo';
 import InputSection from '../components/InputSection';
 import TuningSection from '../components/TuningSection';
 import OutputSection from '../components/OutputSection';
@@ -46,6 +49,7 @@ const MODES: { id: ThemeMode; label: string }[] = [
 export default function Home() {
   const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'dumper' | 'obfuscator'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
+  const [pinOpen, setPinOpen] = useState(true);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
   const { theme, mode, setTheme, setMode } = useTheme();
@@ -131,11 +135,18 @@ export default function Home() {
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (pin === CORRECT_PIN) {
+      setPinOpen(false);
       setUnlocked(true);
     } else {
       setPinError(true);
       setPin('');
     }
+  };
+
+  const handleClosePin = () => {
+    setPinOpen(false);
+    setPin('');
+    setPinError(false);
   };
 
   const changeTheme = (newTheme: ThemeName) => {
@@ -188,91 +199,81 @@ export default function Home() {
   if (!unlocked) {
     return (
       <ToastProvider>
-        <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--bg)] p-4">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-12%,var(--accent-12),transparent_50%)]" />
-          <div className="pointer-events-none absolute inset-0 opacity-[0.025]" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, var(--accent) 1px, transparent 0)', backgroundSize: '32px 32px' }} />
-          <motion.section
-            initial={{ opacity: 0, y: 16, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-            className="relative w-full max-w-sm"
-            aria-labelledby="access-title"
-          >
-            <div className="gradient-border rounded-2xl">
-              <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl backdrop-blur-sm overflow-hidden">
-                <div className="px-6 pt-7 sm:px-8">
-                  <div className="flex flex-col items-center text-center mb-6">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] flex items-center justify-center mb-4 shadow-lg shadow-[var(--accent-20)]">
-                      <Music className="h-7 w-7 text-[var(--on-accent)]" />
-                    </div>
-                    <h1 id="access-title" className="text-2xl font-bold text-[var(--text)] tracking-tight">S2 Studio</h1>
-                    <p className="text-sm text-[var(--text-50)] mt-1">Audio Master to Roblox</p>
-                  </div>
-                </div>
-
-                <form onSubmit={handlePinSubmit} className="space-y-5 px-6 pb-7 sm:px-8">
-                  <div className="space-y-2">
-                    <label htmlFor="access-code" className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-45)] block text-center">
-                      Access Code
-                    </label>
-                    <motion.div
-                      animate={pinError ? { x: [-6, 6, -4, 4, -2, 2, 0] } : {}}
-                      transition={{ duration: 0.35 }}
-                    >
-                      <div className="relative">
-                        <LockKeyhole size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-35)]" />
-                        <input
-                          id="access-code"
-                          type="password"
-                          inputMode="numeric"
-                          autoComplete="one-time-code"
-                          maxLength={6}
-                          pattern="[0-9]*"
-                          value={pin}
-                          onChange={(e) => {
-                            const onlyDigits = e.target.value.replace(/\D/g, '');
-                            setPin(onlyDigits.slice(0, 6));
-                            setPinError(false);
-                          }}
-                          placeholder="Enter 6-digit code"
-                          autoFocus
-                          aria-invalid={pinError}
-                          aria-describedby={pinError ? 'access-error' : undefined}
-                          className={`w-full bg-[var(--surface-focus)] text-[var(--text)] rounded-xl py-4 pl-11 pr-4 border text-sm text-center tracking-[0.3em] text-lg font-mono outline-none transition duration-150 ease-out focus:border-[var(--accent-40)] focus:ring-2 focus:ring-[var(--accent-20)] placeholder:tracking-normal placeholder:text-sm placeholder:font-normal ${
-                            pinError ? 'border-[var(--danger)]' : 'border-[var(--line)]'
-                          }`}
-                        />
-                      </div>
-                    </motion.div>
-                    <AnimatePresence mode="wait">
-                      {pinError && (
-                        <motion.p
-                          id="access-error"
-                          initial={{ opacity: 0, y: -4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -4 }}
-                          className="text-xs text-[var(--danger)] text-center"
-                        >
-                          Code tidak valid. Periksa lalu coba lagi.
-                        </motion.p>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={pin.length !== 6}
-                    className="w-full py-3.5 rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] text-[var(--on-accent)] font-semibold text-sm transition duration-150 ease-out hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100 shadow-lg shadow-[var(--accent-15)]"
-                  >
-                    <LockKeyhole className="h-4 w-4 inline-block mr-2" />
-                    Enter Workspace
-                  </button>
-                </form>
-              </div>
+        <LandingSection onEnter={() => setPinOpen(true)} />
+        <Modal
+          isOpen={pinOpen}
+          onClose={handleClosePin}
+          size="sm"
+          preventClose={false}
+          icon={<S2Logo className="h-6 w-6" />}
+        >
+          <div className="flex flex-col items-center text-center">
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] shadow-lg shadow-[var(--accent-20)]">
+              <S2Logo className="h-7 w-7" />
             </div>
-            <p className="mt-6 text-center text-[10px] text-[var(--text-30)]">Built by fhrlsym</p>
-          </motion.section>
-        </main>
+            <h2 id="access-title" className="text-xl font-bold tracking-tight text-[var(--text)]">Masuk ke Studio</h2>
+            <p className="mt-1 text-xs text-[var(--text-50)]">Masukkan access code untuk membuka workspace.</p>
+          </div>
+
+          <form onSubmit={handlePinSubmit} className="mt-6 space-y-5">
+            <div className="space-y-2">
+              <label htmlFor="access-code" className="block text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-45)]">
+                Access Code
+              </label>
+              <motion.div
+                animate={pinError ? { x: [-6, 6, -4, 4, -2, 2, 0] } : {}}
+                transition={{ duration: 0.35 }}
+              >
+                <div className="relative">
+                  <LockKeyhole size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-35)]" />
+                  <input
+                    id="access-code"
+                    data-autofocus
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    pattern="[0-9]*"
+                    value={pin}
+                    onChange={(e) => {
+                      const onlyDigits = e.target.value.replace(/\D/g, '');
+                      setPin(onlyDigits.slice(0, 6));
+                      setPinError(false);
+                    }}
+                    placeholder="Enter 6-digit code"
+                    aria-invalid={pinError}
+                    aria-describedby={pinError ? 'access-error' : undefined}
+                    className={`w-full bg-[var(--surface-focus)] text-[var(--text)] rounded-xl py-4 pl-11 pr-4 border text-center text-lg font-mono tracking-[0.3em] outline-none transition duration-150 ease-out focus:border-[var(--accent-40)] focus:ring-2 focus:ring-[var(--accent-20)] placeholder:tracking-normal placeholder:text-sm placeholder:font-normal ${
+                      pinError ? 'border-[var(--danger)]' : 'border-[var(--line)]'
+                    }`}
+                  />
+                </div>
+              </motion.div>
+              <AnimatePresence mode="wait">
+                {pinError && (
+                  <motion.p
+                    id="access-error"
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    className="text-center text-xs text-[var(--danger)]"
+                  >
+                    Code tidak valid. Periksa lalu coba lagi.
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <button
+              type="submit"
+              disabled={pin.length !== 6}
+              className="w-full rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] py-3.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg shadow-[var(--accent-15)] transition duration-150 ease-out hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100"
+            >
+              <LockKeyhole className="mr-2 inline-block h-4 w-4" />
+              Enter Workspace
+            </button>
+          </form>
+        </Modal>
       </ToastProvider>
     );
   }

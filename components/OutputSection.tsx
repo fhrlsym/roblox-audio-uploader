@@ -6,6 +6,8 @@ import { StatusBadge } from './StatusBadge';
 import { useToast } from './Toast';
 import { BTN_PRIMARY, cleanSongTitle } from '../lib/ui';
 import { Card } from './ui/Card';
+import { EmptyState } from './ui/EmptyState';
+import { ProgressBar } from './ui/ProgressBar';
 
 interface OutputSectionProps {
   tunedFiles: TunedAudioFile[];
@@ -19,6 +21,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   const { toast } = useToast();
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [uploadResults, setUploadResults] = useState<Record<string, UploadResult>>({});
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
 
   const handleDownload = (file: TunedAudioFile) => {
     const url = URL.createObjectURL(file.blob);
@@ -48,6 +51,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
     }
 
     setUploading((prev) => ({ ...prev, [file.id]: true }));
+    setUploadProgress((prev) => ({ ...prev, [file.id]: 5 }));
 
     try {
       const displayName = cleanSongTitle(file.tunedName);
@@ -77,6 +81,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       // Poll status every 1000ms directly via backend
       for (let attempt = 0; attempt < 60; attempt++) {
         await new Promise((r) => setTimeout(r, 1000));
+        setUploadProgress((prev) => ({ ...prev, [file.id]: Math.min(90, 8 + (attempt / 60) * 82) }));
 
         const opResponse = await fetch(
           `${backendUrl}/api/operation-status/${operationId}?apiKey=${encodeURIComponent(selectedAccount.apiKey)}`
@@ -98,6 +103,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       }
 
       if (assetId) {
+        setUploadProgress((prev) => ({ ...prev, [file.id]: 100 }));
         setUploadResults((prev) => ({
           ...prev,
           [file.id]: { filename: file.tunedName, assetId, status, success: true },
@@ -174,10 +180,11 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
       </div>
 
       {tunedFiles.length === 0 ? (
-        <div className="empty-state rounded-xl border border-dashed border-[var(--line)] py-6 text-center">
-          <Music className="mx-auto mb-2 w-6 h-6 text-[var(--text-30)]" />
-          <p className="text-sm text-[var(--text-45)]">Belum ada file yang di-tune.</p>
-        </div>
+        <EmptyState
+          icon={<Music className="h-5 w-5" />}
+          title="Belum ada file di-tune"
+          description="Tuning audio dulu di langkah 2 (Tuning) — file hasil tuning akan muncul di sini untuk di-upload."
+        />
       ) : (
         <div className="space-y-3">
           <AnimatePresence>
@@ -223,6 +230,16 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                     </button>
                   </div>
                 </div>
+
+                {uploading[file.id] && (
+                  <div className="mt-3 flex items-center gap-3">
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--accent-soft)]" />
+                    <ProgressBar value={uploadProgress[file.id] ?? 5} className="flex-1" />
+                    <span className="shrink-0 font-mono text-[10px] text-[var(--text-45)]">
+                      {Math.round(uploadProgress[file.id] ?? 5)}%
+                    </span>
+                  </div>
+                )}
 
                 {result && (
                   <div className="mt-3">

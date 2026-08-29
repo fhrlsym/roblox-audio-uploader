@@ -35,6 +35,7 @@ export function Modal({
   preventClose = false,
 }: ModalProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const lastActiveRef = useRef<HTMLElement | null>(null);
 
   const handleClose = useCallback(() => {
@@ -45,7 +46,10 @@ export function Modal({
   useEffect(() => {
     if (!isOpen) return;
     lastActiveRef.current = document.activeElement as HTMLElement | null;
-    const timer = setTimeout(() => closeRef.current?.focus(), 50);
+    const timer = setTimeout(() => {
+      const autoFocusEl = containerRef.current?.querySelector<HTMLElement>('[data-autofocus]');
+      (autoFocusEl ?? closeRef.current)?.focus();
+    }, 50);
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') handleClose();
@@ -71,6 +75,7 @@ export function Modal({
       onClick={handleClose}
     >
       <div
+        ref={containerRef}
         className={`modal-enter flex max-h-[92vh] w-full ${SIZES[size]} flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
