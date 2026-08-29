@@ -10,7 +10,7 @@ export function Label({ children, htmlFor, className = '' }: LabelProps) {
   return (
     <label
       htmlFor={htmlFor}
-      className={`text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-45)] ${className}`}
+      className={`text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)] ${className}`}
     >
       {children}
     </label>
@@ -27,7 +27,7 @@ interface SectionTitleProps {
 export function SectionTitle({ step, title, actions }: SectionTitleProps) {
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
-      <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">
+      <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">
         {step ? `${step}. ${title}` : title}
       </h2>
       {actions}

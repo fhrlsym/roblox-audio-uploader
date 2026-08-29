@@ -14,8 +14,8 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "S2 Studio — Roblox Audio Suite",
-  description: "Konversi, tuning, dan batch upload audio ke Roblox dalam satu workspace. Created by fhrlsym.",
+  title: "S2 Studio — Roblox Creator Suite",
+  description: "Convert & tune audio, clone aset, dump script, dan obfuscate — all-in-one workspace untuk Roblox creator. Created by fhrlsym.",
 };
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `try{var s=JSON.parse(localStorage.getItem('audioUploader_settings')||'{}');var t=s.theme||'default',m=s.mode||'light';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode',m)}catch(e){document.documentElement.setAttribute('data-theme','default');document.documentElement.setAttribute('data-mode','light')}`,
+            __html: `try{var s=JSON.parse(localStorage.getItem('audioUploader_settings')||'{}');var t=s.theme||'default';document.documentElement.setAttribute('data-theme',t);document.documentElement.setAttribute('data-mode','light')}catch(e){document.documentElement.setAttribute('data-theme','default');document.documentElement.setAttribute('data-mode','light')}`,
           }}
         />
         <Script

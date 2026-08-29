@@ -9,12 +9,12 @@ interface EmptyStateProps {
 
 export function EmptyState({ icon, title, description, children }: EmptyStateProps) {
   return (
-    <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
-      <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-35)]">
+    <div className="brutal-card-sm py-8 text-center">
+      <div className="brutal-icon-box mx-auto mb-3 bg-[var(--bg)] text-[var(--text-50)]">
         {icon}
       </div>
-      <p className="text-sm font-semibold text-[var(--text-70)]">{title}</p>
-      {description && <p className="mx-auto mt-1 max-w-sm text-xs text-[var(--text-40)]">{description}</p>}
+      <p className="text-sm font-bold uppercase tracking-wide text-[var(--text-80)]">{title}</p>
+      {description && <p className="mx-auto mt-1 max-w-sm text-xs font-medium text-[var(--text-50)]">{description}</p>}
       {children && <div className="mt-3">{children}</div>}
     </div>
   );

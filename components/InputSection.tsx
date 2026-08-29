@@ -301,14 +301,14 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
   return (
     <Card className="p-4">
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">1. Input Audio</h2>
-        <div className="grid grid-cols-3 gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-0.5 sm:flex">
+        <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">1. Input Audio</h2>
+        <div className="grid grid-cols-3 gap-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-1 shadow-[2px_2px_0_0_var(--text)] sm:flex">
           <button
             onClick={() => setActiveTab('file')}
-            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs transition ${
               activeTab === 'file'
-                ? 'bg-[var(--accent-20)] text-[var(--accent-strong)]'
-                : 'text-[var(--text-50)] hover:text-[var(--text-80)]'
+                ? 'border-2 border-[var(--text)] bg-[var(--accent)] font-bold uppercase tracking-wide text-[var(--on-accent)]'
+                : 'font-bold uppercase tracking-wide text-[var(--text-60)]'
             }`}
           >
             <Upload className="w-3.5 h-3.5" />
@@ -316,10 +316,10 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
           </button>
           <button
             onClick={() => setActiveTab('youtube')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-xs transition ${
               activeTab === 'youtube'
-                ? 'bg-[var(--accent-20)] text-[var(--accent-strong)]'
-                : 'text-[var(--text-50)] hover:text-[var(--text-80)]'
+                ? 'border-2 border-[var(--text)] bg-[var(--accent)] font-bold uppercase tracking-wide text-[var(--on-accent)]'
+                : 'font-bold uppercase tracking-wide text-[var(--text-60)]'
             }`}
           >
             <Play className="w-3.5 h-3.5" />
@@ -327,10 +327,10 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
           </button>
           <button
             onClick={() => setActiveTab('soundcloud')}
-            className={`flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-xs font-medium transition ${
+            className={`flex items-center gap-1.5 rounded-md px-2.5 sm:px-3 py-1.5 text-xs transition ${
               activeTab === 'soundcloud'
-                ? 'bg-[var(--accent-20)] text-[var(--accent-strong)]'
-                : 'text-[var(--text-50)] hover:text-[var(--text-80)]'
+                ? 'border-2 border-[var(--text)] bg-[var(--accent)] font-bold uppercase tracking-wide text-[var(--on-accent)]'
+                : 'font-bold uppercase tracking-wide text-[var(--text-60)]'
             }`}
           >
             <Headphones className="w-3.5 h-3.5" />
@@ -366,19 +366,19 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
               toast(`Berhasil menambahkan ${dropped.length} file audio`, 'success');
               onNext?.();
             }}
-            className={`cursor-pointer w-full border-2 border-dashed rounded-2xl p-5 sm:p-8 text-center transition-all ${
+            className={`cursor-pointer w-full border-2 border-dashed rounded-xl p-5 sm:p-8 text-center transition-all ${
               isDragging
-                ? 'border-[var(--accent)] bg-[var(--accent-15)] scale-[1.01] shadow-xl'
-                : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-30)] hover:bg-[var(--surface)]'
+                ? 'border-[var(--accent)] bg-[var(--accent)]/10 shadow-[6px_6px_0_0_var(--text)]'
+                : 'border-[var(--text)] bg-[var(--bg)] hover:bg-[var(--accent)]/10'
             }`}
           >
-            <div className="mx-auto mb-3 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] shadow-sm">
+            <div className="mx-auto mb-3 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] text-[var(--accent-strong)] shadow-[2px_2px_0_0_var(--text)]">
               <Upload className="w-5 h-5 sm:w-6 sm:h-6" />
             </div>
-            <p className="text-xs sm:text-sm font-semibold text-[var(--text-90)]">
+            <p className="text-xs sm:text-sm font-bold uppercase tracking-wide text-[var(--text-90)]">
               {isDragging ? 'Lepaskan file di sini' : 'Klik atau tarik (drag & drop) file audio ke sini'}
             </p>
-            <p className="text-[11px] sm:text-xs text-[var(--text-40)] mt-1.5 font-medium">MP3 · WAV · OGG · M4A — multi file didukung</p>
+            <p className="text-[11px] sm:text-xs text-[var(--text-40)] mt-1.5">MP3 · WAV · OGG · M4A — multi file didukung</p>
           </div>
           <input
             ref={fileInputRef}
@@ -416,7 +416,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className={LABEL}>Antrian ({readyCount} siap)</p>
-                <button onClick={clearLinks} className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition">
+                <button onClick={clearLinks} className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-40)] hover:text-[var(--danger)] transition">
                   Hapus semua
                 </button>
               </div>
@@ -458,7 +458,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
 
           {doneCount > 0 && (
             <div className="space-y-2">
-              <p className="text-xs text-emerald-400/90">
+              <p className="text-xs text-[var(--emerald)]">
                 {doneCount} audio siap di-tune.
               </p>
               {onNext && (
@@ -504,7 +504,7 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <p className={LABEL}>Antrian SoundCloud ({soundcloudReadyCount} siap)</p>
-                <button onClick={() => setSoundcloudLinks([])} className="text-[11px] text-[var(--text-40)] transition hover:text-rose-300">
+                <button onClick={() => setSoundcloudLinks([])} className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-40)] transition hover:text-[var(--danger)]">
                   Hapus semua
                 </button>
               </div>
@@ -552,12 +552,12 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
           onClick={() => setCookieHelpUrl(null)}
         >
           <div
-            className="modal-enter w-full max-w-lg rounded-2xl border border-[var(--accent-25)] bg-[var(--panel)] p-6 shadow-2xl"
+            className="modal-enter w-full max-w-lg rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] p-6 shadow-[6px_6px_0_0_var(--text)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h3 className="font-serif text-xl text-[var(--accent-strong)]">
+                <h3 className="font-serif text-xl font-bold uppercase tracking-wide text-[var(--accent-strong)]">
                   Oops, kena &quot;not a bot&quot; bot check
                 </h3>
                 <p className="mt-1 text-xs text-[var(--text-40)]">
@@ -581,11 +581,11 @@ export default function InputSection({ onFilesAdded, rawFilesCount = 0, backendU
                 ['Tempel di bawah', 'Klik kotak di bawah ini, tekan Ctrl+V, lalu klik tombol Simpan.'],
               ].map(([title, desc], i) => (
                 <li key={i} className="flex gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[var(--accent-30)] text-xs text-[var(--accent-soft)]">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 border-[var(--text)] bg-[var(--accent)] text-xs font-bold uppercase text-[var(--on-accent)]">
                     {i + 1}
                   </span>
                   <div>
-                    <div className="text-sm font-medium text-[var(--text-90)]">{title}</div>
+                    <div className="text-sm font-bold text-[var(--text-90)]">{title}</div>
                     <div className="mt-0.5 text-xs leading-relaxed text-[var(--text-50)]">{desc}</div>
                   </div>
                 </li>

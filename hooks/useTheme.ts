@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-export type ThemeName = 'default' | 'gold' | 'emerald' | 'royal' | 'ocean' | 'graphite';
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeName = 'default' | 'gold' | 'emerald' | 'royal' | 'ocean' | 'graphite' | 'sunset' | 'rose' | 'mint';
+export type ThemeMode = 'light';
 
 const SETTINGS_KEY = 'audioUploader_settings';
 
@@ -24,26 +24,20 @@ function readSettings(): Partial<ThemeState> {
 
 function resolveTheme(): ThemeName {
   const saved = readSettings();
-  const valid: ThemeName[] = ['default', 'gold', 'emerald', 'royal', 'ocean', 'graphite'];
+  const valid: ThemeName[] = ['default', 'gold', 'emerald', 'royal', 'ocean', 'graphite', 'sunset', 'rose', 'mint'];
   return valid.includes(saved.theme as ThemeName) ? (saved.theme as ThemeName) : 'default';
 }
 
-function resolveMode(): ThemeMode {
-  const saved = readSettings();
-  const valid: ThemeMode[] = ['light', 'dark', 'system'];
-  return valid.includes(saved.mode as ThemeMode) ? (saved.mode as ThemeMode) : 'light';
-}
-
-function apply(theme: ThemeName, mode: ThemeMode) {
+function apply(theme: ThemeName) {
   const root = document.documentElement;
   root.setAttribute('data-theme', theme);
-  root.setAttribute('data-mode', mode);
+  root.setAttribute('data-mode', 'light');
 }
 
 function persist(state: ThemeState) {
   try {
     const current = readSettings();
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, theme: state.theme, mode: state.mode }));
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify({ ...current, theme: state.theme, mode: 'light' }));
   } catch {
     // ignore
   }
@@ -51,29 +45,24 @@ function persist(state: ThemeState) {
 
 export function useTheme() {
   const [theme, setTheme] = useState<ThemeName>('default');
-  const [mode, setMode] = useState<ThemeMode>('light');
 
   useEffect(() => {
-    // Hydrate from settings (defaults to light)
+    // Hydrate from settings (always light mode now)
     const t = resolveTheme();
-    const m = resolveMode();
     setTheme(t);
-    setMode(m);
-    apply(t, m);
+    apply(t);
   }, []);
 
   const changeTheme = useCallback((next: ThemeName) => {
     setTheme(next);
-    apply(next, mode);
-    persist({ theme: next, mode });
-  }, [mode]);
+    apply(next);
+    persist({ theme: next, mode: 'light' });
+  }, []);
 
-  const changeMode = useCallback((next: ThemeMode) => {
-    setMode(next);
-    apply(theme, next);
-    persist({ theme, mode: next });
-  }, [theme]);
+  // Keep 'light' mode only — setMode is a no-op kept for API compat
+  const setMode = useCallback((_next: ThemeMode) => {
+    // no-op: dark mode removed
+  }, []);
 
-  // Keep data-mode in sync for 'system' (re-applied on OS change is handled by CSS media queries)
-  return { theme, mode, setTheme: changeTheme, setMode: changeMode };
+  return { theme, mode: 'light' as ThemeMode, setTheme: changeTheme, setMode };
 }

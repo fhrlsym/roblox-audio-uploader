@@ -20,18 +20,18 @@ export function Collapsible({ trigger, count, countLabel, children, defaultOpen 
       <div className="flex items-center justify-center">
         <button
           onClick={() => setOpen(!open)}
-          className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2.5 text-xs font-semibold text-[var(--text-80)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] hover:bg-[var(--surface)]"
+          className="brutal-btn-flat inline-flex items-center gap-2"
         >
           {triggerIcon}
           <span>{trigger}</span>
           {typeof count === 'number' && count > 0 && (
-            <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+            <span className="rounded-full border-2 border-[var(--text)] bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold text-[var(--on-accent)]">
               {count}
             </span>
           )}
-          {countLabel && <span className="text-[var(--text-45)]">{countLabel}</span>}
+          {countLabel && <span className="text-[var(--text-50)]">{countLabel}</span>}
           <ChevronDown
-            className={`h-4 w-4 text-[var(--text-45)] transition-transform duration-300 ${open ? 'rotate-180 text-[var(--accent)]' : ''}`}
+            className={`h-4 w-4 transition-transform duration-300 ${open ? 'rotate-180' : ''}`}
           />
         </button>
       </div>

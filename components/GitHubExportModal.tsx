@@ -402,7 +402,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
         </>
       }
       icon={
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-15)] text-[var(--accent)]">
+        <div className="brutal-icon-box h-10 w-10 bg-[var(--accent)] text-[var(--on-accent)]">
           <GitHubIcon className="w-5 h-5" />
         </div>
       }
@@ -425,7 +425,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               type="button"
               onClick={onClose}
               disabled={committing}
-              className="px-4 py-2 text-xs font-semibold text-[var(--text-60)] hover:text-[var(--text)] transition"
+              className="rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] px-4 py-2 text-xs font-bold uppercase tracking-wide text-[var(--text)] shadow-[3px_3px_0_0_var(--text)] transition hover:bg-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Batal
             </button>
@@ -454,7 +454,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
     >
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            <section className="brutal-card-sm p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-45)]">
@@ -474,9 +474,9 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                       key={filename}
                       type="button"
                       onClick={() => handleSelectMap(filename)}
-                      className={`group flex min-h-16 items-center gap-2.5 rounded-xl border p-3 text-left transition duration-150 ease-out active:scale-[0.98] ${selected ? 'border-[var(--accent-30)] bg-[var(--accent-10)]' : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-25)]'}`}
+                      className={`group flex min-h-16 items-center gap-2.5 rounded-lg border-2 p-3 text-left transition duration-150 ease-out active:translate-y-[1px] ${selected ? 'border-[var(--text)] bg-[var(--accent)]/10 shadow-[2px_2px_0_0_var(--text)]' : 'border-[var(--text)] bg-[var(--panel)] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--text)]'}`}
                     >
-                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${selected ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--surface-strong)] text-[var(--text-45)]'}`}>
+                      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-[var(--text)] ${selected ? 'bg-[var(--accent)] text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)]' : 'bg-[var(--bg)] text-[var(--text-50)] shadow-[2px_2px_0_0_var(--text)]'}`}>
                         {selected ? <Check className="h-4 w-4" /> : <Folder className="h-4 w-4" />}
                       </span>
                       <span className="min-w-0">
@@ -489,9 +489,9 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                 <button
                   type="button"
                   onClick={() => handleSelectMap('__new__')}
-                  className={`flex min-h-16 items-center gap-2.5 rounded-xl border border-dashed p-3 text-left transition duration-150 ease-out active:scale-[0.98] ${isNewMap ? 'border-[var(--accent-30)] bg-[var(--accent-10)]' : 'border-[var(--line)] text-[var(--text-50)] hover:border-[var(--accent-25)] hover:text-[var(--accent-strong)]'}`}
+                  className={`flex min-h-16 items-center gap-2.5 rounded-lg border-2 border-dashed p-3 text-left transition duration-150 ease-out active:translate-y-[1px] ${isNewMap ? 'border-[var(--text)] bg-[var(--accent)]/10 shadow-[2px_2px_0_0_var(--text)]' : 'border-[var(--text)] text-[var(--text-50)] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--text)] hover:text-[var(--accent-strong)]'}`}
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--surface-strong)]">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] shadow-[2px_2px_0_0_var(--text)]">
                     <Plus className="h-4 w-4" />
                   </span>
                   <span className="text-xs font-bold">Map baru</span>
@@ -499,7 +499,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               </div>
 
               {isNewMap && (
-                <div className="mt-3 rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-3">
+                <div className="mt-3 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)]/10 p-3 shadow-[2px_2px_0_0_var(--text)]">
                   <input
                     type="text"
                     value={newMapName}
@@ -513,7 +513,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               )}
             </section>
 
-            <section className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            <section className="brutal-card-sm p-4">
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-45)]">
@@ -534,7 +534,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                         key={genre}
                         type="button"
                         onClick={() => handleSelectGenre(genre)}
-                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-[11px] font-bold transition duration-150 ease-out active:scale-[0.97] ${selected ? 'border-[var(--accent-30)] bg-[var(--accent)] text-[var(--on-accent)]' : 'border-[var(--line)] bg-[var(--surface-50)] text-[var(--text-70)] hover:border-[var(--accent-25)]'}`}
+                        className={`inline-flex items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-[11px] font-bold uppercase tracking-wide transition duration-150 ease-out active:translate-y-[1px] ${selected ? 'border-[var(--text)] bg-[var(--accent)] text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)]' : 'border-[var(--text)] bg-[var(--panel)] text-[var(--text-70)] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--text)]'}`}
                       >
                         {selected && <Check className="h-3 w-3" />}
                         {genre}
@@ -544,7 +544,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                   <button
                     type="button"
                     onClick={() => handleSelectGenre('__new__')}
-                    className={`inline-flex items-center gap-1.5 rounded-xl border border-dashed px-3 py-2 text-[11px] font-bold transition duration-150 ease-out active:scale-[0.97] ${isNewGenre ? 'border-[var(--accent-30)] bg-[var(--accent-10)] text-[var(--accent-strong)]' : 'border-[var(--line)] text-[var(--text-50)] hover:border-[var(--accent-25)]'}`}
+                    className={`inline-flex items-center gap-1.5 rounded-lg border-2 border-dashed px-3 py-2 text-[11px] font-bold uppercase tracking-wide transition duration-150 ease-out active:translate-y-[1px] ${isNewGenre ? 'border-[var(--text)] bg-[var(--accent)]/10 text-[var(--accent-strong)] shadow-[2px_2px_0_0_var(--text)]' : 'border-[var(--text)] text-[var(--text-50)] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--text)]'}`}
                   >
                     <Plus className="h-3 w-3" />
                     Genre baru
@@ -553,7 +553,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
               )}
 
               {(isNewMap || isNewGenre || genres.length === 0) && (
-                <div className="space-y-3 rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-3">
+                <div className="space-y-3 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)]/10 p-3 shadow-[2px_2px_0_0_var(--text)]">
                   <div>
                     <label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[var(--accent-soft)]">Nama genre baru</label>
                     <input
@@ -587,7 +587,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                 <button
                   type="button"
                   onClick={handleToggleSelectAll}
-                  className="text-[11px] text-[var(--accent-soft)] hover:underline font-semibold"
+                  className="text-[11px] font-bold uppercase tracking-wide text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)] hover:underline"
                 >
                   {items.length > 0 && items.every((i) => i.selected) ? 'Batal Pilih Semua' : 'Pilih Semua'}
                 </button>
@@ -598,7 +598,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
             </div>
 
             {items.length === 0 ? (
-              <div className="empty-state py-8 text-center rounded-xl border border-dashed border-[var(--line)] text-xs text-[var(--text-40)]">
+              <div className="empty-state py-8 text-center rounded-lg border-2 border-dashed border-[var(--text)] bg-[var(--panel)] text-xs font-bold uppercase tracking-wide text-[var(--text-40)]">
                 Belum ada audio dengan status Active yang siap di-sync.
               </div>
             ) : (
@@ -609,17 +609,17 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                     initial={{ opacity: 0, transform: 'translateY(6px)' }}
                     animate={{ opacity: 1, transform: 'translateY(0)' }}
                     transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
-                    className={`flex items-center gap-3 p-3 rounded-xl border transition ${
+                    className={`flex items-center gap-3 p-3 rounded-lg border-2 transition ${
                       item.selected
-                        ? 'border-[var(--accent-30)] bg-[var(--accent-06)]'
-                        : 'border-[var(--line)] bg-[var(--surface-50)] opacity-60'
+                        ? 'border-[var(--text)] bg-[var(--accent)]/10 shadow-[2px_2px_0_0_var(--text)]'
+                        : 'border-[var(--text)] bg-[var(--panel)] opacity-60'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={item.selected}
                       onChange={() => handleItemToggle(item.id)}
-                      className="w-4 h-4 rounded border-[var(--line)] accent-[var(--accent)] cursor-pointer shrink-0"
+                      className="w-4 h-4 rounded border-2 border-[var(--text)] accent-[var(--accent)] cursor-pointer shrink-0"
                     />
 
                     <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-3 gap-2 items-center">
@@ -629,7 +629,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                           value={item.name}
                           onChange={(e) => handleItemNameChange(item.id, e.target.value)}
                           placeholder="Nama lagu in-game..."
-                          className={`${INPUT} text-xs py-1.5 font-medium`}
+                          className={`${INPUT} text-xs py-1.5 font-bold uppercase tracking-wide`}
                           disabled={!item.selected}
                         />
                       </div>
@@ -638,7 +638,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                         <span className="font-mono text-[11px] text-[var(--accent-soft)] font-bold">
                           ID: {item.assetId}
                         </span>
-                        <span className="rounded bg-[var(--surface-strong)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-60)]">
+                        <span className="rounded border-2 border-[var(--text)] bg-[var(--bg)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-60)] shadow-[2px_2px_0_0_var(--text)]">
                           {item.playbackSpeed}x
                         </span>
                       </div>
@@ -658,7 +658,7 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                   <button
                     type="button"
                     onClick={copySnippetToClipboard}
-                    className="text-[11px] text-[var(--accent-soft)] hover:underline flex items-center gap-1"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)] hover:underline"
                   >
                     <Copy className="w-3 h-3" />
                     Salin JSON
@@ -666,14 +666,14 @@ export default function GitHubExportModal({ isOpen, onClose, songs, backendUrl =
                   <button
                     type="button"
                     onClick={downloadJsonFile}
-                    className="text-[11px] text-[var(--accent-soft)] hover:underline flex items-center gap-1"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)] hover:underline"
                   >
                     <Download className="w-3 h-3" />
                     Unduh .json
                   </button>
                 </div>
               </div>
-              <pre className="p-3 rounded-xl bg-black/60 border border-[var(--line)] font-mono text-[11px] text-[var(--text-80)] max-h-36 overflow-y-auto">
+              <pre className="p-3 rounded-lg bg-black border-2 border-[var(--text)] font-mono text-[11px] text-[var(--text-80)] shadow-[4px_4px_0_0_var(--text)] max-h-36 overflow-y-auto">
                 {generateSnippet()}
               </pre>
             </div>

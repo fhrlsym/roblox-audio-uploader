@@ -71,21 +71,21 @@ export function Modal({
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
       onClick={handleClose}
     >
       <div
         ref={containerRef}
-        className={`modal-enter flex max-h-[92vh] w-full ${SIZES[size]} flex-col rounded-2xl border border-[var(--accent-15)] bg-[var(--panel)] shadow-2xl`}
+        className={`modal-enter flex max-h-[92vh] w-full ${SIZES[size]} flex-col rounded-xl border-2 border-[var(--text)] bg-[var(--panel)] shadow-[6px_6px_0_0_var(--text)]`}
         onClick={(e) => e.stopPropagation()}
       >
         {(title || icon) && (
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--line)] p-5">
+          <div className="flex items-center justify-between gap-3 border-b-2 border-[var(--text)] p-5">
             <div className="flex items-center gap-3">
               {icon}
               <div>
-                {title && <h3 className="font-semibold text-lg text-[var(--text)]">{title}</h3>}
-                {subtitle && <p className="mt-0.5 text-xs text-[var(--text-40)]">{subtitle}</p>}
+                {title && <h3 className="text-lg font-extrabold uppercase tracking-tight text-[var(--text)]">{title}</h3>}
+                {subtitle && <p className="mt-0.5 text-xs font-semibold text-[var(--text-50)]">{subtitle}</p>}
               </div>
             </div>
             <button
@@ -93,7 +93,7 @@ export function Modal({
               type="button"
               onClick={handleClose}
               aria-label="Tutup"
-              className="rounded-lg p-2 text-[var(--text-40)] transition hover:bg-[var(--surface)] hover:text-[var(--text)]"
+              className="border-2 border-[var(--text)] bg-[var(--bg)] p-2 text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] active:translate-y-[1px]"
             >
               <X className="h-5 w-5" />
             </button>
@@ -103,7 +103,7 @@ export function Modal({
         <div className="flex-1 min-h-0 overflow-y-auto p-5">{children}</div>
 
         {footer && (
-          <div className="shrink-0 border-t border-[var(--line)] bg-[var(--surface-50)] p-4 sm:p-5">
+          <div className="shrink-0 border-t-2 border-[var(--text)] bg-[var(--bg)] p-4 sm:p-5">
             {footer}
           </div>
         )}

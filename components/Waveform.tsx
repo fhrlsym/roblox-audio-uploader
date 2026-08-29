@@ -183,7 +183,7 @@ export default function Waveform({ file, speed = 1, className = '' }: WaveformPr
         onClick={togglePlay}
         disabled={!hasAudio}
         aria-label={playing ? 'Jeda preview' : 'Putar preview'}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--text-60)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] active:scale-[0.95] disabled:opacity-30"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text)] shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] active:translate-y-[1px] active:shadow-[1px_1px_0_0_var(--text)] disabled:opacity-30 disabled:hover:bg-[var(--panel)] disabled:hover:text-[var(--text)]"
       >
         {playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3 translate-x-px" />}
       </button>

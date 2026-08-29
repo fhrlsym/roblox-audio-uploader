@@ -107,7 +107,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
 
   return (
     <Card className="p-4">
-      <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight mb-4">2. Audio Tuning</h2>
+      <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--text)] mb-4">2. Audio Tuning</h2>
 
       <div className="mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -115,7 +115,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
           {rawFiles.length > 0 && (
             <button
               onClick={() => rawFiles.forEach((f) => onRemoveRaw(f.id))}
-              className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition"
+              className="text-[11px] font-bold uppercase tracking-wide text-[var(--danger)] hover:text-[var(--text)] transition"
             >
               Hapus semua
             </button>
@@ -142,8 +142,8 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, y: -6 }}
                     transition={{ duration: 0.2, delay: index * 0.04 }}
-                    className={`flex items-center gap-3 rounded-xl border bg-[var(--surface)] p-2.5 transition ${
-                      overLimit ? 'border-amber-400/25' : 'border-[var(--line)]'
+                    className={`brutal-card-sm flex items-center gap-3 p-2.5 ${
+                      overLimit ? 'bg-[var(--danger)]/10' : ''
                     }`}
                   >
                     {file.video?.thumbnail ? (
@@ -151,18 +151,18 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                         src={file.video.thumbnail}
                         alt=""
                         referrerPolicy="no-referrer"
-                        className="h-10 w-16 shrink-0 rounded-lg object-cover"
+                        className="h-10 w-16 shrink-0 rounded-md border-2 border-[var(--text)] object-cover"
                       />
                     ) : (
-                      <div className="flex h-10 w-16 shrink-0 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)]">
-                        <Music className="w-4 h-4 text-[var(--text-40)]" />
+                      <div className="brutal-icon-box flex h-10 w-16 shrink-0 justify-center bg-[var(--bg)] text-[var(--text-50)]">
+                        <Music className="w-4 h-4" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-[var(--text-90)]">
+                      <p className="truncate text-sm font-bold text-[var(--text-90)]">
                         {cleanSongTitle(file.video?.title || file.name)}
                       </p>
-                      <p className="truncate text-xs text-[var(--text-45)]">
+                      <p className="truncate text-xs font-medium text-[var(--text-50)]">
                         {file.video
                           ? `${file.video.channel} · ${file.video.durationString}`
                           : file.file
@@ -170,7 +170,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                             : ''}
                       </p>
                       {overLimit && (
-                        <p className="mt-1 flex items-center gap-1 text-[11px] text-amber-300/90">
+                        <p className="mt-1 flex items-center gap-1 text-[11px] font-bold text-[var(--danger)]">
                           <AlertTriangle className="w-3 h-3 shrink-0" />
                           Setelah speed {speed}x jadi ~{fmtDuration(file.video!.duration! / speed)} — lebih dari 7 menit, ditolak Roblox.
                         </p>
@@ -179,7 +179,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                     </div>
                     <button
                       onClick={() => onRemoveRaw(file.id)}
-                      className="shrink-0 p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                      className="shrink-0 rounded-md border-2 border-[var(--text)] bg-[var(--bg)] p-1.5 text-[var(--text)] transition hover:bg-[var(--danger)] hover:text-white active:translate-y-[1px]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -195,7 +195,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
       <div className="mb-5 space-y-2">
         <div className="flex items-center justify-between">
           <p className={LABEL}>Preset</p>
-          <span className="text-[11px] font-mono font-semibold text-[var(--accent-soft)]">
+          <span className="text-[11px] font-mono font-bold uppercase text-[var(--accent)]">
             {speed === 2.3 && amplify === -4
               ? 'Roblox Standard'
               : speed === 2.75 && amplify === -6
@@ -233,19 +233,19 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
                     toast(`Preset diterapkan: ${preset.label} (${preset.badge})`, 'info');
                   }
                 }}
-                className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all duration-150 ${
+                className={`flex flex-col items-start p-2.5 rounded-lg border-2 border-[var(--text)] text-left transition-all duration-150 ${
                   isMatch
-                    ? 'border-[var(--accent-40)] bg-[var(--accent-15)] shadow-sm'
-                    : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-20)] hover:bg-[var(--surface)]'
+                    ? 'bg-[var(--accent)] text-[var(--on-accent)] shadow-[3px_3px_0_0_var(--text)]'
+                    : 'bg-[var(--panel)] text-[var(--text)] hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)]'
                 }`}
               >
                 <div className="flex items-center gap-1.5 w-full">
-                  <Icon className={`w-3.5 h-3.5 ${isMatch ? 'text-[var(--accent-strong)]' : 'text-[var(--text-60)]'}`} />
-                  <span className={`text-xs font-bold truncate ${isMatch ? 'text-[var(--accent-strong)]' : 'text-[var(--text-90)]'}`}>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="text-xs font-bold uppercase truncate">
                     {preset.label}
                   </span>
                 </div>
-                <span className={`text-[10px] mt-1 font-mono ${isMatch ? 'text-[var(--accent-soft)]' : 'text-[var(--text-45)]'}`}>
+                <span className="text-[10px] mt-1 font-mono opacity-80">
                   {preset.badge}
                 </span>
               </button>
@@ -258,7 +258,7 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={LABEL}>Speed</label>
-            <span className="font-mono text-sm text-[var(--accent-strong)]">{speed}x</span>
+            <span className="font-mono text-sm font-bold text-[var(--accent)]">{speed}x</span>
           </div>
           <input
             type="range"
@@ -269,16 +269,16 @@ export default function TuningSection({ rawFiles, onTuningComplete, onRemoveRaw,
             onChange={(e) => setSpeed(parseFloat(e.target.value))}
             className="w-full accent-[var(--accent)]"
           />
-          <p className="text-xs text-[var(--text-40)] mt-1.5">
+          <p className="text-xs font-medium text-[var(--text-50)] mt-1.5">
             Roblox PlaybackSpeed:{' '}
-            <span className="font-mono text-[var(--accent-soft)] font-semibold">{calculateRobloxSpeed()}</span>
+            <span className="font-mono font-bold text-[var(--accent)]">{calculateRobloxSpeed()}</span>
           </p>
         </div>
 
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className={LABEL}>Amplify</label>
-            <span className="font-mono text-sm text-emerald-400">{amplify > 0 ? '+' : ''}{amplify} dB</span>
+            <span className="font-mono text-sm font-bold text-[var(--emerald)]">{amplify > 0 ? '+' : ''}{amplify} dB</span>
           </div>
           <input
             type="range"

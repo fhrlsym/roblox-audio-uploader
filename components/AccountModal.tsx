@@ -50,13 +50,13 @@ function QuotaBar({ usage, capacity }: { usage?: number; capacity?: number }) {
 
   return (
     <div className="mt-3">
-      <div className="flex items-center justify-between text-[10px] text-[var(--text-40)] mb-1">
+      <div className="mb-1 flex items-center justify-between text-[10px] text-[var(--text-40)]">
         <span>Audio Quota (bulan ini)</span>
-        <span className="font-medium text-[var(--text-60)]">
+        <span className="font-bold uppercase tracking-wide text-[var(--text-60)]">
           {usage.toLocaleString()} / {capacity.toLocaleString()}
         </span>
       </div>
-      <div className="w-full h-1.5 bg-[var(--surface-strong)] rounded-full overflow-hidden">
+      <div className="w-full h-2 border-2 border-[var(--text)] bg-[var(--bg)] rounded-full overflow-hidden">
         <div className={`h-full ${color} transition-all duration-300`} style={{ width: `${pct}%` }} />
       </div>
     </div>
@@ -156,7 +156,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition inline-flex items-center gap-1"
+                className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)]"
               >
                 {showApiKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 <span>{showApiKey ? 'Sembunyikan' : 'Tampilkan'}</span>
@@ -178,7 +178,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
               <button
                 type="button"
                 onClick={() => setShowApiKey(!showApiKey)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-40)] hover:text-[var(--text)] transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-40)] transition hover:text-[var(--text)]"
               >
                 {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -208,7 +208,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
             <button
               onClick={handleCheck}
               disabled={checking || !apiKey.trim()}
-              className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] py-3 text-sm font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="brutal-btn-primary flex-1 py-3 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {checking ? (
                 <>
@@ -224,7 +224,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
             </button>
             <button
               onClick={onClose}
-              className="rounded-xl border border-[var(--line)] px-6 py-3 text-sm text-[var(--text-60)] transition hover:border-[var(--accent-25)] hover:text-[var(--text)]"
+              className="rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] px-6 py-3 text-sm font-bold uppercase tracking-wide text-[var(--text)] shadow-[3px_3px_0_0_var(--text)] transition hover:bg-[var(--surface)] active:translate-y-[1px]"
             >
               Batal
             </button>
@@ -232,34 +232,34 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
 
           {/* Error */}
           {error && (
-            <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-300">
+            <div className="rounded-lg border-2 border-[var(--danger)] bg-[var(--danger)]/10 p-3 text-sm text-rose-300 shadow-[3px_3px_0_0_var(--text)]">
               {error}
             </div>
           )}
 
           {/* Key Info */}
           {keyInfo && (
-            <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-4">
+            <div className="rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-4 shadow-[3px_3px_0_0_var(--text)] space-y-4">
               {/* Owner Info */}
               <div className="flex items-center gap-4">
                 {keyInfo.owner.thumbnail ? (
                   <img
                     src={keyInfo.owner.thumbnail}
                     alt={keyInfo.owner.name}
-                    className="w-16 h-16 rounded-xl object-cover border border-[var(--line)]"
+                    className="w-16 h-16 rounded-lg object-cover border-2 border-[var(--text)]"
                   />
                 ) : (
-                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--text-40)]">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] text-[var(--text-40)] shadow-[2px_2px_0_0_var(--text)]">
                     <User className="w-8 h-8" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="truncate text-base font-semibold text-[var(--text)]">
+                    <h4 className="truncate text-base font-bold uppercase tracking-wide text-[var(--text)]">
                       {keyInfo.owner.displayName || keyInfo.owner.name}
                     </h4>
                     {keyInfo.owner.hasVerifiedBadge && (
-                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--accent-strong)] text-[10px] font-bold text-[var(--on-accent)]">
+                      <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 border-[var(--text)] bg-[var(--accent)] text-[10px] font-bold text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)]">
                         <Check className="w-3 h-3" />
                       </span>
                     )}
@@ -285,31 +285,31 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
                       <button
                         key={g.id}
                         onClick={() => setSelectedGroupId(g.id)}
-                        className={`flex w-full items-center gap-3 rounded-lg border p-3 transition-all ${
+                        className={`flex w-full items-center gap-3 rounded-lg border-2 p-3 transition-all ${
                           selectedGroupId === g.id
-                            ? 'border-[var(--accent-30)] bg-[var(--accent-10)]'
-                            : 'border-[var(--line)] bg-[var(--surface-strong)] hover:border-[var(--accent-25)]'
+                            ? 'border-[var(--text)] bg-[var(--accent)]/10 shadow-[2px_2px_0_0_var(--text)]'
+                            : 'border-[var(--text)] bg-[var(--panel)] hover:-translate-y-[1px] hover:shadow-[2px_2px_0_0_var(--text)]'
                         }`}
                       >
                         {g.thumbnail ? (
                           <img
                             src={g.thumbnail}
                             alt={g.name}
-                            className="h-10 w-10 rounded-lg object-cover border border-[var(--line)]"
+                            className="h-10 w-10 rounded-lg object-cover border-2 border-[var(--text)]"
                           />
                         ) : (
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface-strong)] text-[var(--text-40)]">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] text-[var(--text-50)]">
                             <Building2 className="w-5 h-5" />
                           </div>
                         )}
                         <div className="flex-1 text-left min-w-0">
-                          <p className="truncate text-sm font-medium text-[var(--text-90)]">{g.name}</p>
+                          <p className="truncate text-sm font-bold uppercase tracking-wide text-[var(--text-90)]">{g.name}</p>
                           {g.memberCount != null && (
                             <p className="text-xs text-[var(--text-40)]">{g.memberCount.toLocaleString()} members</p>
                           )}
                         </div>
                         {selectedGroupId === g.id && (
-                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--accent-strong)]">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-[var(--text)] bg-[var(--accent)] shadow-[2px_2px_0_0_var(--text)]">
                             <Check className="h-3 w-3 text-[var(--on-accent)]" />
                           </span>
                         )}
@@ -322,7 +322,7 @@ export default function AccountModal({ isOpen, onClose, onAccountAdded, backendU
               {/* Save Button */}
               <button
                 onClick={handleSave}
-                className="w-full rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] py-3 text-sm font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.98]"
+                className="brutal-btn-primary w-full py-3"
               >
                 Simpan Akun
               </button>

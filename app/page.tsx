@@ -32,24 +32,25 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:300
 const CORRECT_PIN = process.env.NEXT_PUBLIC_PIN || '515753';
 
 const THEMES: { id: ThemeName; label: string; swatch: string }[] = [
-  { id: 'default', label: 'Default', swatch: 'linear-gradient(135deg, #4f46e5, #818cf8)' },
-  { id: 'gold', label: 'Gold', swatch: 'linear-gradient(135deg, #f0cd6b, #b8912a)' },
-  { id: 'emerald', label: 'Emerald', swatch: 'linear-gradient(135deg, #55e0ab, #1f8f68)' },
-  { id: 'royal', label: 'Royal', swatch: 'linear-gradient(135deg, #b0a4ff, #6a58d6)' },
-  { id: 'ocean', label: 'Ocean', swatch: 'linear-gradient(135deg, #7dd3fc, #1f8fc9)' },
-  { id: 'graphite', label: 'Graphite', swatch: 'linear-gradient(135deg, #cbd5e1, #465368)' },
+  { id: 'default', label: 'Default', swatch: '#4f46e5' },
+  { id: 'gold', label: 'Gold', swatch: '#a67c00' },
+  { id: 'emerald', label: 'Emerald', swatch: '#0f9d6b' },
+  { id: 'royal', label: 'Royal', swatch: '#6d5ae0' },
+  { id: 'ocean', label: 'Ocean', swatch: '#0e94d4' },
+  { id: 'graphite', label: 'Graphite', swatch: '#59677d' },
+  { id: 'sunset', label: 'Sunset', swatch: '#ea580c' },
+  { id: 'rose', label: 'Rose', swatch: '#e11d48' },
+  { id: 'mint', label: 'Mint', swatch: '#10b981' },
 ];
 
 const MODES: { id: ThemeMode; label: string }[] = [
   { id: 'light', label: 'Light' },
-  { id: 'dark', label: 'Dark' },
-  { id: 'system', label: 'System' },
 ];
 
 export default function Home() {
   const [activeTool, setActiveTool] = useState<'audio-master' | 'spoofer' | 'dumper' | 'obfuscator'>('audio-master');
   const [unlocked, setUnlocked] = useState(false);
-  const [pinOpen, setPinOpen] = useState(true);
+  const [pinOpen, setPinOpen] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
   const { theme, mode, setTheme, setMode } = useTheme();
@@ -205,50 +206,44 @@ export default function Home() {
           onClose={handleClosePin}
           size="sm"
           preventClose={false}
-          icon={<S2Logo className="h-6 w-6" />}
         >
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] shadow-lg shadow-[var(--accent-20)]">
+            <div className="brutal-icon-box mb-4 flex h-14 w-14 items-center justify-center rounded-xl border-2 border-[var(--text)] bg-[var(--accent)] text-white shadow-[4px_4px_0_0_var(--text)]">
               <S2Logo className="h-7 w-7" />
             </div>
-            <h2 id="access-title" className="text-xl font-bold tracking-tight text-[var(--text)]">Masuk ke Studio</h2>
-            <p className="mt-1 text-xs text-[var(--text-50)]">Masukkan access code untuk membuka workspace.</p>
+            <h2 id="access-title" className="text-xl font-extrabold uppercase tracking-wide text-[var(--text)]">Masuk ke Studio</h2>
+            <p className="mt-1 text-xs font-medium text-[var(--text-50)]">Masukkan access code untuk membuka workspace.</p>
           </div>
 
           <form onSubmit={handlePinSubmit} className="mt-6 space-y-5">
             <div className="space-y-2">
-              <label htmlFor="access-code" className="block text-center text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-45)]">
+              <label htmlFor="access-code" className="block text-center text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)]">
                 Access Code
               </label>
-              <motion.div
-                animate={pinError ? { x: [-6, 6, -4, 4, -2, 2, 0] } : {}}
-                transition={{ duration: 0.35 }}
-              >
-                <div className="relative">
-                  <LockKeyhole size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-35)]" />
-                  <input
-                    id="access-code"
-                    data-autofocus
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    maxLength={6}
-                    pattern="[0-9]*"
-                    value={pin}
-                    onChange={(e) => {
-                      const onlyDigits = e.target.value.replace(/\D/g, '');
-                      setPin(onlyDigits.slice(0, 6));
-                      setPinError(false);
-                    }}
-                    placeholder="Enter 6-digit code"
-                    aria-invalid={pinError}
-                    aria-describedby={pinError ? 'access-error' : undefined}
-                    className={`w-full bg-[var(--surface-focus)] text-[var(--text)] rounded-xl py-4 pl-11 pr-4 border text-center text-lg font-mono tracking-[0.3em] outline-none transition duration-150 ease-out focus:border-[var(--accent-40)] focus:ring-2 focus:ring-[var(--accent-20)] placeholder:tracking-normal placeholder:text-sm placeholder:font-normal ${
-                      pinError ? 'border-[var(--danger)]' : 'border-[var(--line)]'
-                    }`}
-                  />
-                </div>
-              </motion.div>
+              <div className="relative">
+                <LockKeyhole size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-50)]" />
+                <input
+                  id="access-code"
+                  data-autofocus
+                  type="password"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  pattern="[0-9]*"
+                  value={pin}
+                  onChange={(e) => {
+                    const onlyDigits = e.target.value.replace(/\D/g, '');
+                    setPin(onlyDigits.slice(0, 6));
+                    setPinError(false);
+                  }}
+                  placeholder="Enter 6-digit code"
+                  aria-invalid={pinError}
+                  aria-describedby={pinError ? 'access-error' : undefined}
+                  className={`w-full rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] py-4 pl-11 pr-4 text-center text-lg font-mono tracking-[0.3em] outline-none transition-colors duration-150 focus:border-[var(--accent)] placeholder:tracking-normal placeholder:text-sm placeholder:font-normal ${
+                    pinError ? 'border-[var(--danger)] bg-[var(--danger)]/5' : ''
+                  }`}
+                />
+              </div>
               <AnimatePresence mode="wait">
                 {pinError && (
                   <motion.p
@@ -256,7 +251,7 @@ export default function Home() {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
-                    className="text-center text-xs text-[var(--danger)]"
+                    className="rounded-md border-2 border-[var(--danger)] bg-[var(--danger)] px-3 py-1.5 text-center text-xs font-bold uppercase text-white"
                   >
                     Code tidak valid. Periksa lalu coba lagi.
                   </motion.p>
@@ -267,7 +262,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={pin.length !== 6}
-              className="w-full rounded-xl bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] py-3.5 text-sm font-semibold text-[var(--on-accent)] shadow-lg shadow-[var(--accent-15)] transition duration-150 ease-out hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:active:scale-100"
+              className="brutal-btn-primary w-full justify-center py-3.5"
             >
               <LockKeyhole className="mr-2 inline-block h-4 w-4" />
               Enter Workspace
@@ -311,23 +306,30 @@ export default function Home() {
           {/* Main Application Workbench */}
           <main className="min-w-0 flex-1 overflow-y-auto pb-20 lg:pb-0">
             <div className="max-w-[1400px] w-full mx-auto px-3 sm:px-4 py-4 sm:py-6">
-          {/* Audio Master Tool (selalu ter-mount agar state tidak reset) */}
-          <div className={activeTool === 'audio-master' ? 'space-y-4' : 'hidden'}>
-            <section className="relative overflow-hidden rounded-[28px] border border-[var(--line)] bg-[var(--panel)] px-5 py-6 sm:px-7 sm:py-7">
-              <div className="absolute inset-0 hero-gradient opacity-80" />
+          <AnimatePresence mode="wait">
+            {activeTool === 'audio-master' && (
+              <motion.div
+                key="audio-master"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="space-y-4"
+              >
+            <section className="brutal-card relative overflow-hidden px-5 py-6 sm:px-7 sm:py-7">
               <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-strong)] text-[var(--on-accent)] shadow-lg shadow-[var(--accent-20)]">
+                  <span className="brutal-icon-box h-12 w-12 bg-[var(--accent)] text-white">
                     <Music className="h-6 w-6" />
                   </span>
                   <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-[var(--text)]">Audio Master</h2>
-                    <p className="mt-0.5 text-sm text-[var(--text-50)]">Upload &rarr; Tune &rarr; Roblox</p>
+                    <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">Audio Master</h2>
+                    <p className="mt-0.5 text-sm font-medium text-[var(--text-50)]">Upload &rarr; Tune &rarr; Roblox</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-[var(--accent-25)] bg-[var(--accent-08)] px-3 py-2">
-                  <SlidersHorizontal className="h-3.5 w-3.5 text-[var(--accent-strong)]" />
-                  <span className="text-[11px] font-semibold text-[var(--accent-strong)]">Step {activeStep} / 3</span>
+                <div className="brutal-tag flex items-center gap-2">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  <span>Step {activeStep} / 3</span>
                 </div>
               </div>
             </section>
@@ -430,18 +432,18 @@ export default function Home() {
               <div className="flex items-center justify-center">
                 <button
                   onClick={() => setHistoryOpen(!historyOpen)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2.5 text-xs font-semibold text-[var(--text-80)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] hover:bg-[var(--surface)]"
+                  className="brutal-btn-flat inline-flex items-center gap-2"
                 >
-                  <HistoryIcon className="w-4 h-4 text-[var(--accent-soft)]" />
+                  <HistoryIcon className="h-4 w-4" />
                   <span>Riwayat Upload</span>
                   {uploadHistory.length > 0 && (
-                    <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+                    <span className="rounded-full border-2 border-[var(--text)] bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold text-[var(--on-accent)]">
                       {uploadHistory.length}
                     </span>
                   )}
                   <ChevronDown
-                    className={`w-4 h-4 text-[var(--text-45)] transition-transform duration-300 ${
-                      historyOpen ? 'rotate-180 text-[var(--accent)]' : ''
+                    className={`h-4 w-4 transition-transform duration-300 ${
+                      historyOpen ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
@@ -467,38 +469,64 @@ export default function Home() {
                 )}
               </AnimatePresence>
             </div>
-          </div>
+              </motion.div>
+            )}
 
-          {/* Spoofer Tool (selalu ter-mount agar state tidak reset) */}
-          <div className={activeTool === 'spoofer' ? 'space-y-6' : 'hidden'}>
-            <SpooferSection
-              selectedAccount={selectedAccount}
-              backendUrl={BACKEND_URL}
-            />
-          </div>
+            {activeTool === 'spoofer' && (
+              <motion.div
+                key="spoofer"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="space-y-6"
+              >
+                <SpooferSection
+                  selectedAccount={selectedAccount}
+                  backendUrl={BACKEND_URL}
+                />
+              </motion.div>
+            )}
 
-          {/* Dumper Tool (selalu ter-mount agar state tidak reset) */}
-          <div className={activeTool === 'dumper' ? 'space-y-6' : 'hidden'}>
-            <DumperSection backendUrl={BACKEND_URL} />
-          </div>
+            {activeTool === 'dumper' && (
+              <motion.div
+                key="dumper"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="space-y-6"
+              >
+                <DumperSection backendUrl={BACKEND_URL} />
+              </motion.div>
+            )}
 
-          {/* Obfuscator Tool (selalu ter-mount agar state tidak reset) */}
-          <div className={activeTool === 'obfuscator' ? 'space-y-6' : 'hidden'}>
-            <ObfuscatorSection />
-          </div>
+            {activeTool === 'obfuscator' && (
+              <motion.div
+                key="obfuscator"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
+                className="space-y-6"
+              >
+                <ObfuscatorSection />
+              </motion.div>
+            )}
+          </AnimatePresence>
             </div>
           </main>
         </div>
 
         {/* Footer */}
-        <footer className="mt-auto shrink-0 border-t border-[var(--line)] py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
+        <footer className="mt-auto shrink-0 border-t-2 border-[var(--text)] py-4 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:pb-4">
           <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4">
-            <div className="flex items-center gap-2 text-[11px] text-[var(--text-40)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--emerald)]" />
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-[var(--text-50)]">
+              <span className="h-2 w-2 border-2 border-[var(--text)] bg-[var(--emerald)]" />
               <span>S2 Studio</span>
             </div>
             {webVersion && (
-              <p className="text-[11px] text-[var(--text-35)] font-mono">v{webVersion}</p>
+              <p className="text-[11px] font-bold font-mono text-[var(--text-40)]">v{webVersion}</p>
             )}
           </div>
         </footer>

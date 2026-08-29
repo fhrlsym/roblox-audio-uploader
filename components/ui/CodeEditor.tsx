@@ -47,7 +47,7 @@ export function CodeEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         {label ? (
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-45)]">{label}</span>
+          <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)]">{label}</span>
         ) : (
           <span />
         )}
@@ -56,7 +56,7 @@ export function CodeEditor({
             <button
               type="button"
               onClick={onPasteClipboard}
-              className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--accent-soft)] transition hover:bg-[var(--accent-10)]"
+              className="inline-flex items-center gap-1 rounded-md border-2 border-[var(--text)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] active:translate-y-[1px]"
               title="Paste dari Clipboard"
             >
               <Copy className="h-3 w-3" />
@@ -68,7 +68,7 @@ export function CodeEditor({
               <button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
-                className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11px] font-medium text-[var(--text-60)] transition hover:bg-[var(--surface-50)] hover:text-[var(--text)]"
+                className="inline-flex items-center gap-1 rounded-md border-2 border-[var(--text)] bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] active:translate-y-[1px]"
                 title="Upload File"
               >
                 <Upload className="h-3 w-3" />
@@ -88,7 +88,7 @@ export function CodeEditor({
             <button
               type="button"
               onClick={onClear}
-              className="rounded-lg p-1 text-[var(--text-35)] transition hover:text-[var(--danger)]"
+              className="rounded-md border-2 border-[var(--text)] bg-[var(--panel)] p-1 text-[var(--text)] transition hover:bg-[var(--danger)] hover:text-white active:translate-y-[1px]"
               title="Hapus Input"
             >
               <Trash2 className="h-3.5 w-3.5" />

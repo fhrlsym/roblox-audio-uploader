@@ -17,15 +17,15 @@ const TONES = {
 };
 
 const TOPBAR = {
-  default: 'from-[var(--accent-40)] to-[var(--accent)]',
-  accent: 'from-[var(--accent-40)] to-[var(--accent)]',
-  success: 'from-emerald-400 to-emerald-600',
-  danger: 'from-rose-400 to-rose-600',
+  default: 'bg-[var(--accent)]',
+  accent: 'bg-[var(--accent)]',
+  success: 'bg-[var(--emerald)]',
+  danger: 'bg-[var(--danger)]',
 };
 
 const ICON = {
-  default: 'text-[var(--accent-soft)]',
-  accent: 'text-[var(--accent-soft)]',
+  default: 'text-[var(--accent)]',
+  accent: 'text-[var(--accent)]',
   success: 'text-[var(--emerald)]',
   danger: 'text-[var(--danger)]',
 };
@@ -34,9 +34,9 @@ export function StatCard({ label, icon, value, tone = 'default', topBar = false 
   return (
     <Card className="relative overflow-hidden p-3 text-center sm:p-4">
       {topBar && (
-        <span className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${TOPBAR[tone]}`} />
+        <span className={`absolute inset-x-0 top-0 h-1 ${TOPBAR[tone]}`} />
       )}
-      <p className={`inline-flex items-center gap-1.5 text-[10px] font-medium uppercase tracking-wider sm:text-[11px] ${ICON[tone]}`}>
+      <p className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide sm:text-[11px] ${ICON[tone]}`}>
         {icon}
         {label}
       </p>

@@ -36,9 +36,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const icons: Record<ToastType, ReactNode> = {
-    success: <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />,
-    error: <XCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />,
-    info: <Info className="w-4 h-4 text-[var(--accent-soft)] flex-shrink-0" />,
+    success: <CheckCircle2 className="w-4 h-4 text-[var(--emerald)] flex-shrink-0" />,
+    error: <XCircle className="w-4 h-4 text-[var(--danger)] flex-shrink-0" />,
+    info: <Info className="w-4 h-4 text-[var(--accent)] flex-shrink-0" />,
   };
 
   return (
@@ -48,17 +48,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="toast-enter pointer-events-auto flex flex-col items-start gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] shadow-2xl overflow-hidden"
+            className="toast-enter pointer-events-auto flex flex-col items-start gap-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[4px_4px_0_0_var(--text)] overflow-hidden"
           >
             <div className="flex items-start gap-2.5 px-4 pt-3 pb-2">
               {icons[t.type]}
-              <p className="text-sm text-[var(--text-80)]">{t.message}</p>
+              <p className="text-sm font-bold text-[var(--text-90)]">{t.message}</p>
             </div>
             {/* Auto-dismiss progress bar */}
-            <div className="w-full h-0.5 bg-[var(--surface-strong)]">
+            <div className="w-full h-1 bg-[var(--bg)]">
               <div
-                className={`h-full toast-progress rounded-full ${
-                  t.type === 'success' ? 'bg-emerald-400' : t.type === 'error' ? 'bg-rose-400' : 'bg-[var(--accent)]'
+                className={`h-full toast-progress ${
+                  t.type === 'success' ? 'bg-[var(--emerald)]' : t.type === 'error' ? 'bg-[var(--danger)]' : 'bg-[var(--accent)]'
                 }`}
                 style={{ animationDuration: `${TOAST_DURATION}ms` }}
               />

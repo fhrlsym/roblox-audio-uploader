@@ -309,14 +309,14 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
     <div className="space-y-6">
       {/* Top Banner & Overview */}
       <Card className="relative overflow-hidden p-4 sm:p-5">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-strong)]" />
+        <span className="absolute inset-x-0 top-0 h-1 bg-[var(--accent)]" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
+            <div className="brutal-icon-box bg-[var(--accent)] text-[var(--on-accent)] shrink-0">
               <Terminal className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
+              <h2 className="text-base sm:text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">
                 Dumper Script Roblox Studio
               </h2>
               <p className="text-xs text-[var(--text-45)]">
@@ -326,13 +326,13 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-semibold text-[var(--text-40)]">Sample:</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-40)]">Sample:</span>
             {SAMPLE_SCRIPTS.map((s) => (
               <button
                 key={s.label}
                 type="button"
                 onClick={() => handleLoadSample(s)}
-                className="px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[11px] font-medium text-[var(--text-70)] hover:text-[var(--text)] hover:border-[var(--accent-30)] hover:bg-[var(--surface)] transition"
+                className="px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] text-[11px] font-bold uppercase tracking-wide text-[var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
               >
                 {s.label}
               </button>
@@ -366,7 +366,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
           </Card>
 
           {/* Auto-Detection Card */}
-          <Card className="space-y-3 border-[var(--accent-25)] bg-[var(--accent-06)] p-4">
+          <Card className="space-y-3 border-[var(--text)] bg-[var(--bg)] p-4">
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Shield className="w-4 h-4 text-[var(--accent-soft)]" />
@@ -374,10 +374,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               </div>
               {!backendEngines.loading && (
                 <span
-                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold ${
+                  className={`rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)] ${
                     backendEngines.larry || backendEngines.moonveil
-                      ? 'bg-[var(--emerald-15)] text-[var(--emerald)]'
-                      : 'bg-amber-500/15 text-amber-300'
+                      ? 'bg-[var(--emerald)] text-white'
+                      : 'bg-[var(--accent)] text-[var(--on-accent)]'
                   }`}
                   title={backendEngines.larry || backendEngines.moonveil ? 'Backend aktif — engine full tersedia' : 'Backend mati/tertidur — hanya analisis statis'}
                 >
@@ -390,13 +390,13 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               )}
             </div>
 
-            <div className="p-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] space-y-2">
+            <div className="p-3 brutal-card-sm space-y-2">
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-extrabold text-[var(--accent-strong)]">
+                  <span className="text-xs font-extrabold uppercase tracking-wide text-[var(--accent-strong)]">
                     {detection.obfuscator}
                   </span>
-                  <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-extrabold text-[var(--accent-strong)]">
+                  <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--on-accent)] border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)]">
                     Akurasi {detection.confidence}%
                   </span>
                 </div>
@@ -410,7 +410,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               {detection.features.length > 0 && (
                 <div className="flex gap-1.5 flex-wrap pt-0.5">
                   {detection.features.map((f) => (
-                    <span key={f} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--surface-strong)] text-[var(--text-60)]">
+                    <span key={f} className="text-[9px] font-mono px-1.5 py-0.5 rounded border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-60)]">
                       {f}
                     </span>
                   ))}
@@ -419,7 +419,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
             </div>
 
             {/* Engine Selector Dropdown */}
-            <div className="pt-2 border-t border-[var(--line)] space-y-1.5">
+            <div className="pt-2 border-t-2 border-[var(--text)] space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] flex items-center gap-1">
                 <Sliders className="w-3 h-3 text-[var(--accent-soft)]" />
                 Pilih Engine Dumper
@@ -427,7 +427,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               <select
                 value={selectedEngine}
                 onChange={(e) => setSelectedEngine(e.target.value as DumperEngine)}
-                className={`${INPUT} text-xs py-2 bg-[var(--surface-focus)] font-medium`}
+                className={`${INPUT} text-xs py-2 bg-[var(--bg)] font-medium`}
               >
                 <option value="auto">Auto-Detect (Rekomendasi: {detection.engineName})</option>
                 <option value="mimic-sandbox">Universal Dumper (Larry — semua obfuscator)</option>
@@ -450,7 +450,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               type="button"
               onClick={handleRunDumper}
               disabled={isProcessing || !inputCode.trim()}
-              className={`${BTN_PRIMARY} w-full py-3 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg`}
+              className={`${BTN_PRIMARY} w-full py-3 text-xs sm:text-sm font-bold uppercase tracking-wide flex items-center justify-center gap-2`}
             >
               {isProcessing ? (
                 <>
@@ -471,15 +471,15 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
         <div className="lg:col-span-7 space-y-4">
           <Card className="flex min-h-[500px] flex-col space-y-4 p-4">
             {/* Output Tabs Header */}
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 flex-wrap gap-2">
-              <div className="flex items-center gap-1 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)]">
+            <div className="flex items-center justify-between border-b-2 border-[var(--text)] pb-3 flex-wrap gap-2">
+              <div className="flex items-center gap-1 p-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] shadow-[2px_2px_0_0_var(--text)]">
                 <button
                   type="button"
                   onClick={() => setActiveOutputTab('code')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
                     activeOutputTab === 'code'
-                      ? 'bg-[var(--accent)] text-[#000000] shadow-sm'
-                      : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'text-[var(--text-60)] hover:text-[var(--text)] font-bold uppercase tracking-wide'
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
@@ -489,16 +489,16 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 <button
                   type="button"
                   onClick={() => setActiveOutputTab('http')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
                     activeOutputTab === 'http'
-                      ? 'bg-[var(--accent)] text-[#000000] shadow-sm'
-                      : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'text-[var(--text-60)] hover:text-[var(--text)] font-bold uppercase tracking-wide'
                   }`}
                 >
                   <Globe className="w-3.5 h-3.5" />
                   <span>HTTP Logs</span>
                   {dumpResult && dumpResult.httpLogs.length > 0 && (
-                    <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[9px] font-bold">
+                    <span className="rounded-full bg-[var(--text)] text-[var(--bg)] px-1.5 py-0.2 text-[9px] font-bold">
                       {dumpResult.httpLogs.length}
                     </span>
                   )}
@@ -507,16 +507,16 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                 <button
                   type="button"
                   onClick={() => setActiveOutputTab('constants')}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
                     activeOutputTab === 'constants'
-                      ? 'bg-[var(--accent)] text-[#000000] shadow-sm'
-                      : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                      ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                      : 'text-[var(--text-60)] hover:text-[var(--text)] font-bold uppercase tracking-wide'
                   }`}
                 >
                   <Key className="w-3.5 h-3.5" />
                   <span>Constant Pool</span>
                   {dumpResult && dumpResult.constants.length > 0 && (
-                    <span className="rounded-full bg-black/20 px-1.5 py-0.2 text-[9px] font-bold">
+                    <span className="rounded-full bg-[var(--text)] text-[var(--bg)] px-1.5 py-0.2 text-[9px] font-bold">
                       {dumpResult.constants.length}
                     </span>
                   )}
@@ -526,10 +526,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                   <button
                     type="button"
                     onClick={() => setActiveOutputTab('trace')}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide transition ${
                       activeOutputTab === 'trace'
-                        ? 'bg-[var(--accent)] text-[#000000] shadow-sm'
-                        : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'text-[var(--text-60)] hover:text-[var(--text)] font-bold uppercase tracking-wide'
                     }`}
                   >
                     <Cpu className="w-3.5 h-3.5" />
@@ -544,7 +544,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                   <button
                     type="button"
                     onClick={() => handleCopyCode()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent-15)] text-xs font-bold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-xs font-bold uppercase tracking-wide text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)] transition"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     Salin Kode
@@ -552,7 +552,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                   <button
                     type="button"
                     onClick={() => handleDownloadCode()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-xs font-bold text-[var(--text-80)] hover:bg-[var(--surface)] transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-xs font-bold uppercase tracking-wide text-[var(--text)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Download .lua
@@ -564,11 +564,11 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
             {/* Output Content Area */}
             {!dumpResult ? (
               <div className="flex-1 flex flex-col items-center justify-center py-24 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--surface-50)] border border-[var(--line)] flex items-center justify-center text-[var(--text-35)]">
+                <div className="w-12 h-12 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] flex items-center justify-center text-[var(--text)]">
                   <FileCode className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-[var(--text-70)]">Belum Ada Hasil Dump</p>
+                  <p className="text-sm font-bold uppercase tracking-wide text-[var(--text)]">Belum Ada Hasil Dump</p>
                   <p className="text-xs text-[var(--text-40)] max-w-sm mt-1">
                     Tempelkan script target di sebelah kiri lalu klik &quot;Run Dumper&quot; untuk menjalankan sandbox.
                   </p>
@@ -577,9 +577,9 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
             ) : (
               <div className="flex-1 flex flex-col space-y-3">
                 {/* Summary Info Bar */}
-                <div className="flex items-center justify-between text-[11px] font-mono p-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)]">
+                <div className="flex items-center justify-between text-[11px] font-mono p-2.5 brutal-card-sm bg-[var(--bg)]">
                   <div className="flex items-center gap-3">
-                    <span className="text-[var(--accent-soft)] font-bold">
+                    <span className="text-[var(--accent-strong)] font-bold">
                       Engine: {dumpResult.engineUsed}
                     </span>
                     <span className="text-[var(--text-40)]">|</span>
@@ -594,7 +594,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
 
                 {/* Tab 1: Source Code Viewer */}
                 {activeOutputTab === 'code' && (
-                  <pre className="flex-1 p-4 rounded-xl bg-black/70 border border-[var(--line)] font-mono text-xs text-[var(--text)] overflow-auto max-h-[550px] leading-relaxed select-text">
+                  <pre className="flex-1 p-4 rounded-lg bg-black border-2 border-[var(--text)] shadow-[4px_4px_0_0_var(--text)] font-mono text-xs text-[var(--text)] overflow-auto max-h-[550px] leading-relaxed select-text">
                     {dumpResult.deobfuscatedCode}
                   </pre>
                 )}
@@ -611,21 +611,21 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                         {dumpResult.httpLogs.map((log) => (
                           <div
                             key={log.id}
-                            className="p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] flex items-start justify-between gap-3"
+                            className="p-3 brutal-card-sm bg-[var(--bg)] flex items-start justify-between gap-3"
                           >
                             <div className="space-y-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                  log.method === 'POST' ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border-2 border-[var(--text)] ${
+                                  log.method === 'POST' ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--emerald)] text-white'
                                 }`}>
                                   {log.method}
                                 </span>
-                                <span className="rounded bg-[var(--surface-strong)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-50)]">
+                                <span className="rounded border-2 border-[var(--text)] bg-[var(--panel)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--text-50)]">
                                   {log.interceptedType}
                                 </span>
                                 <span className="text-[10px] text-[var(--text-40)]">{log.timestamp}</span>
                               </div>
-                              <code className="text-xs font-mono text-[var(--accent-soft)] break-all block">
+                              <code className="text-xs font-mono text-[var(--accent-strong)] break-all block">
                                 {log.url}
                               </code>
                             </div>
@@ -635,7 +635,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                                 navigator.clipboard.writeText(log.url);
                                 toast('URL disalin', 'success');
                               }}
-                              className="p-1.5 rounded-lg border border-[var(--line)] hover:bg-[var(--surface)] text-[var(--text-50)] hover:text-[var(--text)] transition shrink-0"
+                              className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] text-[var(--text)] transition shrink-0"
                               title="Salin URL"
                             >
                               <Copy className="w-3.5 h-3.5" />
@@ -670,10 +670,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                         filteredConstants.map((c) => (
                           <div
                             key={c.id}
-                            className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] flex items-center justify-between gap-2"
+                            className="p-2.5 brutal-card-sm bg-[var(--bg)] flex items-center justify-between gap-2"
                           >
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className="rounded bg-[var(--surface-strong)] px-1.5 py-0.5 font-mono text-[9px] uppercase text-[var(--text-50)] shrink-0">
+                              <span className="rounded border-2 border-[var(--text)] bg-[var(--panel)] px-1.5 py-0.5 font-mono text-[9px] uppercase text-[var(--text-50)] shrink-0">
                                 {c.type}
                               </span>
                               <code className="text-xs font-mono text-[var(--text-80)] truncate">
@@ -686,7 +686,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                                 navigator.clipboard.writeText(c.value);
                                 toast('Konstanta disalin', 'success');
                               }}
-                              className="p-1 text-[var(--text-40)] hover:text-[var(--accent-soft)] transition shrink-0"
+                              className="p-1 rounded border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] text-[var(--text)] transition shrink-0"
                               title="Salin Konstanta"
                             >
                               <Copy className="w-3 h-3" />
@@ -705,11 +705,11 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                       {dumpResult.vmTraces.map((t, idx) => (
                         <div
                           key={idx}
-                          className="p-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] text-xs font-mono flex items-center justify-between"
+                          className="p-2.5 brutal-card-sm bg-[var(--bg)] text-xs font-mono flex items-center justify-between"
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-[var(--text-40)]">#{t.line}</span>
-                            <span className="px-1.5 py-0.5 rounded bg-[var(--accent-15)] text-[var(--accent-strong)] font-bold text-[10px]">
+                            <span className="px-1.5 py-0.5 rounded bg-[var(--accent)] text-[var(--on-accent)] border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)] font-bold uppercase tracking-wide text-[10px]">
                               {t.opcode}
                             </span>
                             <span className="text-[var(--text-70)]">
@@ -736,12 +736,12 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
           <button
             type="button"
             onClick={() => setHistoryOpen(!historyOpen)}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2.5 text-xs font-semibold text-[var(--text-80)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] hover:bg-[var(--surface)]"
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-[var(--text)] shadow-[3px_3px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0_0_var(--text)]"
           >
             <HistoryIcon className="w-4 h-4 text-[var(--accent-soft)]" />
             <span>Riwayat Dump</span>
             {records.length > 0 && (
-              <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+              <span className="rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)] border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)]">
                 {records.length}
               </span>
             )}
@@ -763,10 +763,10 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
               className="overflow-hidden"
             >
               <Card className="space-y-3 p-4">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-[var(--line)] pb-3">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b-2 border-[var(--text)] pb-3">
                   <div className="flex items-center gap-2">
                     <HistoryIcon className="w-4 h-4 text-[var(--accent)]" />
-                    <h3 className="text-sm font-bold text-[var(--text)]">Daftar Riwayat Dump Script</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--text)]">Daftar Riwayat Dump Script</h3>
                   </div>
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
@@ -792,7 +792,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                             toast('Riwayat dump berhasil dibersihkan', 'info');
                           }
                         }}
-                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[11px] font-medium text-[var(--text-50)] hover:text-[var(--danger)] hover:border-red-500/30 transition shrink-0"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] text-[11px] font-bold uppercase tracking-wide text-[var(--text)] hover:bg-[var(--danger)] hover:text-white transition shrink-0"
                       >
                         <Trash2 className="w-3 h-3" />
                         Hapus Semua
@@ -817,14 +817,14 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                         initial={{ opacity: 0, transform: 'translateY(6px)' }}
                         animate={{ opacity: 1, transform: 'translateY(0)' }}
                         transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
-                        className="p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        className="p-3 brutal-card-sm bg-[var(--bg)] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-xs text-[var(--text-90)] truncate max-w-xs">
+                            <span className="font-bold uppercase tracking-wide text-xs text-[var(--text)] truncate max-w-xs">
                               {rec.title}
                             </span>
-                            <span className="rounded bg-[var(--accent-15)] px-1.5 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+                            <span className="rounded bg-[var(--accent)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)] border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)]">
                               {rec.obfuscator}
                             </span>
                             <span className="text-[10px] font-mono text-[var(--text-40)]">
@@ -846,7 +846,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                             {rec.httpLogsCount > 0 && (
                               <>
                                 <span>•</span>
-                                <span className="text-[var(--accent-soft)]">
+                                <span className="text-[var(--accent-strong)]">
                                   {rec.httpLogsCount} HTTP Intercepted
                                 </span>
                               </>
@@ -860,7 +860,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                           <button
                             type="button"
                             onClick={() => handleLoadFromHistory(rec)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent-15)] text-[11px] font-bold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[11px] font-bold uppercase tracking-wide text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)] transition"
                             title="Buka kembali di editor"
                           >
                             <ExternalLink className="w-3 h-3" />
@@ -869,7 +869,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                           <button
                             type="button"
                             onClick={() => handleCopyCode(rec.dumpedCode)}
-                            className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--text-60)] hover:text-[var(--text)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] text-[var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                             title="Salin Source Code"
                           >
                             <Copy className="w-3.5 h-3.5" />
@@ -877,7 +877,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                           <button
                             type="button"
                             onClick={() => handleDownloadCode(rec.dumpedCode, `dumped_${rec.obfuscator}`)}
-                            className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--text-60)] hover:text-[var(--text)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] text-[var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                             title="Download .lua"
                           >
                             <Download className="w-3.5 h-3.5" />
@@ -885,7 +885,7 @@ export default function DumperSection({ backendUrl = '' }: DumperSectionProps) {
                           <button
                             type="button"
                             onClick={() => deleteRecord(rec.id)}
-                            className="p-1.5 rounded-lg text-[var(--text-35)] hover:text-[var(--danger)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] shadow-[2px_2px_0_0_var(--text)] text-[var(--text)] hover:bg-[var(--danger)] hover:text-white transition"
                             title="Hapus dari Riwayat"
                           >
                             <Trash2 className="w-3.5 h-3.5" />

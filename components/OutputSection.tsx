@@ -176,7 +176,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-[var(--text)] tracking-tight">3. Output &amp; Upload</h2>
+        <h2 className="text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">3. Output &amp; Upload</h2>
       </div>
 
       {tunedFiles.length === 0 ? (
@@ -198,32 +198,27 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                   animate={{ opacity: 1, height: 'auto', y: 0 }}
                   exit={{ opacity: 0, height: 0, y: -6 }}
                   transition={{ duration: 0.2, delay: index * 0.04 }}
-                  className={`rounded-xl border p-4 transition ${result?.success
-                      ? 'border-emerald-400/15 bg-emerald-400/[0.04]'
-                      : result
-                        ? 'border-rose-400/15 bg-rose-400/[0.04]'
-                        : 'border-[var(--line)] bg-[var(--surface)]'
-                    }`}
+                  className={`brutal-card-sm p-4 ${result?.success ? 'bg-[var(--emerald)]/10' : result ? 'bg-[var(--danger)]/10' : ''}`}
                 >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--text-90)]">{cleanSongTitle(file.tunedName)}</p>
-                    <p className="mt-0.5 text-xs text-[var(--text-45)]">
+                    <p className="truncate text-sm font-bold text-[var(--text-90)]">{cleanSongTitle(file.tunedName)}</p>
+                    <p className="mt-0.5 text-xs font-medium text-[var(--text-50)]">
                       Speed {file.speed}x · Amplify {file.amplify > 0 ? '+' : ''}{file.amplify}dB · Playback{' '}
-                      <span className="font-mono text-[var(--accent-soft)]">{(1 / file.speed).toFixed(4)}</span>
+                      <span className="font-mono font-bold text-[var(--accent)]">{(1 / file.speed).toFixed(4)}</span>
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
                     <button
                       onClick={() => handleDownload(file)}
-                      className="rounded-lg p-1.5 text-[var(--text-40)] transition hover:bg-[var(--surface-strong)] hover:text-[var(--accent-soft)]"
+                      className="rounded-md border-2 border-[var(--text)] bg-[var(--bg)] p-1.5 text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)] active:translate-y-[1px]"
                       aria-label={`Unduh ${cleanSongTitle(file.tunedName)}`}
                     >
                       <Download className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onRemoveTuned(file.id)}
-                      className="rounded-lg p-1.5 text-[var(--text-40)] transition hover:bg-[var(--surface-strong)] hover:text-rose-300"
+                      className="rounded-md border-2 border-[var(--text)] bg-[var(--bg)] p-1.5 text-[var(--text)] transition hover:bg-[var(--danger)] hover:text-white active:translate-y-[1px]"
                       aria-label={`Hapus ${cleanSongTitle(file.tunedName)}`}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -233,9 +228,9 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
 
                 {uploading[file.id] && (
                   <div className="mt-3 flex items-center gap-3">
-                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--accent-soft)]" />
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--accent)]" />
                     <ProgressBar value={uploadProgress[file.id] ?? 5} className="flex-1" />
-                    <span className="shrink-0 font-mono text-[10px] text-[var(--text-45)]">
+                    <span className="shrink-0 font-mono text-[10px] font-bold text-[var(--text-50)]">
                       {Math.round(uploadProgress[file.id] ?? 5)}%
                     </span>
                   </div>
@@ -244,14 +239,14 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                 {result && (
                   <div className="mt-3">
                     {result.success ? (
-                      <div className="rounded-xl border border-[var(--accent-20)] bg-[var(--accent-06)] p-4">
+                      <div className="brutal-card-sm p-4 bg-[var(--accent)]/10">
                         <div className="flex items-center gap-2">
                           <StatusBadge status={result.status || 'Pending'} />
                           <div className="ml-auto flex items-center gap-1.5">
                             <button
                               type="button"
                               onClick={() => copySongInfo(file.tunedName, result.assetId!, (1 / file.speed).toFixed(4))}
-                              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-b from-[var(--accent-strong)] to-[var(--accent-deep)] px-3 py-1.5 text-[11px] font-semibold text-[var(--on-accent)] transition hover:brightness-110 active:scale-[0.97]"
+                              className="inline-flex items-center gap-1.5 rounded-md border-2 border-[var(--text)] bg-[var(--accent)] px-3 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)] transition hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)] active:translate-y-[1px] active:shadow-[1px_1px_0_0_var(--text)]"
                             >
                               <Copy className="w-3 h-3" />
                               Salin 3 info
@@ -260,29 +255,29 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                         </div>
                         <div className="mt-3 space-y-2">
                           <div className="flex items-start justify-between gap-2">
-                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0 w-24 pt-0.5">Nama</span>
-                            <span className="text-sm font-medium text-[var(--text-90)] text-right">{file.tunedName}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)] flex-shrink-0 w-24 pt-0.5">Nama</span>
+                            <span className="text-sm font-bold text-[var(--text-90)] text-right">{file.tunedName}</span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
-                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0 w-24 pt-0.5">Asset ID</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)] flex-shrink-0 w-24 pt-0.5">Asset ID</span>
                             <button
                               onClick={() => copyAssetId(result.assetId!)}
-                              className="group inline-flex items-center gap-1.5 font-mono text-sm text-[var(--accent-soft)] transition hover:text-[var(--accent-strong)]"
+                              className="group inline-flex items-center gap-1.5 font-mono text-sm font-bold text-[var(--accent)] transition hover:text-[var(--accent-deep)]"
                             >
                               {result.assetId}
                               <Copy className="w-3 h-3 opacity-50 transition group-hover:opacity-100" />
                             </button>
                           </div>
-                          <div className="flex items-center justify-between gap-2 rounded-lg bg-[var(--surface-strong)] px-3 py-2">
-                            <span className="text-[10px] uppercase tracking-[0.15em] text-[var(--text-40)] flex-shrink-0">Playback Speed</span>
-                            <span className="font-mono text-lg font-semibold text-[var(--accent-strong)]">
+                          <div className="flex items-center justify-between gap-2 rounded-md border-2 border-[var(--text)] bg-[var(--bg)] px-3 py-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--text-50)] flex-shrink-0">Playback Speed</span>
+                            <span className="font-mono text-lg font-bold text-[var(--accent)]">
                               {(1 / file.speed).toFixed(4)}
                             </span>
                           </div>
                         </div>
                       </div>
                     ) : (
-                      <p className="text-xs text-rose-300">{result.error}</p>
+                      <p className="text-xs font-bold text-[var(--danger)]">{result.error}</p>
                     )}
                   </div>
                 )}
@@ -304,7 +299,7 @@ export default function OutputSection({ tunedFiles, onRemoveTuned, backendUrl, s
                 failedTargets.forEach((file) => handleUploadToRoblox(file));
               }}
               disabled={uploadingAny}
-              className="w-full py-2 text-xs font-semibold rounded-xl border border-rose-400/30 bg-rose-400/10 text-rose-300 hover:bg-rose-400/20 transition flex items-center justify-center gap-2"
+              className="w-full py-2 text-xs font-bold uppercase tracking-wide rounded-lg border-2 border-[var(--text)] bg-[var(--danger)] text-white shadow-[3px_3px_0_0_var(--text)] transition hover:-translate-y-[1px] hover:shadow-[4px_4px_0_0_var(--text)] active:translate-y-[1px] active:shadow-[1px_1px_0_0_var(--text)] flex items-center justify-center gap-2 disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-[3px_3px_0_0_var(--text)]"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               Coba Ulang File yang Gagal ({tunedFiles.filter((f) => uploadResults[f.id] && !uploadResults[f.id].success).length})

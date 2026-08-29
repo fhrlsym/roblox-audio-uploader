@@ -327,11 +327,11 @@ const stopPolling = () => {
       <Card className="space-y-5 p-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)]">
+            <div className="brutal-icon-box w-10 h-10 flex items-center justify-center bg-[var(--accent)] text-[var(--on-accent)]">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-bold text-[var(--text)] tracking-tight">Asset Spoofer</h2>
+              <h2 className="text-base font-extrabold uppercase tracking-wide text-[var(--text)]">Asset Spoofer</h2>
               <p className="text-xs text-[var(--text-45)]">
                 Ubah ID Animation, Sound, Decal &amp; lainnya menjadi milik Anda — dukungan batch
               </p>
@@ -364,10 +364,10 @@ const stopPolling = () => {
         {queue.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <p className="text-xs text-[var(--text-60)] font-medium">
+              <p className="text-xs text-[var(--text-60)] font-bold uppercase tracking-wide">
                 Antrian Asset ({queue.length})
               </p>
-              <button onClick={clearQueue} disabled={polling || uploading} className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition">
+              <button onClick={clearQueue} disabled={polling || uploading} className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-60)] hover:text-[var(--danger)] transition">
                 Hapus semua
               </button>
             </div>
@@ -380,14 +380,14 @@ const stopPolling = () => {
                     animate={{ opacity: 1, height: 'auto', y: 0 }}
                     exit={{ opacity: 0, height: 0, y: -6 }}
                     transition={{ duration: 0.18, delay: index * 0.04 }}
-                    className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 transition hover:border-[var(--accent-25)]"
+                    className="flex items-center gap-3 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] p-2.5 shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                   >
                     <Film className="w-4 h-4 shrink-0 text-[var(--accent-soft)]" />
                     <code className="min-w-0 flex-1 text-sm font-mono text-[var(--text-80)]">{item.originalAssetId}</code>
                     <button
                       onClick={() => removeFromQueue(item.id)}
                       disabled={polling || uploading}
-                      className="p-1.5 text-[var(--text-40)] transition hover:text-rose-300"
+                      className="p-1.5 text-[var(--text-60)] transition hover:text-[var(--danger)]"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -416,15 +416,15 @@ const stopPolling = () => {
           )}
         </button>
 
-        <div className="flex items-center justify-between pt-3 border-t border-[var(--line)]">
+        <div className="flex items-center justify-between pt-3 border-t-2 border-[var(--text)]">
           <div className="text-xs text-[var(--text-45)]">
             Target Akun:{' '}
-            <span className="font-semibold text-[var(--accent-strong)]">
+            <span className="font-bold uppercase tracking-wide text-[var(--accent-strong)]">
               {selectedAccount ? selectedAccount.name : 'Belum dipilih'}
             </span>
           </div>
           {doneCount > 0 && (
-            <span className="flex items-center gap-1.5 text-xs text-[var(--emerald)] font-semibold">
+            <span className="flex items-center gap-1.5 text-xs text-[var(--emerald)] font-bold uppercase tracking-wide">
               <Check className="w-3.5 h-3.5" /> {doneCount} sukses
             </span>
           )}
@@ -439,7 +439,7 @@ const stopPolling = () => {
         title={uploading ? 'Uploading ke Roblox' : polling ? 'Memproses Spoof' : 'Hasil Spoof'}
         subtitle={job ? `Job ${job.jobId || 'Active'} · ${job.items.length} asset` : undefined}
         icon={
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-15)] text-[var(--accent)]">
+          <div className="brutal-icon-box flex h-9 w-9 items-center justify-center bg-[var(--accent)] text-[var(--on-accent)]">
             {uploading || polling ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -472,7 +472,7 @@ const stopPolling = () => {
             {polling && (
               <Terminal title="spoofer-job.sh" maxHeight="56">
                 {(job.logs || []).slice(-40).map((line, i) => (
-                  <p key={i} className={line.includes('GAGAL') || line.includes('gagal') ? 'text-rose-300' : 'text-[var(--text-80)]'}>
+                  <p key={i} className={line.includes('GAGAL') || line.includes('gagal') ? 'text-[var(--danger)]' : 'text-[var(--text-80)]'}>
                     {line}
                   </p>
                 ))}
@@ -486,20 +486,20 @@ const stopPolling = () => {
               {(job.items || []).map((item) => (
                 <div
                   key={item.key}
-                  className={`flex items-center gap-3 rounded-xl border p-3 text-xs ${
+                  className={`flex items-center gap-3 rounded-lg border-2 p-3 text-xs shadow-[2px_2px_0_0_var(--text)] ${
                     item.status === 'failed'
-                      ? 'border-rose-400/25 bg-rose-400/[0.04]'
+                      ? 'border-[var(--text)] bg-[var(--danger)] text-white'
                       : item.newAssetId
-                        ? 'border-[var(--emerald-25)] bg-[var(--emerald-10)]'
-                        : 'border-[var(--line)] bg-[var(--surface-50)]'
+                        ? 'border-[var(--text)] bg-[var(--emerald)] text-white'
+                        : 'border-[var(--text)] bg-[var(--bg)]'
                   }`}
                 >
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate font-semibold text-[var(--text-90)]">
+                      <p className="truncate font-bold uppercase tracking-wide text-[var(--text-90)]">
                         {item.name || `Asset_${item.originalAssetId}`}
                       </p>
-                      <span className="shrink-0 rounded-md bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[var(--accent-strong)]">
+                      <span className="shrink-0 rounded-full border-2 border-[var(--text)] bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)]">
                         {item.assetType || 'Audio'}
                       </span>
                     </div>
@@ -515,15 +515,15 @@ const stopPolling = () => {
                       </p>
                     )}
                     {item.status === 'failed' && (
-                      <p className="text-[11px] text-rose-300">{item.error}</p>
+                      <p className="text-[11px] text-[var(--danger)]">{item.error}</p>
                     )}
                     {item.uploadStatus === 'failed' && (
-                      <p className="text-[11px] text-rose-300">{item.uploadError}</p>
+                      <p className="text-[11px] text-[var(--danger)]">{item.uploadError}</p>
                     )}
                     {item.uploadStatus === 'done' && item.newAssetId && (
                       <button
                         onClick={() => copyToClipboard(item.newAssetId!, 'ID Baru')}
-                        className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--accent-strong)] hover:underline"
+                        className="mt-1 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--accent-strong)] hover:underline"
                       >
                         <Copy className="w-3 h-3" />
                         Salin ID Baru
@@ -536,7 +536,7 @@ const stopPolling = () => {
                       <button
                         type="button"
                         onClick={() => togglePlayAudio(item.originalAssetId)}
-                        className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
+                        className="p-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--accent-soft)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                         title={playingAssetId === item.originalAssetId ? "Stop Audio" : "Putar Audio"}
                       >
                         {playingAssetId === item.originalAssetId ? (
@@ -549,7 +549,7 @@ const stopPolling = () => {
                     <button
                       type="button"
                       onClick={() => handleDownloadAsset(item.originalAssetId)}
-                      className="p-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
+                      className="p-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-60)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                       title="Download File Asli ke PC"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -569,7 +569,7 @@ const stopPolling = () => {
       {records.length > 0 && (
         <Card className="space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-[var(--text)] tracking-tight flex items-center gap-2">
+            <h3 className="text-sm font-extrabold uppercase tracking-wide text-[var(--text)] flex items-center gap-2">
               <History className="w-4 h-4 text-[var(--accent-soft)]" />
               Riwayat Spoofing ({records.length})
             </h3>
@@ -577,14 +577,14 @@ const stopPolling = () => {
               {doneCount > 0 && (
                 <button
                   onClick={() => records.filter((r) => r.status === 'Active').forEach((r) => copyToClipboard(r.newAssetId!, 'Asset ID'))}
-                  className="text-[11px] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
+                  className="text-[11px] font-bold uppercase tracking-wide text-[var(--accent-soft)] hover:text-[var(--accent-strong)] transition"
                 >
                   Copy semua ID ({doneCount})
                 </button>
               )}
               <button
                 onClick={clearHistory}
-                className="text-[11px] text-[var(--text-40)] hover:text-rose-300 transition"
+                className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-60)] hover:text-[var(--danger)] transition"
               >
                 Hapus
               </button>
@@ -598,30 +598,30 @@ const stopPolling = () => {
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.03 }}
-                className="rounded-xl border border-[var(--line)] bg-[var(--surface-50)] p-3.5 text-xs"
+                className="rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] p-3.5 text-xs shadow-[3px_3px_0_0_var(--text)]"
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-[var(--text)] truncate">{rec.title}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-[var(--accent-15)] text-[var(--accent-strong)] text-[10px] font-semibold uppercase shrink-0">
+                      <span className="px-2 py-0.5 rounded-full border-2 border-[var(--text)] bg-[var(--accent)] text-[var(--on-accent)] text-[10px] font-bold uppercase tracking-wide shrink-0">
                         {rec.assetType}
                       </span>
                       <StatusBadge status={rec.status} />
                     </div>
                     <div className="text-[11px] text-[var(--text-45)] font-mono flex items-center gap-1.5 flex-wrap mt-0.5">
                       <span>ID Asli:</span>
-                      <code className="text-[var(--text-70)] bg-[var(--surface-strong)] px-1.5 py-0.5 rounded">{rec.originalAssetId}</code>
+                      <code className="text-[var(--text-70)] bg-[var(--bg)] px-1.5 py-0.5 rounded border-2 border-[var(--text)]">{rec.originalAssetId}</code>
                       {rec.newAssetId && (
                         <>
                           <span className="text-[var(--accent-soft)]">→</span>
                           <span>ID Baru:</span>
-                          <code className="font-bold text-[var(--emerald)] bg-[var(--surface-strong)] px-1.5 py-0.5 rounded">{rec.newAssetId}</code>
+                          <code className="font-bold text-[var(--emerald)] bg-[var(--bg)] px-1.5 py-0.5 rounded border-2 border-[var(--text)]">{rec.newAssetId}</code>
                         </>
                       )}
                     </div>
                     {rec.status === 'Failed' && rec.error && (
-                      <p className="text-[11px] text-rose-300">{rec.error}</p>
+                      <p className="text-[11px] text-[var(--danger)]">{rec.error}</p>
                     )}
                     {rec.status === 'Pending' && (
                       <p className="text-[11px] text-[var(--text-40)]">Status moderasi Roblox masih berlangsung.</p>
@@ -633,7 +633,7 @@ const stopPolling = () => {
                       <button
                         type="button"
                         onClick={() => togglePlayAudio(rec.originalAssetId)}
-                        className="p-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--accent-soft)] hover:text-[var(--accent-strong)] hover:border-[var(--accent-30)] transition"
+                        className="p-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--accent-soft)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                         title={playingAssetId === rec.originalAssetId ? "Stop Audio" : "Putar Audio"}
                       >
                         {playingAssetId === rec.originalAssetId ? (
@@ -647,7 +647,7 @@ const stopPolling = () => {
                     <button
                       type="button"
                       onClick={() => handleDownloadAsset(rec.originalAssetId)}
-                      className="p-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[var(--text-60)] hover:text-[var(--text)] hover:border-[var(--accent-30)] transition"
+                      className="p-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-60)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                       title="Download File Asli ke PC"
                     >
                       <Download className="w-3.5 h-3.5" />
@@ -656,7 +656,7 @@ const stopPolling = () => {
                     {rec.newAssetId && (
                       <button
                         onClick={() => copyToClipboard(rec.newAssetId!, 'Asset ID Baru')}
-                        className={`${BTN_GHOST} text-[11px] px-2.5 py-2 flex items-center gap-1.5 border border-[var(--line)] rounded-xl hover:border-[var(--accent-30)] transition`}
+                        className={`${BTN_GHOST} text-[11px] px-2.5 py-2 flex items-center gap-1.5`}
                       >
                         <Copy className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
                         Copy ID

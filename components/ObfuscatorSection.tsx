@@ -365,14 +365,14 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
     <div className="space-y-6">
       {/* Top Banner */}
       <Card className="relative overflow-hidden p-4 sm:p-5">
-        <span className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--accent-40)] via-[var(--accent)] to-[var(--accent-strong)]" />
+        <span className="absolute inset-x-0 top-0 h-1 bg-[var(--accent)]" />
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-[var(--accent-15)] flex items-center justify-center text-[var(--accent)] shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-[var(--accent)] border-2 border-[var(--text)] shadow-[2px_2px_0_0_var(--text)] flex items-center justify-center text-[var(--on-accent)] shrink-0">
               <Lock className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base sm:text-lg font-bold text-[var(--text)] tracking-tight">
+              <h2 className="text-base sm:text-lg font-extrabold uppercase tracking-wide text-[var(--text)]">
                 Script Obfuscator
               </h2>
               <p className="text-xs text-[var(--text-45)]">
@@ -382,13 +382,13 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-semibold text-[var(--text-40)]">Sample:</span>
+            <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-40)]">Sample:</span>
             {SAMPLE_SCRIPTS.map((s) => (
               <button
                 key={s.label}
                 type="button"
                 onClick={() => handleLoadSample(s)}
-                className="px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-[11px] font-medium text-[var(--text-70)] hover:text-[var(--text)] hover:border-[var(--accent-30)] hover:bg-[var(--surface)] transition"
+                className="px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[11px] font-bold uppercase tracking-wide text-[var(--text)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
               >
                 {s.label}
               </button>
@@ -430,7 +430,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
               <div className="flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-[var(--accent-soft)]" />
                 <span className="text-xs font-bold text-[var(--text)]">Pengaturan Obfuscation</span>
-                <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+                <span className="rounded-full border-2 border-[var(--text)] bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)]">
                   {activeSettingsCount} aktif
                 </span>
               </div>
@@ -458,19 +458,19 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                             key={preset.id}
                             type="button"
                             onClick={() => applyPreset(preset)}
-                            className={`flex flex-col items-start p-2.5 rounded-xl border text-left transition-all duration-150 ${
+                            className={`flex flex-col items-start p-2.5 rounded-lg border-2 text-left transition-all duration-150 ${
                               isActive
-                                ? 'border-[var(--accent-40)] bg-[var(--accent-15)] shadow-sm'
-                                : 'border-[var(--line)] bg-[var(--surface-50)] hover:border-[var(--accent-20)] hover:bg-[var(--surface)]'
+                                ? 'border-[var(--text)] bg-[var(--accent)] text-[var(--on-accent)] shadow-[3px_3px_0_0_var(--text)]'
+                                : 'border-[var(--text)] bg-[var(--panel)] hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)]'
                             }`}
                           >
                             <div className="flex items-center gap-1.5 w-full">
-                              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--accent-strong)]' : 'text-[var(--text-60)]'}`} />
-                              <span className={`text-xs font-bold truncate ${isActive ? 'text-[var(--accent-strong)]' : 'text-[var(--text-90)]'}`}>
+                              <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-[var(--on-accent)]' : 'text-[var(--text-60)]'}`} />
+                              <span className={`text-xs font-bold uppercase tracking-wide truncate ${isActive ? 'text-[var(--on-accent)]' : 'text-[var(--text-90)]'}`}>
                                 {preset.label}
                               </span>
                             </div>
-                            <span className={`text-[10px] mt-1 font-mono ${isActive ? 'text-[var(--accent-soft)]' : 'text-[var(--text-45)]'}`}>
+                            <span className={`text-[10px] mt-1 font-mono ${isActive ? 'text-[var(--on-accent)]' : 'text-[var(--text-45)]'}`}>
                               {preset.badge}
                             </span>
                           </button>
@@ -480,7 +480,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                   </div>
 
                   {/* Toggle Settings */}
-                  <div className="pt-2 border-t border-[var(--line)] space-y-2">
+                  <div className="pt-2 border-t-2 border-[var(--text)] space-y-2">
                     <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-45)] mb-1">Individual Settings</p>
                     {([
                       { key: 'encryptStrings' as const, label: 'Encrypt Strings', desc: 'Enkripsi semua string literal' },
@@ -501,7 +501,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                   </div>
 
                   {/* VM Depth Slider */}
-                  <div className="pt-2 border-t border-[var(--line)]">
+                  <div className="pt-2 border-t-2 border-[var(--text)]">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-1.5">
                         <Layers className="w-3.5 h-3.5 text-[var(--accent-soft)]" />
@@ -538,7 +538,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
             type="button"
             onClick={handleObfuscate}
             disabled={isProcessing || !inputCode.trim()}
-            className={`${BTN_PRIMARY} w-full py-3.5 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg`}
+            className={`${BTN_PRIMARY} w-full py-3.5 text-xs sm:text-sm font-bold uppercase tracking-wide flex items-center justify-center gap-2`}
           >
             {isProcessing ? (
               <>
@@ -558,10 +558,10 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
         <div className="lg:col-span-7 space-y-4">
           <Card className="flex min-h-[500px] flex-col space-y-4 p-4">
             {/* Output Header */}
-            <div className="flex items-center justify-between border-b border-[var(--line)] pb-3 flex-wrap gap-2">
+            <div className="flex items-center justify-between border-b-2 border-[var(--text)] pb-3 flex-wrap gap-2">
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 p-1 bg-[var(--surface-50)] rounded-xl border border-[var(--line)]">
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--accent)] text-[#000000] shadow-sm">
+                <div className="flex items-center gap-1.5 p-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] shadow-[2px_2px_0_0_var(--text)]">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide bg-[var(--accent)] text-[var(--on-accent)]">
                     <Code className="w-3.5 h-3.5" />
                     <span>Obfuscated Output</span>
                   </div>
@@ -573,7 +573,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                   <button
                     type="button"
                     onClick={handleCopyOutput}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--accent-15)] text-xs font-bold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-xs font-bold uppercase tracking-wide text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)] hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)] transition"
                   >
                     <Copy className="w-3.5 h-3.5" />
                     Salin Kode
@@ -581,7 +581,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                   <button
                     type="button"
                     onClick={handleDownloadOutput}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-50)] text-xs font-bold text-[var(--text-80)] hover:bg-[var(--surface)] transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-xs font-bold uppercase tracking-wide text-[var(--text)] shadow-[2px_2px_0_0_var(--text)] hover:bg-[var(--accent)] hover:text-[var(--on-accent)] transition"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Download .lua
@@ -593,11 +593,11 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
             {/* Output Content */}
             {!outputCode ? (
               <div className="flex-1 flex flex-col items-center justify-center py-24 text-center space-y-3">
-                <div className="w-12 h-12 rounded-2xl bg-[var(--surface-50)] border border-[var(--line)] flex items-center justify-center text-[var(--text-35)]">
+                <div className="w-12 h-12 rounded-lg bg-[var(--panel)] border-2 border-[var(--text)] shadow-[3px_3px_0_0_var(--text)] flex items-center justify-center text-[var(--text-35)]">
                   <FileCode className="w-6 h-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-[var(--text-70)]">Belum Ada Output</p>
+                  <p className="text-sm font-bold uppercase tracking-wide text-[var(--text-70)]">Belum Ada Output</p>
                   <p className="text-xs text-[var(--text-40)] max-w-sm mt-1">
                     Tempelkan script di sebelah kiri, atur settings, lalu klik &quot;Obfuscate Script&quot; untuk memproteksi kode Anda.
                   </p>
@@ -606,7 +606,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
             ) : (
               <div className="flex-1 flex flex-col space-y-3">
                 {/* Summary Info Bar */}
-                <div className="flex items-center justify-between text-[11px] font-mono p-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface-50)]">
+                <div className="flex items-center justify-between text-[11px] font-mono p-2.5 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] shadow-[3px_3px_0_0_var(--text)]">
                   <div className="flex items-center gap-3">
                     <span className="text-[var(--accent-soft)] font-bold">
                       Goofyscator V8
@@ -622,31 +622,31 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                 </div>
 
                 {/* Code Viewer */}
-                <pre className="flex-1 p-4 rounded-xl bg-black/70 border border-[var(--line)] font-mono text-xs text-[var(--text)] overflow-auto max-h-[550px] leading-relaxed select-text">
+                <pre className="flex-1 p-4 rounded-lg bg-black border-2 border-[var(--text)] shadow-[4px_4px_0_0_var(--text)] font-mono text-xs text-[var(--text)] overflow-auto max-h-[550px] leading-relaxed select-text">
                   {outputCode}
                 </pre>
 
                 {/* Settings Used Summary */}
                 <div className="flex flex-wrap gap-1.5">
                   {settings.encryptStrings && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">encryptStrings</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">encryptStrings</span>
                   )}
                   {settings.proxifyLocals && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">proxifyLocals</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">proxifyLocals</span>
                   )}
                   {settings.proxifyFunctions && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">proxifyFunctions</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">proxifyFunctions</span>
                   )}
                   {settings.antiTamper && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">antiTamper</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">antiTamper</span>
                   )}
                   {settings.controlFlowFlattening && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">controlFlow</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">controlFlow</span>
                   )}
                   {settings.isLuauRuntime && (
-                    <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">luauRuntime</span>
+                    <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">luauRuntime</span>
                   )}
-                  <span className="px-2 py-0.5 rounded-lg bg-[var(--accent-10)] text-[9px] font-mono text-[var(--accent-strong)]">vmDepth={settings.loaderVMDepth}</span>
+                  <span className="px-2 py-0.5 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[9px] font-mono text-[var(--on-accent)]">vmDepth={settings.loaderVMDepth}</span>
                 </div>
               </div>
             )}
@@ -660,12 +660,12 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
           <button
             type="button"
             onClick={() => setHistoryOpen(!historyOpen)}
-            className="inline-flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] px-4 py-2.5 text-xs font-semibold text-[var(--text-80)] transition hover:border-[var(--accent-30)] hover:text-[var(--accent-strong)] hover:bg-[var(--surface)]"
+            className="inline-flex items-center gap-2 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] px-4 py-2.5 text-xs font-bold uppercase tracking-wide text-[var(--text)] shadow-[3px_3px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
           >
             <FileCode className="w-4 h-4 text-[var(--accent-soft)]" />
             <span>Riwayat Obfuscation</span>
             {history.length > 0 && (
-              <span className="rounded-full bg-[var(--accent-15)] px-2 py-0.5 text-[10px] font-bold text-[var(--accent-strong)]">
+              <span className="rounded-full border-2 border-[var(--text)] bg-[var(--accent)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[var(--on-accent)]">
                 {history.length}
               </span>
             )}
@@ -685,10 +685,10 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
               className="overflow-hidden"
             >
               <Card className="space-y-3 p-4">
-                <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
+                <div className="flex items-center justify-between border-b-2 border-[var(--text)] pb-3">
                   <div className="flex items-center gap-2">
                     <FileCode className="w-4 h-4 text-[var(--accent)]" />
-                    <h3 className="text-sm font-bold text-[var(--text)]">Riwayat Obfuscation</h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wide text-[var(--text)]">Riwayat Obfuscation</h3>
                   </div>
                   {history.length > 0 && (
                     <button
@@ -699,7 +699,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                           toast('Riwayat obfuscation dibersihkan', 'info');
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-[var(--line)] text-[11px] font-medium text-[var(--text-50)] hover:text-[var(--danger)] hover:border-red-500/30 transition"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[11px] font-bold uppercase tracking-wide text-[var(--text-50)] shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--danger)] hover:text-white"
                     >
                       <Trash2 className="w-3 h-3" />
                       Hapus Semua
@@ -716,11 +716,11 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                     {history.map((rec) => (
                       <div
                         key={rec.id}
-                        className="p-3 rounded-xl border border-[var(--line)] bg-[var(--surface-50)] hover:bg-[var(--surface)] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                        className="p-3 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] shadow-[3px_3px_0_0_var(--text)] transition flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                       >
                         <div className="space-y-1 min-w-0 flex-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-xs text-[var(--text-90)] truncate max-w-xs">
+                            <span className="font-bold uppercase tracking-wide text-xs text-[var(--text-90)] truncate max-w-xs">
                               {rec.title}
                             </span>
                             <span className="text-[10px] font-mono text-[var(--text-40)]">
@@ -745,7 +745,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                           <button
                             type="button"
                             onClick={() => handleLoadFromHistory(rec)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent-15)] text-[11px] font-bold text-[var(--accent-strong)] hover:bg-[var(--accent-20)] transition"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border-2 border-[var(--text)] bg-[var(--accent)] text-[11px] font-bold uppercase tracking-wide text-[var(--on-accent)] shadow-[2px_2px_0_0_var(--text)] transition hover:-translate-y-[1px] hover:shadow-[3px_3px_0_0_var(--text)]"
                           >
                             <Eye className="w-3 h-3" />
                             Buka
@@ -756,7 +756,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                               navigator.clipboard.writeText(rec.outputCode);
                               toast('Output disalin', 'success');
                             }}
-                            className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--text-60)] hover:text-[var(--text)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-60)] shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
@@ -771,7 +771,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                               a.click();
                               URL.revokeObjectURL(url);
                             }}
-                            className="p-1.5 rounded-lg border border-[var(--line)] text-[var(--text-60)] hover:text-[var(--text)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-60)] shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
@@ -780,7 +780,7 @@ const outputLineCount = outputCode ? outputCode.split(/\r?\n/).length : 0;
                             onClick={() => {
                               saveHistory(history.filter((r) => r.id !== rec.id));
                             }}
-                            className="p-1.5 rounded-lg text-[var(--text-35)] hover:text-[var(--danger)] transition"
+                            className="p-1.5 rounded-lg border-2 border-[var(--text)] bg-[var(--panel)] text-[var(--text-35)] shadow-[2px_2px_0_0_var(--text)] transition hover:bg-[var(--danger)] hover:text-white"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>

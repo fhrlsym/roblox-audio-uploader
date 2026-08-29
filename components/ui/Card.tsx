@@ -9,11 +9,11 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 export function Card({ children, as = 'div', hover = false, className = '', ...props }: CardProps) {
   const Tag = as;
   const hoverCls = hover
-    ? 'transition duration-150 ease-out hover:border-[var(--accent-25)]'
+    ? 'transition duration-150 ease-out hover:-translate-x-[2px] hover:-translate-y-[2px] hover:shadow-[6px_6px_0_0_var(--text)]'
     : '';
   return (
     <Tag
-      className={`rounded-2xl border border-[var(--line)] bg-[var(--panel)] shadow-[var(--shadow-card)] ${hoverCls} ${className}`}
+      className={`brutal-card ${hoverCls} ${className}`}
       {...props}
     >
       {children}
