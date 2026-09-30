@@ -399,6 +399,16 @@ body {
   box-shadow: 4px 4px 0 0 var(--text);
 }
 
+/* Static card: same look as .brutal-card but never reacts to hover.
+   Use for large containers where a moving hover feels noisy. */
+.brutal-card--static {
+  transition: none;
+}
+.brutal-card--static:hover {
+  transform: none;
+  box-shadow: 4px 4px 0 0 var(--text);
+}
+
 .brutal-btn-primary {
   display: inline-flex;
   align-items: center;

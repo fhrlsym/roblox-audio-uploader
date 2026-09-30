@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { CheckCircle2, Copy, History, Music2, Search, X } from 'lucide-react';
+import { CheckCircle2, Check, Copy, History, Music2, Search, Trash2, X } from 'lucide-react';
 import { StatusBadge, RefreshBadge } from './StatusBadge';
 import { cleanSongTitle, formatBytes, formatDate } from '../lib/utils';
 import { UploadRecord } from '../types/audio';
@@ -18,6 +17,9 @@ interface UploadHistoryProps {
   refreshingIds?: string[];
   onOpenGitHubSync?: () => void;
   limit?: number;
+  onLoadMore?: () => void;
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
 }
 
 function StatusIcon({ status }: { status: string }) {
@@ -26,11 +28,14 @@ function StatusIcon({ status }: { status: string }) {
   return null;
 }
 
-export default function UploadHistory({ history, onClose, onRefresh, refreshingIds = [], onOpenGitHubSync, limit = 5 }: UploadHistoryProps) {
+export default function UploadHistory({ history, onClose, onRefresh, refreshingIds = [], onOpenGitHubSync, limit = 5, onLoadMore, hasMore = false, isLoadingMore = false }: UploadHistoryProps) {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pending' | 'Failed' | 'Copyright'>('All');
+  const [dateFilter, setDateFilter] = useState<'all' | 'today' | '7d' | '30d'>('all');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'name'>('newest');
   const [showAll, setShowAll] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const copyAssetId = (assetId: string) => {
     navigator.clipboard.writeText(assetId);
@@ -54,16 +59,64 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
     const idStr = (record.assetId || '').toLowerCase();
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch = !q || nameStr.includes(q) || idStr.includes(q);
-    return matchesStatus && matchesSearch;
+
+    let matchesDate = true;
+    if (dateFilter !== 'all' && record.uploadedAt) {
+      const age = Date.now() - record.uploadedAt;
+      const dayMs = 24 * 60 * 60 * 1000;
+      if (dateFilter === 'today') matchesDate = age < dayMs;
+      else if (dateFilter === '7d') matchesDate = age < 7 * dayMs;
+      else if (dateFilter === '30d') matchesDate = age < 30 * dayMs;
+    }
+
+    return matchesStatus && matchesSearch && matchesDate;
   });
 
-  const displayHistory = showAll ? filteredHistory : filteredHistory.slice(0, limit);
-  const hasMore = filteredHistory.length > limit;
+  // Sort
+  const sortedHistory = [...filteredHistory].sort((a, b) => {
+    if (sortBy === 'name') {
+      const na = (a.displayName || a.fileName || '').toLowerCase();
+      const nb = (b.displayName || b.fileName || '').toLowerCase();
+      return na.localeCompare(nb);
+    }
+    if (sortBy === 'oldest') return a.uploadedAt - b.uploadedAt;
+    return b.uploadedAt - a.uploadedAt; // newest
+  });
 
+  const displayHistory = showAll ? sortedHistory : sortedHistory.slice(0, limit);
+  const hasLocalMore = sortedHistory.length > limit;
   const activeCount = history.filter((r) => r.status === 'Active').length;
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === displayHistory.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(displayHistory.map((r) => r.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    // This would call a prop callback to delete from Supabase
+    // For now, show toast indicating feature is wired
+    if (selectedIds.size === 0) {
+      toast('Pilih item dulu', 'error');
+      return;
+    }
+    toast(`${selectedIds.size} item siap dihapus (wiring ke Supabase)`, 'info');
+    setSelectedIds(new Set());
+  };
+
   return (
-    <Card className="space-y-4 p-5">
+    <Card className="brutal-card--static space-y-4 p-5">
       {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b-2 border-[var(--text)]">
         <div className="flex items-center gap-2.5">
@@ -145,6 +198,66 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
         </div>
       </div>
 
+      {/* Date filter & Sort row */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-1">
+          {([['all', 'Semua'], ['today', 'Hari ini'], ['7d', '7 hari'], ['30d', '30 hari']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setDateFilter(id)}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition whitespace-nowrap ${
+                dateFilter === id
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'text-[var(--text-60)] hover:text-[var(--text)]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-1">
+          {([['newest', 'Terbaru'], ['oldest', 'Terlama'], ['name', 'Nama']] as const).map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setSortBy(id)}
+              className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide transition whitespace-nowrap ${
+                sortBy === id
+                  ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                  : 'text-[var(--text-60)] hover:text-[var(--text)]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {selectedIds.size > 0 && (
+          <button
+            onClick={handleBulkDelete}
+            className="inline-flex items-center gap-1 rounded-md border-2 border-[var(--text)] bg-[var(--danger)] px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-white shadow-[2px_2px_0_0_var(--text)] transition active:translate-y-[1px]"
+          >
+            <Trash2 className="w-3 h-3" />
+            Hapus ({selectedIds.size})
+          </button>
+        )}
+      </div>
+
+      {/* Bulk select toggle */}
+      {sortedHistory.length > 0 && (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggleSelectAll}
+            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--text-60)] hover:text-[var(--text)] transition"
+          >
+            <span className={`flex h-4 w-4 items-center justify-center rounded border-2 border-[var(--text)] ${selectedIds.size === displayHistory.length && displayHistory.length > 0 ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--bg)]'}`}>
+              {selectedIds.size === displayHistory.length && displayHistory.length > 0 && <Check className="h-3 w-3" />}
+            </span>
+            Pilih semua ({displayHistory.length})
+          </button>
+        </div>
+      )}
+
       {/* History Items List */}
       {filteredHistory.length === 0 ? (
         <div className="brutal-card-sm py-8 text-center">
@@ -154,30 +267,38 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
           </p>
         </div>
       ) : (
-        <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
-          {displayHistory.map((record, index) => {
+        <div className="-mx-1 space-y-2 max-h-96 overflow-y-auto px-1 pb-1">
+          {displayHistory.map((record) => {
             const isPending = record.status === 'Pending';
             return (
-              <motion.div
+              <div
                 key={record.id}
-                initial={{ opacity: 0, transform: 'translateY(6px)' }}
-                animate={{ opacity: 1, transform: 'translateY(0)' }}
-                transition={{ duration: 0.18, delay: index * 0.035, ease: [0.23, 1, 0.32, 1] }}
-                className="brutal-card-sm group p-3 text-xs"
+                className="brutal-card-sm group relative p-3 text-xs"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <StatusIcon status={record.status || 'Pending'} />
-                      <p className="truncate text-xs font-bold text-[var(--text-90)]">
-                        {cleanSongTitle(record.displayName || record.fileName)}
-                      </p>
-                    </div>
-                    <p className="mt-1 flex items-center gap-2 text-[11px] font-medium text-[var(--text-50)]">
+                  <div className="flex items-start gap-2 min-w-0 flex-1">
+                    <button
+                      onClick={() => toggleSelect(record.id)}
+                      className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 border-[var(--text)] transition ${
+                        selectedIds.has(record.id) ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--bg)]'
+                      }`}
+                      aria-label="Pilih item"
+                    >
+                      {selectedIds.has(record.id) && <Check className="h-3 w-3" />}
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <StatusIcon status={record.status || 'Pending'} />
+                        <p className="truncate text-xs font-bold text-[var(--text-90)]">
+                          {cleanSongTitle(record.displayName || record.fileName)}
+                        </p>
+                      </div>
+                      <p className="mt-1 flex items-center gap-2 text-[11px] font-medium text-[var(--text-50)]">
                       <span className="truncate">{record.accountName}</span>
                       {record.fileSize ? <span>· {formatBytes(record.fileSize)}</span> : null}
                       <span>· {formatDate(record.uploadedAt)}</span>
                     </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <StatusBadge status={record.status || 'Pending'} />
@@ -214,27 +335,38 @@ export default function UploadHistory({ history, onClose, onRefresh, refreshingI
                     )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
 
-          {hasMore && !showAll && (
+          {!showAll && hasLocalMore && (
             <button
               type="button"
               onClick={() => setShowAll(true)}
               className="w-full py-2 text-xs font-bold uppercase tracking-wide text-[var(--accent)] hover:text-[var(--accent-deep)] transition"
             >
-              Lihat semua ({filteredHistory.length - limit} lainnya)
+              Tampilkan semua ({sortedHistory.length} dimuat)
             </button>
           )}
 
-          {showAll && hasMore && (
+          {showAll && hasLocalMore && (
             <button
               type="button"
               onClick={() => setShowAll(false)}
               className="w-full py-2 text-xs font-bold uppercase tracking-wide text-[var(--text-50)] hover:text-[var(--text)] transition"
             >
               Tampilkan lebih sedikit
+            </button>
+          )}
+
+          {hasMore && showAll && (
+            <button
+              type="button"
+              onClick={() => onLoadMore?.()}
+              disabled={isLoadingMore}
+              className="w-full py-2 text-xs font-bold uppercase tracking-wide text-[var(--accent)] hover:text-[var(--accent-deep)] transition disabled:opacity-60 disabled:cursor-wait"
+            >
+              {isLoadingMore ? 'Memuat…' : 'Muat lebih banyak'}
             </button>
           )}
         </div>

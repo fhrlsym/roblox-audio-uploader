@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';
-import { BACKEND_ROOT } from './src/config.js';
+import { BACKEND_ROOT, YTDLP } from './src/config.js';
 import audioRoutes from './src/routes/audio.routes.js';
 import robloxRoutes from './src/routes/roblox.routes.js';
 import githubRoutes from './src/routes/github.routes.js';
@@ -29,12 +29,120 @@ app.get('/api/version', (req, res) => {
   });
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({
+// --- Rich health data (cached 60s, refreshed lazily) ---
+const healthCache = { data: null, fetchedAt: 0 };
+const HEALTH_TTL = 60 * 1000;
+
+async function execVersion(cmd, args) {
+  const { execFile } = await import('child_process');
+  const { promisify } = await import('util');
+  const execFileAsync = promisify(execFile);
+  try {
+    const { stdout } = await execFileAsync(cmd, args, { timeout: 8000 });
+    return stdout.trim().split('\n')[0];
+  } catch {
+    return null;
+  }
+}
+
+async function getDiskUsage() {
+  const { statfs } = await import('fs/promises').catch(() => ({ statfs: null }));
+  try {
+    if (!statfs) {
+      // Fallback: sum file sizes in backend root (approximation)
+      const { readdirSync, statSync } = await import('fs');
+      let total = 0;
+      let count = 0;
+      for (const f of readdirSync('.')) {
+        try {
+          const st = statSync(f);
+          if (st.isFile()) { total += st.size; count++; }
+        } catch { /* ignore */ }
+      }
+      return { type: 'approx', totalBytes: total, fileCount: count };
+    }
+    const fs = await statfs('.');
+    const total = Number(fs.blocks) * Number(fs.bsize);
+    const free = Number(fs.bfree) * Number(fs.bsize);
+    return { type: 'statfs', totalBytes: total, freeBytes: free, usedBytes: total - free };
+  } catch {
+    return { type: 'unknown' };
+  }
+}
+
+function countTempFiles() {
+  let temp = 0, output = 0, upload = 0;
+  try {
+    temp = readdirSync('.').filter((f) => f.startsWith('temp_')).length;
+    output = readdirSync('.').filter((f) => f.startsWith('output_')).length;
+  } catch { /* ignore */ }
+  try {
+    upload = readdirSync('uploads').length;
+  } catch { /* ignore */ }
+  return { temp, output, upload };
+}
+
+function getCacheStats() {
+  try {
+    const { videoInfoCache } = globalThis.__s2cache || {};
+    if (videoInfoCache) {
+      return {
+        size: videoInfoCache.size,
+        max: 200,
+      };
+    }
+  } catch { /* ignore */ }
+  return null;
+}
+
+app.get('/api/health', async (req, res) => {
+  const now = Date.now();
+  if (healthCache.data && now - healthCache.fetchedAt < HEALTH_TTL) {
+    return res.json({ ...healthCache.data, cached: true, ageSeconds: Math.floor((now - healthCache.fetchedAt) / 1000) });
+  }
+
+  const [ytdlpVersion, ffmpegVersion, disk, tempFiles, mem] = await Promise.all([
+    execVersion(YTDLP, ['--version']),
+    execVersion('ffmpeg', ['-version']),
+    getDiskUsage(),
+    Promise.resolve(countTempFiles()),
+    Promise.resolve(process.memoryUsage()),
+  ]);
+
+  const queue = globalThis.__s2uploadQueue ? {
+    pending: globalThis.__s2uploadQueue.pending,
+    active: globalThis.__s2uploadQueue.active,
+  } : null;
+
+  const data = {
     status: 'ok',
     uptimeSeconds: Math.floor(process.uptime()),
+    startedAt: process.env.STARTED_AT,
     timestamp: new Date().toISOString(),
-  });
+    versions: {
+      node: process.version,
+      ytdlp: ytdlpVersion,
+      ffmpeg: ffmpegVersion,
+    },
+    resources: {
+      disk,
+      tempFiles,
+      memory: {
+        rssMB: Math.round(mem.rss / 1024 / 1024),
+        heapUsedMB: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotalMB: Math.round(mem.heapTotal / 1024 / 1024),
+      },
+    },
+    uploadQueue: queue,
+    flags: {
+      youtubeCookies: Boolean(process.env.YT_COOKIES_B64),
+      potProvider: Boolean(process.env.YOUTUBE_POT_PROVIDER_URL),
+    },
+  };
+
+  healthCache.data = data;
+  healthCache.fetchedAt = now;
+  res.json({ ...data, cached: false });
 });
 
 // Fallback JSON for unmatched /api routes

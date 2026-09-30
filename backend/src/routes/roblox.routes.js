@@ -18,6 +18,7 @@ import {
   downloadOriginalAssetAPI,
   SPOOF_FILE_EXT,
 } from '../services/roblox.service.js';
+import { enqueue as enqueueUpload } from '../services/upload-queue.service.js';
 
 const upload = multer({ dest: 'uploads/' });
 const router = Router();
@@ -206,14 +207,14 @@ router.post('/upload-to-roblox', upload.single('file'), async (req, res) => {
   if (!creatorId) return res.status(400).json({ error: 'Missing creator ID' });
 
   try {
-    const operationId = await uploadToRoblox(req.file.path, {
+    const operationId = await enqueueUpload(() => uploadToRoblox(req.file.path, {
       assetType,
       displayName,
       description,
       creatorType,
       creatorId,
       apiKey,
-    });
+    }));
     res.json({ operationId });
   } catch (error) {
     res.status(error.status || 500).json({
@@ -250,14 +251,14 @@ router.post('/upload-converted', async (req, res) => {
   }
 
   try {
-    const operationId = await uploadToRoblox(filePath, {
+    const operationId = await enqueueUpload(() => uploadToRoblox(filePath, {
       assetType: 'Audio',
       displayName: displayName || fileId,
       description,
       creatorType,
       creatorId,
       apiKey,
-    });
+    }));
     res.json({ operationId });
   } catch (error) {
     res.status(error.status || 500).json({ error: error.message || 'Upload failed' });

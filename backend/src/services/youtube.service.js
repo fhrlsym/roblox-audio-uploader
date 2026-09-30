@@ -22,6 +22,9 @@ const videoInfoCache = new LRUCache({
   ttl: 1000 * 60 * 60 * 24, // 24 hours
 });
 
+// Expose cache for /api/health
+globalThis.__s2cache = { videoInfoCache };
+
 const execFileAsync = promisify(execFile);
 
 function prepareCookiesFile(cookies) {
@@ -59,11 +62,11 @@ function createYoutubeError(error, cookiesFile) {
     if (cookiesFile) {
       youtubeError.code = 'YOUTUBE_ACCESS_BLOCKED';
       youtubeError.status = 403;
-      youtubeError.message = 'YouTube masih menolak akses setelah PO Token dan cookies dicoba. Coba lagi beberapa saat.';
+      youtubeError.message = 'YouTube masih memblokir akses (bot check) setelah beberapa kali percobaan. Coba lagi beberapa saat, atau perbarui cookies YouTube.';
     } else {
       youtubeError.code = 'YOUTUBE_AUTH_REQUIRED';
       youtubeError.status = 401;
-      youtubeError.message = 'PO Token belum cukup untuk video ini. Tambahkan cookies YouTube lalu coba lagi.';
+      youtubeError.message = 'YouTube meminta verifikasi (bot check). Tambahkan cookies YouTube lalu coba lagi.';
     }
     return youtubeError;
   }
@@ -101,30 +104,81 @@ async function runYtdl(args, cookiesFile) {
   return stdout;
 }
 
-async function runYtdlWithClients(args, cookiesFile) {
+// Player clients to rotate through. Order is shuffled per attempt so we don't
+// repeat the same (already block-listed) client first every single time.
+const CLIENTS_WITH_COOKIES = ['web', 'mweb', 'web_safari', 'tv', 'web_embedded', 'default'];
+const CLIENTS_NO_COOKIES = ['tv', 'web_embedded', 'mweb', 'android_vr', 'web_safari', 'ios', 'android', 'default'];
+
+function shuffle(list) {
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Each "wave" runs the given client list in random order. Multiple waves plus a
+// short backoff give transient YouTube bot-checks a chance to clear.
+const MAX_WAVES = 3;
+// Hard ceiling for the whole retry loop so a request can't hang for minutes.
+const RETRY_DEADLINE_MS = 90 * 1000;
+
+async function withRetry(args, cookiesFile) {
+  // Try with the cookie state we were given first, then vary it on later waves.
+  const scenarios = cookiesFile
+    ? [{ cookies: cookiesFile, label: 'cookies' }, { cookies: null, label: 'no-cookies' }]
+    : [{ cookies: null, label: 'no-cookies' }];
+
   let lastError;
-  const candidates = cookiesFile
-    ? ['mweb', 'web_safari', 'web', 'default']
-    : ['mweb', 'android_vr', 'web_safari', 'ios', 'android', 'default'];
-  for (const client of candidates) {
-    try {
-      if (client === 'default') return await runYtdl(args, cookiesFile);
-      return await runYtdl([
-        ...args,
-        '--extractor-args',
-        `youtube:player_client=${client}`,
-      ], cookiesFile);
-    } catch (error) {
-      lastError = error;
-      if (isCookieError(errorText(error))) throw createYoutubeError(error, cookiesFile);
+  let attempts = 0;
+  const startedAt = Date.now();
+
+  for (let wave = 0; wave < MAX_WAVES; wave++) {
+    for (const scenario of scenarios) {
+      const clients = shuffle(scenario.cookies ? CLIENTS_WITH_COOKIES : CLIENTS_NO_COOKIES);
+
+      for (const client of clients) {
+        if (Date.now() - startedAt > RETRY_DEADLINE_MS) {
+          const err = createYoutubeError(lastError, cookiesFile);
+          err.attempts = attempts;
+          err.timedOut = true;
+          throw err;
+        }
+
+        attempts++;
+        try {
+          if (client === 'default') {
+            return await runYtdl(args, scenario.cookies);
+          }
+          return await runYtdl(
+            [...args, '--extractor-args', `youtube:player_client=${client}`],
+            scenario.cookies,
+          );
+        } catch (error) {
+          lastError = error;
+          const raw = errorText(error);
+
+          // A genuinely invalid cookie won't be fixed by rotating clients.
+          // Only abort the cookie scenario (we may still succeed without cookies).
+          if (scenario.cookies && isCookieError(raw)) break;
+
+          // Bot-check / rate-limit: back off briefly before hammering the next client.
+          if (isBotError(raw)) {
+            await sleep(600 + wave * 900 + Math.floor(Math.random() * 400));
+          }
+        }
+      }
     }
   }
 
-  throw createYoutubeError(lastError, cookiesFile);
+  const err = createYoutubeError(lastError, cookiesFile);
+  err.attempts = attempts;
+  throw err;
 }
 
 export async function runYtCommand(args, cookiesFile) {
-  return await runYtdlWithClients(args, cookiesFile);
+  return await withRetry(args, cookiesFile);
 }
 
 export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {

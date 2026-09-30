@@ -48,3 +48,6 @@ next_output.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# supabase cli local state (contains connection metadata — never commit)
+supabase/.temp/

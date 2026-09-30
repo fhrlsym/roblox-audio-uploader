@@ -16,6 +16,7 @@ import AccountModal from '../components/AccountModal';
 import UploadHistory from '../components/UploadHistory';
 import VersionChecker from '../components/VersionChecker';
 import GitHubExportModal from '../components/GitHubExportModal';
+import DevPanel from '../components/DevPanel';
 import { ToastProvider } from '../components/Toast';
 import { cleanSongTitle } from '../lib/ui';
 import { useSavedAccounts } from '../hooks/useSavedAccounts';
@@ -53,12 +54,15 @@ export default function Home() {
   const [pinOpen, setPinOpen] = useState(false);
   const [pin, setPin] = useState('');
   const [pinError, setPinError] = useState(false);
+  const [activePin, setActivePin] = useState(CORRECT_PIN);
+  const [pinLength, setPinLength] = useState(CORRECT_PIN.length);
   const { theme, mode, setTheme, setMode } = useTheme();
   const [themeOpen, setThemeOpen] = useState(false);
   const [youtubeCookies, setYoutubeCookies] = useState('');
   const [webVersion, setWebVersion] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [githubModalOpen, setGithubModalOpen] = useState(false);
+  const [devPanelOpen, setDevPanelOpen] = useState(false);
 
   useEffect(() => {
     const loadVersion = async () => {
@@ -72,6 +76,25 @@ export default function Home() {
       }
     };
     loadVersion();
+  }, []);
+
+  // Load the active PIN from Supabase (developer panel can change it). Falls back to env.
+  useEffect(() => {
+    const loadPin = async () => {
+      try {
+        const res = await fetch('/api/dev/pin', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data.pin) {
+          const next = String(data.pin);
+          setActivePin(next);
+          setPinLength(next.length);
+        }
+      } catch {
+        // ignore; keep env fallback
+      }
+    };
+    loadPin();
   }, []);
 
   // Clean Modular Custom Hooks
@@ -93,11 +116,14 @@ export default function Home() {
     uploadHistory,
     uploadStats,
     isLoading: statsLoading,
+    isLoadingMore,
+    hasMore,
     setKnownAccounts,
     refreshingIds,
     handleRefreshStatus,
     refreshPendingStatuses,
     handleUploadSuccess,
+    loadMoreUploadHistory,
   } = useUploadHistory(unlocked, BACKEND_URL, selectedAccountRef);
 
   useEffect(() => {
@@ -126,16 +152,26 @@ export default function Home() {
     const quotaTimer = setInterval(refreshAccountQuotas, 60000);
     const statusTimer = setInterval(refreshPendingStatuses, 5000);
 
+    // Dev panel shortcut: Ctrl+Shift+D
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+        e.preventDefault();
+        setDevPanelOpen((v) => !v);
+      }
+    };
+    document.addEventListener('keydown', onKey);
+
     return () => {
       clearInterval(quotaTimer);
       clearInterval(statusTimer);
+      document.removeEventListener('keydown', onKey);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unlocked]);
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === CORRECT_PIN) {
+    if (pin === activePin) {
       setPinOpen(false);
       setUnlocked(true);
     } else {
@@ -228,15 +264,15 @@ export default function Home() {
                   type="password"
                   inputMode="numeric"
                   autoComplete="one-time-code"
-                  maxLength={6}
+                  maxLength={pinLength}
                   pattern="[0-9]*"
                   value={pin}
                   onChange={(e) => {
                     const onlyDigits = e.target.value.replace(/\D/g, '');
-                    setPin(onlyDigits.slice(0, 6));
+                    setPin(onlyDigits.slice(0, pinLength));
                     setPinError(false);
                   }}
-                  placeholder="Enter 6-digit code"
+                  placeholder={`Enter ${pinLength}-digit code`}
                   aria-invalid={pinError}
                   aria-describedby={pinError ? 'access-error' : undefined}
                   className={`w-full rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] py-4 pl-11 pr-4 text-center text-lg font-mono tracking-[0.3em] outline-none transition-colors duration-150 focus:border-[var(--accent)] placeholder:tracking-normal placeholder:text-sm placeholder:font-normal ${
@@ -261,7 +297,7 @@ export default function Home() {
 
             <button
               type="submit"
-              disabled={pin.length !== 6}
+              disabled={pin.length !== pinLength}
               className="brutal-btn-primary w-full justify-center py-3.5"
             >
               <LockKeyhole className="mr-2 inline-block h-4 w-4" />
@@ -449,14 +485,18 @@ export default function Home() {
                 </button>
               </div>
 
-              <AnimatePresence>
+              <AnimatePresence initial={false}>
                 {historyOpen && (
                   <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="overflow-hidden"
+                    key="history-drawer"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{
+                      height: { duration: 0.28, ease: [0.23, 1, 0.32, 1] },
+                      opacity: { duration: 0.18, ease: 'easeOut' },
+                    }}
+                    className="overflow-hidden px-1 pb-2"
                   >
                     <UploadHistory
                       history={uploadHistory}
@@ -464,6 +504,9 @@ export default function Home() {
                       onRefresh={handleRefreshStatus}
                       refreshingIds={refreshingIds}
                       onOpenGitHubSync={() => setGithubModalOpen(true)}
+                      onLoadMore={loadMoreUploadHistory}
+                      hasMore={hasMore}
+                      isLoadingMore={isLoadingMore}
                     />
                   </motion.div>
                 )}
@@ -552,6 +595,16 @@ export default function Home() {
               playbackSpeed: r.robloxPlaybackSpeed || (1 / (r.originalSpeed || 1)).toFixed(4),
               originalSpeed: r.originalSpeed,
             }))}
+        />
+
+        <DevPanel
+          isOpen={devPanelOpen}
+          onClose={() => setDevPanelOpen(false)}
+          currentPin={activePin}
+          onPinChanged={(next) => {
+            setActivePin(next);
+            setPinLength(next.length);
+          }}
         />
       </div>
     </ToastProvider>

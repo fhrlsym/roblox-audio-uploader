@@ -5,11 +5,17 @@ import { supabase } from '../lib/supabase';
 import { UploadRecord, UploadStats, SavedAccount } from '../types/audio';
 import { cleanSongTitle } from '../lib/utils';
 
+// Supabase/PostgREST caps each request at 1000 rows by default, so history is
+// fetched in pages and appended on demand instead of relying on a single select.
+const PAGE_SIZE = 500;
+
 export function useUploadHistory(unlocked: boolean, backendUrl: string, selectedAccountRef: React.MutableRefObject<SavedAccount | null>) {
   const [uploadHistory, setUploadHistory] = useState<UploadRecord[]>([]);
   const [uploadStats, setUploadStats] = useState<UploadStats>({ total: 0, active: 0, pending: 0, failed: 0, copyright: 0 });
   const [refreshingIds, setRefreshingIds] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
   const statusRefreshLockRef = useRef(false);
   const accountsRef = useRef<SavedAccount[]>([]);
 
@@ -25,60 +31,113 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     return found?.name || 'Roblox';
   }, [selectedAccountRef]);
 
+  const mapRow = useCallback((row: Record<string, unknown>): UploadRecord => {
+    let originalSpeed = Number(row.original_speed) || 1;
+    if (originalSpeed === 1 && row.name) {
+      const match = String(row.name).match(/_(\d+(?:\.\d+)?)x/i);
+      if (match && match[1]) {
+        originalSpeed = parseFloat(match[1]);
+      }
+    }
+
+    let robloxSpeed: string | undefined = undefined;
+    if (row.roblox_playback_speed && Number(row.roblox_playback_speed) > 0 && Number(row.roblox_playback_speed) !== 1) {
+      robloxSpeed = Number(row.roblox_playback_speed).toFixed(4);
+    } else if (originalSpeed > 0) {
+      robloxSpeed = (1 / originalSpeed).toFixed(4);
+    }
+
+    return {
+      id: String(row.id),
+      fileName: cleanSongTitle(String(row.name ?? '')),
+      displayName: cleanSongTitle(String(row.name ?? '')),
+      assetId: String(row.asset_id ?? ''),
+      accountId: String(row.account_id || ''),
+      accountName: resolveAccountName(String(row.account_id || '')) || 'Roblox',
+      uploadedAt: new Date(String(row.uploaded_at)).getTime(),
+      robloxPlaybackSpeed: robloxSpeed,
+      originalSpeed: originalSpeed,
+      amplify: row.amplify as number | undefined,
+      status: (row.status as string) || 'Pending',
+    };
+  }, [resolveAccountName]);
+
+  const loadUploadStats = useCallback(async () => {
+    try {
+      const countFor = (status?: string) => {
+        let query = supabase
+          .from('audio_uploads')
+          .select('*', { count: 'exact', head: true });
+        if (status) query = query.eq('status', status);
+        return query;
+      };
+
+      const [totalRes, activeRes, pendingRes, failedRes, copyrightRes] = await Promise.all([
+        countFor(),
+        countFor('Active'),
+        countFor('Pending'),
+        countFor('Failed'),
+        countFor('Copyright'),
+      ]);
+
+      setUploadStats({
+        total: totalRes.count ?? 0,
+        active: activeRes.count ?? 0,
+        pending: pendingRes.count ?? 0,
+        failed: failedRes.count ?? 0,
+        copyright: copyrightRes.count ?? 0,
+      });
+    } catch {
+      // ignore; stats are non-critical
+    }
+  }, []);
+
   const loadUploadHistory = useCallback(async () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
         .from('audio_uploads')
         .select('*')
-        .order('uploaded_at', { ascending: false });
+        .order('uploaded_at', { ascending: false })
+        .range(0, PAGE_SIZE - 1);
 
       if (!error && data) {
-        const history: UploadRecord[] = data.map((row) => {
-          let originalSpeed = Number(row.original_speed) || 1;
-          if (originalSpeed === 1 && row.name) {
-            const match = row.name.match(/_(\d+(?:\.\d+)?)x/i);
-            if (match && match[1]) {
-              originalSpeed = parseFloat(match[1]);
-            }
-          }
-
-          let robloxSpeed: string | undefined = undefined;
-          if (row.roblox_playback_speed && Number(row.roblox_playback_speed) > 0 && Number(row.roblox_playback_speed) !== 1) {
-            robloxSpeed = Number(row.roblox_playback_speed).toFixed(4);
-          } else if (originalSpeed > 0) {
-            robloxSpeed = (1 / originalSpeed).toFixed(4);
-          }
-
-          return {
-            id: row.id,
-            fileName: cleanSongTitle(row.name),
-            displayName: cleanSongTitle(row.name),
-            assetId: row.asset_id,
-            accountId: row.account_id || '',
-            accountName: resolveAccountName(row.account_id || '') || 'Roblox',
-            uploadedAt: new Date(row.uploaded_at).getTime(),
-            robloxPlaybackSpeed: robloxSpeed,
-            originalSpeed: originalSpeed,
-            amplify: row.amplify,
-            status: row.status || 'Pending',
-          };
-        });
-        setUploadHistory(history);
-        setUploadStats({
-          total: data.length,
-          active: data.filter((d) => d.status === 'Active').length,
-          pending: data.filter((d) => d.status === 'Pending').length,
-          failed: data.filter((d) => d.status === 'Failed').length,
-          copyright: data.filter((d) => d.status === 'Copyright').length,
-        });
+        setUploadHistory(data.map(mapRow));
+        setHasMore(data.length === PAGE_SIZE);
       }
     } catch {
       // ignore
     } finally {
       setIsLoading(false);
     }
-  }, [resolveAccountName]);
+    // Stats reflect the whole table, independent of the page loaded above.
+    await loadUploadStats();
+  }, [mapRow, loadUploadStats]);
+
+  const loadMoreUploadHistory = useCallback(async () => {
+    if (isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const offset = uploadHistory.length;
+      const { data, error } = await supabase
+        .from('audio_uploads')
+        .select('*')
+        .order('uploaded_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (!error && data) {
+        setUploadHistory((prev) => {
+          const seen = new Set(prev.map((r) => r.id));
+          return [...prev, ...data.map(mapRow).filter((r) => !seen.has(r.id))];
+        });
+        setHasMore(data.length === PAGE_SIZE);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }, [isLoadingMore, uploadHistory.length, mapRow]);
 
   const updateAssetStatus = async (assetId: string, status: string) => {
     try {
@@ -126,6 +185,8 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
       const apiKey = selectedAccountRef.current?.apiKey;
       const query = apiKey ? `?apiKey=${encodeURIComponent(apiKey)}` : '';
 
+      const changed: { assetId: string; status: string }[] = [];
+
       const tasks = data.map(async (row) => {
         try {
           const response = await fetch(`${backendUrl}/api/asset-status/${row.asset_id}${query}`);
@@ -133,6 +194,7 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
           const status = result.status;
           if (status !== 'Pending' && status !== row.status) {
             await updateAssetStatus(row.asset_id, status);
+            changed.push({ assetId: row.asset_id, status });
           }
         } catch {
           // A single failed row must not abort the sweep (or produce unhandled rejections)
@@ -147,6 +209,19 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
         }
       };
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, tasks.length) }, worker));
+
+      // Patch changed rows in place instead of reloading, so pagination is preserved.
+      if (changed.length > 0) {
+        const byId = new Map(changed.map((c) => [c.assetId, c.status]));
+        setUploadHistory((prev) =>
+          prev.map((item) =>
+            byId.has(item.assetId) && item.status !== byId.get(item.assetId)
+              ? { ...item, status: byId.get(item.assetId)! }
+              : item
+          )
+        );
+        await loadUploadStats();
+      }
     } catch {
       // ignore network/Supabase failures; the next 5s sweep will retry
     } finally {
@@ -195,8 +270,11 @@ export function useUploadHistory(unlocked: boolean, backendUrl: string, selected
     uploadStats,
     refreshingIds,
     isLoading,
+    isLoadingMore,
+    hasMore,
     setKnownAccounts,
     loadUploadHistory,
+    loadMoreUploadHistory,
     handleRefreshStatus,
     refreshPendingStatuses,
     handleUploadSuccess,
