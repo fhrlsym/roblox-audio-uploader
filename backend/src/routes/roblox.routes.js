@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import multer from 'multer';
-import fetch from 'node-fetch';
 import { existsSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT } from '../config.js';

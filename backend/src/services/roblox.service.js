@@ -1,9 +1,8 @@
-import fetch from 'node-fetch';
-import FormData from 'form-data';
-import { createReadStream } from 'fs';
-import { existsSync, unlinkSync, writeFileSync } from 'fs';
+import { readFileSync, existsSync, unlinkSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { sleep, BACKEND_ROOT } from '../config.js';
+
+// Node 22 provides global fetch, FormData and Blob — no node-fetch/form-data needed.
 
 export function cleanSongTitle(rawTitle) {
   if (!rawTitle) return '';
@@ -57,10 +56,8 @@ export async function uploadToRoblox(filePath, { assetType = 'Audio', displayNam
       expectedPrice: 0,
     },
   }));
-  form.append('fileContent', createReadStream(filePath), {
-    filename: `${safeName}.${fileExt}`,
-    contentType: fileContentType,
-  });
+  const fileBuffer = readFileSync(filePath);
+  form.append('fileContent', new Blob([fileBuffer], { type: fileContentType }), `${safeName}.${fileExt}`);
 
   const response = await fetch('https://apis.roblox.com/assets/v1/assets', {
     method: 'POST',
