@@ -16,6 +16,7 @@ import {
   formatDuration,
 } from '../config.js';
 import { runFFmpeg } from './ffmpeg.service.js';
+import { logger } from '../logger.js';
 
 const videoInfoCache = new LRUCache({
   max: 200,
@@ -148,6 +149,7 @@ async function withRetry(args, cookiesFile) {
 
         attempts++;
         try {
+          logger.info(`[yt] attempt #${attempts} client=${client} cookies=${scenario.label} (wave ${wave + 1})`);
           if (client === 'default') {
             return await runYtdl(args, scenario.cookies);
           }
@@ -158,10 +160,15 @@ async function withRetry(args, cookiesFile) {
         } catch (error) {
           lastError = error;
           const raw = errorText(error);
+          const short = raw.split('\n').find((l) => /ERROR|error:/i.test(l)) || raw.split('\n').find(Boolean) || '';
+          logger.warn(`[yt] attempt #${attempts} client=${client} failed: ${short.slice(0, 260)}`);
 
           // A genuinely invalid cookie won't be fixed by rotating clients.
           // Only abort the cookie scenario (we may still succeed without cookies).
-          if (scenario.cookies && isCookieError(raw)) break;
+          if (scenario.cookies && isCookieError(raw)) {
+            logger.warn('[yt] cookies rejected — skipping remaining cookie attempts');
+            break;
+          }
 
           // Bot-check / rate-limit: back off briefly before hammering the next client.
           if (isBotError(raw)) {
@@ -206,7 +213,15 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       ytArgs.push('--downloader', 'aria2c', '--downloader-args', 'aria2c:-j 4 -x 4 -k 1M');
     }
 
-    const stdout = String(await runYtCommand(ytArgs, cookiesFile));
+    logger.info(`[yt] download start video=${videoId} cookies=${cookiesFile ? 'yes' : 'no'} speed=${speed} amplify=${amplify}`);
+
+    let stdout;
+    try {
+      stdout = String(await runYtCommand(ytArgs, cookiesFile));
+    } catch (error) {
+      logger.error(`[yt] download failed video=${videoId} code=${error.code || 'n/a'} attempts=${error.attempts || '?'}: ${error.message}`);
+      throw error;
+    }
 
     const title = stdout.trim().replace(/[<>:"/\\|?*]/g, '').substring(0, 50) || `audio_${videoId}`;
 
@@ -216,6 +231,7 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       tempAudioPath = findTempFile();
     }
     if (!tempAudioPath) {
+      logger.error(`[yt] downloaded file not found for runId=${runId}`);
       throw new Error('Audio temp file not found after download');
     }
 
@@ -223,10 +239,18 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
 
     if (speed !== 1.0 || amplify !== 0) {
       if (existsSync(outputPath)) unlinkSync(outputPath);
-      await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
+      logger.info(`[yt] ffmpeg tune start speed=${speed} amplify=${amplify}`);
+      try {
+        await runFFmpeg(tempAudioPath, outputPath, speed, amplify);
+      } catch (error) {
+        logger.error(`[yt] ffmpeg tune failed: ${error.message}`);
+        throw error;
+      }
       if (existsSync(tempAudioPath)) unlinkSync(tempAudioPath);
       finalAudioPath = outputPath;
     }
+
+    logger.info(`[yt] download ok video=${videoId} title="${title}" fileId=${finalAudioPath === tempAudioPath ? `temp_${runId}` : `output_${runId}`}`);
 
     const actualFileId = finalAudioPath === tempAudioPath ? `temp_${runId}` : `output_${runId}`;
 

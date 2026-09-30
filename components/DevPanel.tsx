@@ -1,16 +1,23 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Modal } from './ui/Modal';
 import { Button } from './ui/Button';
 import { useToast } from './Toast';
-import { Activity, Database, KeyRound, RefreshCw, Server, Settings, HardDrive, Zap } from 'lucide-react';
+import { Activity, Database, KeyRound, RefreshCw, Server, Settings, HardDrive, Zap, ScrollText, Trash2 } from 'lucide-react';
 
 interface DevPanelProps {
   isOpen: boolean;
   onClose: () => void;
   currentPin: string;
   onPinChanged: (pin: string) => void;
+}
+
+interface LogEntry {
+  id: number;
+  level: 'info' | 'warn' | 'error' | string;
+  message: string;
+  timestamp: string;
 }
 
 interface HealthData {
@@ -90,6 +97,11 @@ export default function DevPanel({ isOpen, onClose, currentPin, onPinChanged }: 
   const [loading, setLoading] = useState(false);
   const [pinInput, setPinInput] = useState(currentPin);
   const [savingPin, setSavingPin] = useState(false);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [logLevel, setLogLevel] = useState<'all' | 'info' | 'warn' | 'error'>('all');
+  const [logAutoScroll, setLogAutoScroll] = useState(true);
+  const lastLogIdRef = useRef(0);
+  const logBoxRef = useRef<HTMLDivElement>(null);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
@@ -105,13 +117,49 @@ export default function DevPanel({ isOpen, onClose, currentPin, onPinChanged }: 
     }
   }, []);
 
+  const fetchLogs = useCallback(async () => {
+    try {
+      const res = await fetch('/api/dev/logs?since=0&limit=500', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      const incoming: LogEntry[] = Array.isArray(data.logs) ? data.logs : [];
+      setLogs(incoming);
+      if (incoming.length > 0) lastLogIdRef.current = incoming[incoming.length - 1].id;
+    } catch {
+      // ignore; next poll retries
+    }
+  }, []);
+
+  const clearLogs = useCallback(async () => {
+    try {
+      await fetch('/api/dev/logs', { method: 'DELETE' });
+      setLogs([]);
+      lastLogIdRef.current = 0;
+      toast('Log dibersihkan', 'success');
+    } catch {
+      toast('Gagal membersihkan log', 'error');
+    }
+  }, [toast]);
+
   useEffect(() => {
     if (isOpen) {
       fetchHealth();
-      const timer = setInterval(fetchHealth, 15000);
-      return () => clearInterval(timer);
+      fetchLogs();
+      const healthTimer = setInterval(fetchHealth, 15000);
+      const logTimer = setInterval(fetchLogs, 4000);
+      return () => {
+        clearInterval(healthTimer);
+        clearInterval(logTimer);
+      };
     }
-  }, [isOpen, fetchHealth]);
+  }, [isOpen, fetchHealth, fetchLogs]);
+
+  // Keep the log view pinned to the newest entry unless the user scrolled up.
+  useEffect(() => {
+    if (logAutoScroll && logBoxRef.current) {
+      logBoxRef.current.scrollTop = logBoxRef.current.scrollHeight;
+    }
+  }, [logs, logAutoScroll, logLevel]);
 
   // Keep the PIN field in sync with the active PIN when the panel opens.
   useEffect(() => {
@@ -146,6 +194,8 @@ export default function DevPanel({ isOpen, onClose, currentPin, onPinChanged }: 
 
   const b = health?.backend;
   const s = health?.supabase;
+
+  const filteredLogs = logLevel === 'all' ? logs : logs.filter((l) => l.level === logLevel);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Developer Panel" size="xl" icon={<Settings className="h-5 w-5" />}>
@@ -235,6 +285,96 @@ export default function DevPanel({ isOpen, onClose, currentPin, onPinChanged }: 
           </div>
           <p className="mt-2 text-[10px] text-[var(--text-50)]">
             PIN disimpan di Supabase (table <code className="font-mono">app_settings</code>). Override env var <code className="font-mono">NEXT_PUBLIC_PIN</code>.
+          </p>
+        </div>
+
+        {/* Backend Logs */}
+        <div className="brutal-card-sm p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b-2 border-[var(--text)] pb-2">
+            <div className="flex items-center gap-2">
+              <ScrollText className="h-4 w-4" />
+              <h3 className="text-xs font-extrabold uppercase tracking-wide">Backend Logs</h3>
+              <span className="text-[10px] font-bold text-[var(--text-50)]">({filteredLogs.length})</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-0.5">
+                {(['all', 'info', 'warn', 'error'] as const).map((lvl) => (
+                  <button
+                    key={lvl}
+                    onClick={() => setLogLevel(lvl)}
+                    className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide transition ${
+                      logLevel === lvl
+                        ? 'bg-[var(--accent)] text-[var(--on-accent)]'
+                        : 'text-[var(--text-60)] hover:text-[var(--text)]'
+                    }`}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setLogAutoScroll((v) => !v)}
+                className={`rounded-md border-2 border-[var(--text)] px-2 py-1 text-[10px] font-bold uppercase tracking-wide transition ${
+                  logAutoScroll ? 'bg-[var(--accent)] text-[var(--on-accent)]' : 'bg-[var(--bg)] text-[var(--text-60)]'
+                }`}
+                title="Auto-scroll ke log terbaru"
+              >
+                Auto
+              </button>
+              <button
+                onClick={fetchLogs}
+                className="rounded-md border-2 border-[var(--text)] bg-[var(--bg)] p-1 text-[var(--text)] transition hover:bg-[var(--accent)] hover:text-[var(--on-accent)]"
+                title="Refresh log"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={clearLogs}
+                className="rounded-md border-2 border-[var(--text)] bg-[var(--bg)] p-1 text-[var(--danger)] transition hover:bg-[var(--danger)] hover:text-white"
+                title="Bersihkan log"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={logBoxRef}
+            onScroll={(e) => {
+              const el = e.currentTarget;
+              const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 24;
+              setLogAutoScroll(atBottom);
+            }}
+            className="max-h-72 overflow-y-auto rounded-lg border-2 border-[var(--text)] bg-[var(--bg)] p-2 font-mono text-[10.5px] leading-relaxed"
+          >
+            {filteredLogs.length === 0 ? (
+              <p className="py-6 text-center font-sans text-xs font-bold uppercase tracking-wide text-[var(--text-40)]">
+                Belum ada log. Lakukan convert YouTube lalu refresh.
+              </p>
+            ) : (
+              filteredLogs.map((entry) => (
+                <div key={entry.id} className="flex gap-2 border-b border-[var(--text-30)] py-0.5 last:border-0">
+                  <span className="shrink-0 text-[var(--text-40)]">
+                    {new Date(entry.timestamp).toLocaleTimeString('id-ID')}
+                  </span>
+                  <span
+                    className={`shrink-0 font-bold uppercase ${
+                      entry.level === 'error'
+                        ? 'text-[var(--danger)]'
+                        : entry.level === 'warn'
+                          ? 'text-amber-500'
+                          : 'text-[var(--accent)]'
+                    }`}
+                  >
+                    {entry.level}
+                  </span>
+                  <span className="whitespace-pre-wrap break-all text-[var(--text-80)]">{entry.message}</span>
+                </div>
+              ))
+            )}
+          </div>
+          <p className="mt-2 text-[10px] text-[var(--text-50)]">
+            Log in-memory di backend (maks 500 baris terakhir). Ikut ter-reset saat deploy/restart.
           </p>
         </div>
 

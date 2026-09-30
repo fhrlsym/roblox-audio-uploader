@@ -4,12 +4,16 @@ import cors from 'cors';
 import { readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';
 import { BACKEND_ROOT, YTDLP } from './src/config.js';
+import { installConsoleCapture, getLogs, clearLogs } from './src/logger.js';
 import audioRoutes from './src/routes/audio.routes.js';
 import robloxRoutes from './src/routes/roblox.routes.js';
 import githubRoutes from './src/routes/github.routes.js';
 import dumperRoutes from './src/routes/dumper.routes.js';
 
 const app = express();
+
+// Capture console output into an in-memory ring buffer for the Developer Panel.
+installConsoleCapture();
 
 app.use(cors());
 app.use(express.json());
@@ -19,6 +23,19 @@ app.use('/api', audioRoutes);
 app.use('/api', robloxRoutes);
 app.use('/api', githubRoutes);
 app.use('/api', dumperRoutes);
+
+// Log retrieval for the Developer Panel
+app.get('/api/logs', (req, res) => {
+  const since = Number(req.query.since) || 0;
+  const limit = Math.min(Number(req.query.limit) || 200, 500);
+  const level = typeof req.query.level === 'string' ? req.query.level : undefined;
+  res.json({ logs: getLogs({ since, limit, level }), now: Date.now() });
+});
+
+app.delete('/api/logs', (req, res) => {
+  clearLogs();
+  res.json({ ok: true });
+});
 
 // Health & Version endpoints
 process.env.STARTED_AT = process.env.STARTED_AT || new Date().toISOString();
