@@ -39,6 +39,27 @@ function prepareCookiesFile(cookies) {
   return filePath;
 }
 
+/**
+ * Write every cookie jar in the pool to a file.
+ * Returns an array of file paths (possibly empty).
+ */
+function prepareCookiePool(pool) {
+  if (!Array.isArray(pool)) return [];
+  return pool.map((c) => prepareCookiesFile(c)).filter(Boolean);
+}
+
+function cleanupCookiePool(files) {
+  for (const f of files || []) {
+    if (f && existsSync(f)) {
+      try {
+        unlinkSync(f);
+      } catch {
+        // ignore
+      }
+    }
+  }
+}
+
 function errorText(error) {
   return [error?.stderr, error?.stdout, error?.message].filter(Boolean).join('\n');
 }
@@ -47,7 +68,7 @@ function redactSensitiveText(value) {
   return String(value || '').replace(/(https?:\/\/)[^\s:@/]+:[^\s@/]+@/gi, '$1[credentials]@');
 }
 
-function createYoutubeError(error, cookiesFile) {
+function createYoutubeError(error, hadCookies) {
   const raw = redactSensitiveText(errorText(error));
   const youtubeError = new Error('Gagal mengakses YouTube.');
   youtubeError.status = 502;
@@ -60,7 +81,7 @@ function createYoutubeError(error, cookiesFile) {
   }
 
   if (isBotError(raw)) {
-    if (cookiesFile) {
+    if (hadCookies) {
       youtubeError.code = 'YOUTUBE_ACCESS_BLOCKED';
       youtubeError.status = 403;
       youtubeError.message = 'YouTube masih memblokir akses (bot check) setelah beberapa kali percobaan. Coba lagi beberapa saat, atau perbarui cookies YouTube.';
@@ -125,67 +146,85 @@ const MAX_WAVES = 3;
 // Hard ceiling for the whole retry loop so a request can't hang for minutes.
 const RETRY_DEADLINE_MS = 90 * 1000;
 
-async function withRetry(args, cookiesFile) {
-  // Try with the cookie state we were given first, then vary it on later waves.
-  const scenarios = cookiesFile
-    ? [{ cookies: cookiesFile, label: 'cookies' }, { cookies: null, label: 'no-cookies' }]
-    : [{ cookies: null, label: 'no-cookies' }];
-
+/**
+ * Try a command across every combination of cookie jar x player client.
+ *
+ * - `cookieFiles` is a pool of prepared cookies.txt paths (may be empty).
+ * - On a bot check we rotate to the next cookie jar and player client.
+ * - A jar rejected as invalid (cookie error) is dropped for the rest of the run.
+ * - The last wave also tries with no cookies as a final fallback.
+ */
+async function withRetry(args, cookieFiles) {
+  const pool = Array.isArray(cookieFiles) ? cookieFiles.filter(Boolean) : [];
   let lastError;
   let attempts = 0;
   const startedAt = Date.now();
 
+  // Track jars that YouTube explicitly rejected so we don't keep retrying them.
+  const deadJars = new Set();
+
   for (let wave = 0; wave < MAX_WAVES; wave++) {
+    // Scenario 0: with cookies (rotated per wave). Scenario 1 (last wave only):
+    // no cookies, as a last-ditch attempt.
+    const scenarios = [];
+    const livePool = pool.filter((f) => !deadJars.has(f));
+    if (livePool.length > 0) scenarios.push({ jars: shuffle(livePool), label: 'cookies' });
+    if (wave === MAX_WAVES - 1) scenarios.push({ jars: [null], label: 'no-cookies' });
+    if (scenarios.length === 0) scenarios.push({ jars: [null], label: 'no-cookies' });
+
     for (const scenario of scenarios) {
-      const clients = shuffle(scenario.cookies ? CLIENTS_WITH_COOKIES : CLIENTS_NO_COOKIES);
+      for (const jar of scenario.jars) {
+        const jarLabel = jar ? `jar:${pool.indexOf(jar) + 1}` : 'no-cookies';
+        const clients = shuffle(jar ? CLIENTS_WITH_COOKIES : CLIENTS_NO_COOKIES);
 
-      for (const client of clients) {
-        if (Date.now() - startedAt > RETRY_DEADLINE_MS) {
-          const err = createYoutubeError(lastError, cookiesFile);
-          err.attempts = attempts;
-          err.timedOut = true;
-          throw err;
-        }
-
-        attempts++;
-        try {
-          logger.info(`[yt] attempt #${attempts} client=${client} cookies=${scenario.label} (wave ${wave + 1})`);
-          if (client === 'default') {
-            return await runYtdl(args, scenario.cookies);
-          }
-          return await runYtdl(
-            [...args, '--extractor-args', `youtube:player_client=${client}`],
-            scenario.cookies,
-          );
-        } catch (error) {
-          lastError = error;
-          const raw = errorText(error);
-          const short = raw.split('\n').find((l) => /ERROR|error:/i.test(l)) || raw.split('\n').find(Boolean) || '';
-          logger.warn(`[yt] attempt #${attempts} client=${client} failed: ${short.slice(0, 260)}`);
-
-          // A genuinely invalid cookie won't be fixed by rotating clients.
-          // Only abort the cookie scenario (we may still succeed without cookies).
-          if (scenario.cookies && isCookieError(raw)) {
-            logger.warn('[yt] cookies rejected — skipping remaining cookie attempts');
-            break;
+        for (const client of clients) {
+          if (Date.now() - startedAt > RETRY_DEADLINE_MS) {
+            const err = createYoutubeError(lastError, pool.length > 0);
+            err.attempts = attempts;
+            err.timedOut = true;
+            throw err;
           }
 
-          // Bot-check / rate-limit: back off briefly before hammering the next client.
-          if (isBotError(raw)) {
-            await sleep(600 + wave * 900 + Math.floor(Math.random() * 400));
+          attempts++;
+          try {
+            logger.info(`[yt] attempt #${attempts} client=${client} ${jarLabel} (wave ${wave + 1})`);
+            if (client === 'default') {
+              return await runYtdl(args, jar);
+            }
+            return await runYtdl(
+              [...args, '--extractor-args', `youtube:player_client=${client}`],
+              jar,
+            );
+          } catch (error) {
+            lastError = error;
+            const raw = errorText(error);
+            const short = raw.split('\n').find((l) => /ERROR|error:/i.test(l)) || raw.split('\n').find(Boolean) || '';
+            logger.warn(`[yt] attempt #${attempts} client=${client} ${jarLabel} failed: ${short.slice(0, 260)}`);
+
+            // A jar explicitly rejected as invalid is dead — drop it and move on.
+            if (jar && isCookieError(raw)) {
+              deadJars.add(jar);
+              logger.warn(`[yt] ${jarLabel} rejected as invalid — dropping this jar`);
+              break;
+            }
+
+            // Bot-check / rate-limit: back off briefly before the next attempt.
+            if (isBotError(raw)) {
+              await sleep(600 + wave * 900 + Math.floor(Math.random() * 400));
+            }
           }
         }
       }
     }
   }
 
-  const err = createYoutubeError(lastError, cookiesFile);
+  const err = createYoutubeError(lastError, pool.length > 0);
   err.attempts = attempts;
   throw err;
 }
 
-export async function runYtCommand(args, cookiesFile) {
-  return await withRetry(args, cookiesFile);
+export async function runYtCommand(args, cookieFiles) {
+  return await withRetry(args, cookieFiles);
 }
 
 export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookies }) {
@@ -194,7 +233,7 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
   const tempBase = join(BACKEND_ROOT, `temp_${runId}`);
   const outputPath = join(BACKEND_ROOT, `output_${runId}.mp3`);
 
-  const cookiesFile = prepareCookiesFile(cookies);
+  const cookieFiles = prepareCookiePool(cookies);
 
   const findTempFile = () => {
     const match = readdirSync(BACKEND_ROOT).find((f) => f.startsWith(`temp_${runId}.`));
@@ -209,15 +248,15 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
       '--output', `${tempBase}.%(ext)s`,
       '--format', 'bestaudio/best',
     ];
-    if (!cookiesFile) {
+    if (cookieFiles.length === 0) {
       ytArgs.push('--downloader', 'aria2c', '--downloader-args', 'aria2c:-j 4 -x 4 -k 1M');
     }
 
-    logger.info(`[yt] download start video=${videoId} cookies=${cookiesFile ? 'yes' : 'no'} speed=${speed} amplify=${amplify}`);
+    logger.info(`[yt] download start video=${videoId} cookieJars=${cookieFiles.length} speed=${speed} amplify=${amplify}`);
 
     let stdout;
     try {
-      stdout = String(await runYtCommand(ytArgs, cookiesFile));
+      stdout = String(await runYtCommand(ytArgs, cookieFiles));
     } catch (error) {
       logger.error(`[yt] download failed video=${videoId} code=${error.code || 'n/a'} attempts=${error.attempts || '?'}: ${error.message}`);
       throw error;
@@ -271,19 +310,19 @@ export async function downloadYoutubeMp3({ url, speed = 1.0, amplify = 0, cookie
     }
     throw error;
   } finally {
-    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
+    cleanupCookiePool(cookieFiles);
   }
 }
 
 export async function searchYoutube(query, cookies) {
-  const cookiesFile = prepareCookiesFile(cookies);
+  const cookieFiles = prepareCookiePool(cookies);
 
   try {
     const stdout = await runYtCommand([
       '--print',
       '%(id)s\n%(title)s\n%(duration_string)s\n%(thumbnail)s\n%(channel)s\n%(duration)s',
       `ytsearch1:${query}`,
-    ], cookiesFile);
+    ], cookieFiles);
 
     const [id = '', title = '', durationString = '', thumbnail = '', channel = '', duration = '0'] =
       stdout.split('\n').map((s) => s.trim());
@@ -302,7 +341,7 @@ export async function searchYoutube(query, cookies) {
     console.error('YouTube search error:', error);
     throw error;
   } finally {
-    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
+    cleanupCookiePool(cookieFiles);
   }
 }
 
@@ -313,7 +352,7 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
     return videoInfoCache.get(cacheKey);
   }
 
-  const cookiesFile = prepareCookiesFile(cookies);
+  const cookieFiles = prepareCookiePool(cookies);
 
   try {
     const stdout = await runYtCommand([
@@ -321,7 +360,7 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
       '%(title)s\n%(duration_string)s\n%(duration)s\n%(thumbnail)s\n%(channel)s\n%(id)s',
       '--ignore-no-formats-error',
       cleanYoutubeUrl(url),
-    ], cookiesFile);
+    ], cookieFiles);
 
     const [title = '', durationString = '', duration = '0', thumbnail = '', channel = '', id = ''] =
       stdout.split('\n').map((s) => s.trim());
@@ -339,6 +378,6 @@ export async function fetchYoutubeVideoInfo(url, cookies) {
     }
     return info;
   } finally {
-    if (cookiesFile && existsSync(cookiesFile)) unlinkSync(cookiesFile);
+    cleanupCookiePool(cookieFiles);
   }
 }

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import { existsSync, unlinkSync, readdirSync } from 'fs';
 import { join } from 'path';
-import { BACKEND_ROOT } from '../config.js';
+import { BACKEND_ROOT, resolveYoutubeCookies } from '../config.js';
 import { downloadYoutubeMp3, fetchYoutubeVideoInfo, searchYoutube } from '../services/youtube.service.js';
 import { downloadSoundCloudMp3, fetchSoundCloudInfo } from '../services/soundcloud.service.js';
 import { runFFmpeg } from '../services/ffmpeg.service.js';
@@ -28,7 +28,7 @@ router.post('/youtube-download', async (req, res) => {
   }
 
   try {
-    const { title, fileId } = await downloadYoutubeMp3({ url, speed, amplify, cookies });
+    const { title, fileId } = await downloadYoutubeMp3({ url, speed, amplify, cookies: resolveYoutubeCookies(cookies) });
     res.json({
       success: true,
       filename: `${title}.mp3`,
@@ -48,7 +48,7 @@ router.post('/youtube-info', async (req, res) => {
   }
 
   try {
-    const video = await fetchYoutubeVideoInfo(url, cookies);
+    const video = await fetchYoutubeVideoInfo(url, resolveYoutubeCookies(cookies));
     res.json({
       success: true,
       video,
@@ -98,7 +98,7 @@ router.get('/youtube-search', async (req, res) => {
   }
 
   try {
-    const video = await searchYoutube(q, cookies);
+    const video = await searchYoutube(q, resolveYoutubeCookies(cookies));
     if (!video) {
       return res.status(404).json({ error: 'Video audio tidak ditemukan di YouTube' });
     }

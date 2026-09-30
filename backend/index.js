@@ -3,7 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { readdirSync, statSync, unlinkSync } from 'fs';
 import { join } from 'path';
-import { BACKEND_ROOT, YTDLP } from './src/config.js';
+import { BACKEND_ROOT, YTDLP, getYoutubeCookiesPool } from './src/config.js';
 import { installConsoleCapture, getLogs, clearLogs } from './src/logger.js';
 import audioRoutes from './src/routes/audio.routes.js';
 import robloxRoutes from './src/routes/roblox.routes.js';
@@ -152,7 +152,8 @@ app.get('/api/health', async (req, res) => {
     },
     uploadQueue: queue,
     flags: {
-      youtubeCookies: Boolean(process.env.YT_COOKIES_B64),
+      youtubeCookies: getYoutubeCookiesPool().length > 0,
+      youtubeCookieJars: getYoutubeCookiesPool().length,
       potProvider: Boolean(process.env.YOUTUBE_POT_PROVIDER_URL),
     },
   };

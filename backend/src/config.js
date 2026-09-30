@@ -12,6 +12,59 @@ export const YTDLP = process.env.YTDLP_PATH ||
 export const YOUTUBE_POT_PROVIDER_URL =
   process.env.YOUTUBE_POT_PROVIDER_URL || 'http://127.0.0.1:4416';
 
+/**
+ * Decode a base64 Netscape cookies.txt payload. Returns null when the value is
+ * empty or clearly not a cookie jar (guards against malformed env values).
+ */
+function decodeCookieBase64(b64) {
+  if (!b64 || typeof b64 !== 'string') return null;
+  try {
+    const decoded = Buffer.from(b64.trim(), 'base64').toString('utf8');
+    return decoded.includes('\t') || decoded.includes('# Netscape') ? decoded : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Collect every server-side cookie jar.
+ *
+ * Supported env vars (add as many as you like, in this order):
+ *   YT_COOKIES_B64, YT_COOKIES_B64_2, YT_COOKIES_B64_3, ...
+ *
+ * Multiple jars let the retry logic rotate accounts when YouTube throws a bot
+ * check, which is far more resilient than a single cookie.
+ */
+export function getYoutubeCookiesPool() {
+  const pool = [];
+
+  const push = (b64) => {
+    const decoded = decodeCookieBase64(b64);
+    if (decoded && !pool.includes(decoded)) pool.push(decoded);
+  };
+
+  push(process.env.YT_COOKIES_B64);
+  for (let i = 2; i <= 10; i++) {
+    push(process.env[`YT_COOKIES_B64_${i}`]);
+  }
+
+  return pool;
+}
+
+/**
+ * Resolve the cookie pool for a request.
+ *
+ * Priority:
+ *   1. Cookies explicitly sent by the client (single-entry override)
+ *   2. Every server-side cookie jar from the environment
+ */
+export function resolveYoutubeCookies(requestCookies) {
+  if (requestCookies && typeof requestCookies === 'string' && requestCookies.trim()) {
+    return [requestCookies.trim()];
+  }
+  return getYoutubeCookiesPool();
+}
+
 export function isBotError(message) {
   return /sign in to confirm|not a bot|confirm you'?re not a bot|unusual traffic|captcha|confirm.*human|login required/i.test(message || '');
 }

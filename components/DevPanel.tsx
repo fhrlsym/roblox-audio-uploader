@@ -33,7 +33,7 @@ interface HealthData {
       memory?: { rssMB?: number; heapUsedMB?: number; heapTotalMB?: number };
     };
     uploadQueue?: { pending: number; active: number; maxConcurrency?: number } | null;
-    flags?: { youtubeCookies?: boolean; potProvider?: boolean };
+    flags?: { youtubeCookies?: boolean; youtubeCookieJars?: number; potProvider?: boolean };
     cached?: boolean;
     ageSeconds?: number;
     error?: string;
@@ -219,7 +219,7 @@ export default function DevPanel({ isOpen, onClose, currentPin, onPinChanged }: 
             <StatRow label="Started" value={b?.startedAt ? new Date(b.startedAt).toLocaleString('id-ID') : '-'} />
             <StatRow label="yt-dlp" value={b?.versions?.ytdlp || 'N/A'} />
             <StatRow label="ffmpeg" value={b?.versions?.ffmpeg?.split(' ')[0] || 'N/A'} />
-            <StatRow label="YT Cookies" value={b?.flags?.youtubeCookies ? 'Set' : 'Missing'} ok={b?.flags?.youtubeCookies} />
+            <StatRow label="YT Cookies" value={b?.flags?.youtubeCookieJars ? `${b.flags.youtubeCookieJars} jar` : (b?.flags?.youtubeCookies ? 'Set' : 'Missing')} ok={b?.flags?.youtubeCookies} />
           </SectionCard>
 
           {/* Resources */}
