@@ -22,11 +22,11 @@ function getStats() {
 async function enqueue(task) {
   return new Promise((resolve, reject) => {
     queue.push({ task, resolve, reject });
-    process();
+    runNext();
   });
 }
 
-async function process() {
+async function runNext() {
   if (active >= MAX_CONCURRENCY) return;
   if (queue.length === 0) return;
 
@@ -34,7 +34,7 @@ async function process() {
   const now = Date.now();
   const wait = Math.max(0, lastStartedAt + MIN_SPACING_MS - now);
   if (wait > 0) {
-    setTimeout(process, wait + 50);
+    setTimeout(runNext, wait + 50);
     return;
   }
 
@@ -52,7 +52,7 @@ async function process() {
   } finally {
     active--;
     // Process next item
-    setTimeout(process, 50);
+    setTimeout(runNext, 50);
   }
 }
 
